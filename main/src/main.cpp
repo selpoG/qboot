@@ -11,6 +11,7 @@
 #include "multi_array.hpp"
 #include "my_hash.hpp"
 #include "partial_fraction.hpp"
+#include "polynomial.hpp"
 #include "real.hpp"
 #include "real_io.hpp"
 
@@ -243,6 +244,13 @@ int main()
 	auto c = qboot::cb_context<R>(250, 10);
 	auto c2 = qboot2::context_construct(250, 1000, 10);
 	R delta = mpfr::sqrt(R(2)), d12 = mpfr::sqrt(R(3)), d34 = mpfr::sqrt(R(5)) - 1;
+	auto hoge =
+	    algebra::Polynomial<R>::linear_power(R(1), R(1), 5) * algebra::Polynomial<R>::linear_power(R(1), R(-1), 7);
+	auto fuga =
+	    algebra::Polynomial<R>::linear_power(R(1), R(1), 7) * algebra::Polynomial<R>::linear_power(R(1), R(-1), 5);
+	std::cout << hoge << std::endl;
+	std::cout << fuga << std::endl;
+	std::cout << hoge + fuga << std::endl;
 	for (int dim = 3; dim < 8; dim += 2)
 	{
 		R eps = R(dim) / 2 - 1;

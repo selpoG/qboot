@@ -2959,6 +2959,10 @@ namespace mpfr
 
 		void swap(real& o) { MPFR_NS mpfr_swap(_x, o._x); }
 
+		real clone() const { return *this; }
+
+		bool iszero() const { return mpfr::iszero(*this); }
+
 		// //////////////////////////////////////////////////////////////
 		// converting constructors and converting assignment operators
 		// //////////////////////////////////////////////////////////////

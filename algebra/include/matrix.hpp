@@ -15,6 +15,35 @@
 
 namespace algebra
 {
+	template <class T>
+	struct is_mpfr_real;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct is_mpfr_real<mpfr::real<prec, rnd>>
+	{
+		static constexpr bool value = true;
+	};
+	template <class T>
+	struct is_mpfr_real
+	{
+		static constexpr bool value = false;
+	};
+	template <class T>
+	inline constexpr bool is_mpfr_real_v = is_mpfr_real<T>::value;
+	// interface Swappable<T> {
+	//	void swap(T&);
+	// };
+	// interface Cloneable<T> {
+	//	T clone() const;
+	// };
+	// interface ZeroCheckable<T> {
+	//	bool iszero() const;
+	// }
+	// assert(T{}.iszero());  // where T: DefaultConstructible, ZeroCheckable
+	// Real: Swappable, Clonable, ZeroCheckable, DefaultConstructible
+	// Polynomial: Swappable, Clonable, ZeroCheckable, DefaultConstructible
+	// Vector<Real>: Swappable, Clonable
+	// Matrix<Real>: Swappable, Clonable
+	// Tensor<Real>: Swappable, Clonable
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class Vector
 	{
@@ -26,7 +55,7 @@ namespace algebra
 		explicit Vector(size_t len) : arr_(std::make_unique<Real[]>(len)), sz_(len) {}
 		Vector(size_t len, const Real& val) : arr_(std::make_unique<Real[]>(len)), sz_(len)
 		{
-			for (size_t i = 0; i < len; i++) arr_[i] = val;
+			for (size_t i = 0; i < len; i++) arr_[i] = val.clone();
 		}
 		Vector(Vector&& v) noexcept = default;
 		Vector& operator=(Vector&& v) noexcept = default;
@@ -43,17 +72,26 @@ namespace algebra
 		[[nodiscard]] Vector clone() const
 		{
 			Vector v(sz_);
-			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i];
+			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
 			return v;
+		}
+		void swap(Vector& other)
+		{
+			arr_.swap(other.arr_);
+			std::swap(sz_, other.sz_);
 		}
 		void negate()
 		{
 			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
 		}
-		[[nodiscard]] Real abs() const { return mpfr::sqrt(norm()); }
+		template <class T = Real>
+		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> abs() const
+		{
+			return mpfr::sqrt(norm());
+		}
 		[[nodiscard]] Real norm() const
 		{
-			Real s(0);
+			Real s{};
 			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
 			return s;
 		}
@@ -74,7 +112,8 @@ namespace algebra
 			for (size_t i = 0; i < sz_; i++) arr_[i] *= r;
 			return *this;
 		}
-		Vector& operator/=(const Real& r)
+		template <class T = Vector&>
+		std::enable_if_t<is_mpfr_real_v<Real>, T> operator/=(const Real& r)
 		{
 			for (size_t i = 0; i < sz_; i++) arr_[i] /= r;
 			return *this;
@@ -86,9 +125,9 @@ namespace algebra
 			Real s;
 			for (size_t i = 0; i < sz_; i++)
 			{
-				s = 0;
+				s = {};
 				for (size_t j = 0; j <= i; j++) s += arr_[j] * other.arr_[i - j];
-				z.arr_[i] = s;
+				z.arr_[i] = std::move(s);
 			}
 			return z;
 		}
@@ -113,7 +152,8 @@ namespace algebra
 			return z;
 		}
 		friend Vector operator*(const Real& r, const Vector& x) { return x * r; }
-		friend Vector operator/(const Vector& x, const Real& r)
+		template <class T = Vector>
+		friend std::enable_if_t<is_mpfr_real_v<Real>, T> operator/(const Vector& x, const Real& r)
 		{
 			Vector z(x.sz_);
 			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
@@ -122,7 +162,7 @@ namespace algebra
 		friend Real operator*(const Vector& x, const Vector& y)
 		{
 			assert(x.sz_ == y.sz_);
-			Real s(0);
+			Real s{};
 			for (size_t i = 0; i < x.sz_; i++) s += x.arr_[i] * y.arr_[i];
 			return s;
 		}
@@ -170,22 +210,56 @@ namespace algebra
 		[[nodiscard]] const size_t& row() const noexcept { return row_; }
 		[[nodiscard]] const size_t& column() const noexcept { return col_; }
 		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
-		[[nodiscard]] Real abs() const { return mpfr::sqrt(norm()); }
+		template <class T = Real>
+		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> abs() const
+		{
+			return mpfr::sqrt(norm());
+		}
 		[[nodiscard]] Real norm() const
 		{
-			Real s(0);
+			Real s{};
 			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
 			return s;
 		}
 		[[nodiscard]] Matrix clone() const
 		{
 			Matrix v(row_, col_);
-			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i];
+			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
 			return v;
+		}
+		void swap(Matrix& other)
+		{
+			arr_.swap(other.arr_);
+			std::swap(row_, other.row_);
+			std::swap(col_, other.col_);
+			std::swap(sz_, other.sz_);
 		}
 		void negate()
 		{
 			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+		}
+		Matrix& operator+=(const Matrix& v)
+		{
+			assert(v.row_ == row_ && v.col_ == col_);
+			for (size_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
+			return *this;
+		}
+		Matrix& operator-=(const Matrix& v)
+		{
+			assert(v.row_ == row_ && v.col_ == col_);
+			for (size_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
+			return *this;
+		}
+		Matrix& operator*=(const Real& r)
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] *= r;
+			return *this;
+		}
+		template <class T = Matrix&>
+		std::enable_if_t<is_mpfr_real_v<Real>, T> operator/=(const Real& r)
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] /= r;
+			return *this;
 		}
 		Vector<Real> flatten()
 		{
@@ -236,7 +310,8 @@ namespace algebra
 			return z;
 		}
 		friend Matrix operator*(const Real& r, const Matrix& x) { return x * r; }
-		friend Matrix operator/(const Matrix& x, const Real& r)
+		template <class T = Matrix>
+		friend std::enable_if_t<is_mpfr_real_v<Real>, T> operator/(const Matrix& x, const Real& r)
 		{
 			Matrix z(x.row_, x.col_);
 			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
@@ -249,9 +324,9 @@ namespace algebra
 			Real s;
 			for (size_t i = 0; i < x.row_; i++)
 			{
-				s = 0;
+				s = {};
 				for (size_t j = 0, p = i * x.col_; j < x.col_; j++, p++) s += x.arr_[p] * y[j];
-				z[i] = s;
+				z[i] = std::move(s);
 			}
 			return z;
 		}
@@ -262,9 +337,9 @@ namespace algebra
 			Real s;
 			for (size_t i = 0; i < y.col_; i++)
 			{
-				s = 0;
+				s = {};
 				for (size_t j = 0; j < y.row_; j++) s += x[j] * y.get(j, i);
-				z[i] = s;
+				z[i] = std::move(s);
 			}
 			return z;
 		}
@@ -277,9 +352,9 @@ namespace algebra
 			{
 				for (size_t j = 0; j < y.col_; j++)
 				{
-					s = 0;
+					s = {};
 					for (size_t k = 0; k < x.col_; k++) s += x.get(i, k) * y.get(k, j);
-					z.get(i, j) = s;
+					z.get(i, j) = std::move(s);
 				}
 			}
 			return z;
@@ -294,7 +369,8 @@ namespace algebra
 		friend bool operator!=(const Matrix& x, const Matrix& y) { return !(x == y); }
 		// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
 		// this == L L^t and L is lower triangular.
-		[[nodiscard]] Matrix cholesky_decomposition() const
+		template <class T = Matrix>
+		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> cholesky_decomposition() const
 		{
 			assert(is_square());
 			Matrix L(row_, row_);
@@ -303,7 +379,7 @@ namespace algebra
 			{
 				for (size_t j = 0; j <= i; j++)
 				{
-					s = 0;
+					s = {};
 					for (size_t k = 0; k < j; k++) s += L.get(i, k) * L.get(j, k);
 					s = get(i, j) - s;
 					L.get(i, j) = i == j ? mpfr::sqrt(s) : s / L.get(j, j);
@@ -312,7 +388,8 @@ namespace algebra
 			return L;
 		}
 		// calculate the inverse matrix of lower triangular matrix
-		[[nodiscard]] Matrix lower_triangular_inverse() const
+		template <class T = Matrix>
+		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> lower_triangular_inverse() const
 		{
 			// this must be lower triangular, i.e., get(i, j) == 0 for i < j
 			assert(is_square());
@@ -323,7 +400,7 @@ namespace algebra
 				res.get(i, i) = 1 / get(i, i);
 				for (size_t j = 0; j < i; j++)
 				{
-					s = 0;
+					s = {};
 					for (size_t k = j; k < i; k++) s += get(i, k) * res.get(k, j);
 					res.get(i, j) = -s / get(i, i);
 				}
@@ -358,22 +435,57 @@ namespace algebra
 		[[nodiscard]] const size_t& row() const noexcept { return row_; }
 		[[nodiscard]] const size_t& column() const noexcept { return col_; }
 		[[nodiscard]] const size_t& length() const noexcept { return len_; }
-		[[nodiscard]] Real abs() const { return mpfr::sqrt(norm()); }
+		template <class T = Real>
+		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> abs() const
+		{
+			return mpfr::sqrt(norm());
+		}
 		[[nodiscard]] Real norm() const
 		{
-			Real s(0);
+			Real s{};
 			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
 			return s;
 		}
 		[[nodiscard]] Tensor clone() const
 		{
 			Tensor v(row_, col_, len_);
-			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i];
+			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
 			return v;
+		}
+		void swap(Tensor& other)
+		{
+			arr_.swap(other.arr_);
+			std::swap(row_, other.row_);
+			std::swap(col_, other.col_);
+			std::swap(len_, other.len_);
+			std::swap(sz_, other.sz_);
 		}
 		void negate()
 		{
 			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+		}
+		Tensor& operator+=(const Tensor& v)
+		{
+			assert(v.row_ == row_ && v.col_ == col_ && v.len_ == len_);
+			for (size_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
+			return *this;
+		}
+		Tensor& operator-=(const Tensor& v)
+		{
+			assert(v.row_ == row_ && v.col_ == col_ && v.len_ == len_);
+			for (size_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
+			return *this;
+		}
+		Tensor& operator*=(const Real& r)
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] *= r;
+			return *this;
+		}
+		template <class T = Tensor&>
+		std::enable_if_t<is_mpfr_real_v<Real>, T> operator/=(const Real& r)
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] /= r;
+			return *this;
 		}
 		Vector<Real> flatten()
 		{
@@ -409,7 +521,8 @@ namespace algebra
 			return z;
 		}
 		friend Tensor operator*(const Real& r, const Tensor& x) { return x * r; }
-		friend Tensor operator/(const Tensor& x, const Real& r)
+		template <class T = Tensor>
+		friend std::enable_if_t<is_mpfr_real_v<Real>, T> operator/(const Tensor& x, const Real& r)
 		{
 			Tensor z(x.row_, x.col_, x.len_);
 			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
@@ -426,7 +539,7 @@ namespace algebra
 	};
 
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	std::ostream& operator<<(std::ostream& out, const algebra::Vector<Real>& v)
+	std::ostream& operator<<(std::ostream& out, const Vector<Real>& v)
 	{
 		out << "[";
 		auto f = false;
@@ -440,7 +553,7 @@ namespace algebra
 	}
 
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	std::ostream& operator<<(std::ostream& out, const algebra::Matrix<Real>& v)
+	std::ostream& operator<<(std::ostream& out, const Matrix<Real>& v)
 	{
 		out << "[";
 		auto f = false;
@@ -460,7 +573,6 @@ namespace algebra
 		}
 		return out << "]";
 	}
-
 }  // namespace algebra
 
 #endif  // MATRIX_HPP_
