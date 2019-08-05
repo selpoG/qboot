@@ -1,367 +1,466 @@
 #ifndef MATRIX_HPP_
 #define MATRIX_HPP_
 
+#include <array>             // for array
 #include <cassert>           // for assert
 #include <cstddef>           // for size_t
 #include <initializer_list>  // for initializer_list
-#include <istream>           // for basic_istream
-#include <map>               // for map, _Rb_tree_const_iterator, _Rb_tree...
+#include <iostream>          // for <<
+#include <memory>            // for unique_ptr
 #include <ostream>           // for basic_ostream
 #include <string>            // for string
-#include <tuple>             // for tuple
 #include <vector>            // for vector
 
-#include "complex.hpp"  // for iszero, complex, real_prec_t, real_rnd_t
+#include "real.hpp"  // for iszero, complex, real_prec_t, real_rnd_t
 
 namespace algebra
 {
-	using std::size_t;
-	constexpr mpfr::real_prec_t _chop = 1000;
-	constexpr mpfr::real_prec_t _prec = _chop + 30;
-	constexpr mpfr::real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT;
-	using Complex = complex<_prec, _rnd>;
-	using Real = Complex::value_type;
-	extern const Real epsilon;
-	Real chop(const Real& x);
-	Complex chop(const Complex& z);
-	class SparseRow
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	class Vector
 	{
-	private:
-		std::map<size_t, Complex> elements_ = {};
-
-	protected:
-		void elements(const std::map<size_t, Complex>& e) { elements_ = e; }
-		[[nodiscard]] const std::map<size_t, Complex>& elements() const noexcept { return elements_; }
+		std::unique_ptr<Real[]> arr_;
+		size_t sz_;
+		Vector(Real* ptr, size_t len) : arr_(ptr), sz_(len) {}
 
 	public:
-		SparseRow() = default;
-		~SparseRow() = default;
-		SparseRow(const SparseRow&) = default;
-		SparseRow(SparseRow&&) = default;
-		SparseRow& operator=(const SparseRow&) = default;
-		SparseRow& operator=(SparseRow&&) = default;
-		[[nodiscard]] size_t size() const noexcept { return elements_.size(); }
-		int set(size_t c, const Complex& v)
+		explicit Vector(size_t len) : arr_(std::make_unique<Real[]>(len)), sz_(len) {}
+		Vector(size_t len, const Real& val) : arr_(std::make_unique<Real[]>(len)), sz_(len)
 		{
-			auto it = elements_.find(c);
-			if (it != elements_.end())
-				if (iszero(v))
-				{
-					elements_.erase(it);
-					return -1;
-				}
-				else
-					it->second = v;
-			else if (!iszero(v))
-			{
-				elements_[c] = v;
-				return 1;
-			}
-			return 0;
+			for (size_t i = 0; i < len; i++) arr_[i] = val;
 		}
-		[[nodiscard]] Complex get(size_t c) const
+		Vector(Vector&& v) noexcept = default;
+		Vector& operator=(Vector&& v) noexcept = default;
+		~Vector() = default;
+		Vector(const Vector& v) = delete;
+		Vector& operator=(const Vector& v) = default;
+		[[nodiscard]] Real* get() noexcept { return arr_.get(); }
+		[[nodiscard]] const Real* get() const noexcept { return arr_.get(); }
+		[[nodiscard]] Real& get(std::size_t i) { return arr_[i]; }
+		[[nodiscard]] const Real& get(std::size_t i) const { return arr_[i]; }
+		[[nodiscard]] Real& operator[](std::size_t i) { return get(i); }
+		[[nodiscard]] const Real& operator[](std::size_t i) const { return get(i); }
+		[[nodiscard]] const size_t& size() const noexcept { return sz_; }
+		[[nodiscard]] Vector clone() const
 		{
-			auto it = elements_.find(c);
-			return it != elements_.end() ? it->second : Complex(0);
+			Vector v(sz_);
+			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i];
+			return v;
 		}
-		// auto begin() noexcept { return elements_.begin(); }
-		[[nodiscard]] auto begin() const noexcept { return elements_.begin(); }
-		// auto end() noexcept { return elements_.end(); }
-		[[nodiscard]] auto end() const noexcept { return elements_.end(); }
-		SparseRow& conjugate()
+		void negate()
 		{
-			for (auto& t : elements_) t.second = conj(t.second);
+			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+		}
+		[[nodiscard]] Real abs() const { return mpfr::sqrt(norm()); }
+		[[nodiscard]] Real norm() const
+		{
+			Real s(0);
+			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
+			return s;
+		}
+		Vector& operator+=(const Vector& v)
+		{
+			assert(v.sz_ == sz_);
+			for (size_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
 			return *this;
 		}
-		void add(const SparseRow& v, const Real& r);
-		void add(const SparseRow& v, const Complex& r);
-		SparseRow& operator*=(const Real& v);
-		SparseRow& operator*=(const Complex& v);
-		SparseRow& operator+=(const SparseRow& v);
-		SparseRow& operator-=(const SparseRow& v);
-		// Complex& operator[](size_t c);
-		const Complex& operator[](size_t c) const;
-		[[nodiscard]] std::string str() const;
-		[[nodiscard]] std::string str(size_t C) const;
-
+		Vector& operator-=(const Vector& v)
+		{
+			assert(v.sz_ == sz_);
+			for (size_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
+			return *this;
+		}
+		Vector& operator*=(const Real& r)
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] *= r;
+			return *this;
+		}
+		Vector& operator/=(const Real& r)
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] /= r;
+			return *this;
+		}
+		[[nodiscard]] Vector convolve(const Vector& other) const
+		{
+			assert(sz_ == other.sz_);
+			Vector z(sz_);
+			Real s;
+			for (size_t i = 0; i < sz_; i++)
+			{
+				s = 0;
+				for (size_t j = 0; j <= i; j++) s += arr_[j] * other.arr_[i - j];
+				z.arr_[i] = s;
+			}
+			return z;
+		}
+		friend Vector operator+(const Vector& x, const Vector& y)
+		{
+			assert(x.sz_ == y.sz_);
+			Vector z(x.sz_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
+			return z;
+		}
+		friend Vector operator-(const Vector& x, const Vector& y)
+		{
+			assert(x.sz_ == y.sz_);
+			Vector z(x.sz_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
+			return z;
+		}
+		friend Vector operator*(const Vector& x, const Real& r)
+		{
+			Vector z(x.sz_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
+			return z;
+		}
+		friend Vector operator*(const Real& r, const Vector& x) { return x * r; }
+		friend Vector operator/(const Vector& x, const Real& r)
+		{
+			Vector z(x.sz_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
+			return z;
+		}
+		friend Real operator*(const Vector& x, const Vector& y)
+		{
+			assert(x.sz_ == y.sz_);
+			Real s(0);
+			for (size_t i = 0; i < x.sz_; i++) s += x.arr_[i] * y.arr_[i];
+			return s;
+		}
+		friend bool operator==(const Vector& x, const Vector& y)
+		{
+			if (x.sz_ != y.sz_) return false;
+			for (size_t i = 0; i < x.sz_; i++)
+				if (x.arr_[i] != y.arr_[i]) return false;
+			return true;
+		}
+		friend bool operator!=(const Vector& x, const Vector& y) { return !(x == y); }
+		friend Vector operator+(const Vector& x) { return x.clone(); }
+		friend Vector operator-(const Vector& x)
+		{
+			auto y = x.clone();
+			y.negate();
+			return y;
+		}
+		template <class Real2>
 		friend class Matrix;
-		friend Complex operator*(const SparseRow& r1, const SparseRow& r2)
-		{
-			auto sum = Complex();
-			for (auto& it : r1)
-			{
-				auto f = r2.elements_.find(it.first);
-				if (f != r2.elements_.end()) sum += it.second * f->second;
-			}
-			return sum;
-		}
-		friend Complex inner_product(const SparseRow& r1, const SparseRow& r2)
-		{
-			auto sum = Complex(0);
-			for (auto& it : r1)
-			{
-				auto f = r2.elements_.find(it.first);
-				if (f != r2.elements_.end()) sum += inner_product(it.second, f->second);
-			}
-			return sum;
-		}
+		template <class Real2>
+		friend class Tensor;
 	};
-	SparseRow conj(const SparseRow& v);
 
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class Matrix
 	{
-		std::vector<SparseRow> a;
-		size_t row_ = 1, column_ = 1, nonzero_ = 0;
-		void swap_row(size_t r1, size_t r2)
-		{
-			if (r1 == r2) return;
-			auto t = a[r1];
-			a[r1] = a[r2];
-			a[r2] = t;
-		}
-		void multiply_row(size_t r, const Complex& x)
-		{
-			auto p = a[r].size();
-			a[r] *= x;
-			nonzero_ += a[r].size() - p;
-		}
-		void add_row(size_t f, size_t t, const Complex& x)
-		{
-			auto p = a[t].size();
-			a[t].add(a[f], x);
-			nonzero_ += a[t].size() - p;
-		}
+		std::unique_ptr<Real[]> arr_;
+		size_t row_, col_, sz_;
 
 	public:
-		Matrix() : a(1) {}
-		Matrix(size_t r, size_t c) : a(r), row_(r), column_(c) {}
-		[[nodiscard]] size_t row() const noexcept { return row_; }
-		[[nodiscard]] size_t column() const noexcept { return column_; }
-		[[nodiscard]] Complex at(size_t r, size_t c) const { return a[r].get(c); }
-		void set_at(size_t r, size_t c, const Complex& v) { nonzero_ += size_t(a[r].set(c, v)); }
-		void set_row(size_t r, const SparseRow& v)
+		Matrix(size_t r, size_t c) : arr_(std::make_unique<Real[]>(r * c)), row_(r), col_(c), sz_(r * c) {}
+		Matrix(Matrix&& v) noexcept = default;
+		Matrix& operator=(Matrix&& v) noexcept = default;
+		~Matrix() = default;
+		Matrix(const Matrix& v) = delete;
+		Matrix& operator=(const Matrix& v) = default;
+		[[nodiscard]] Real* get() noexcept { return arr_.get(); }
+		[[nodiscard]] const Real* get() const noexcept { return arr_.get(); }
+		[[nodiscard]] Real& get(size_t r, size_t c) { return arr_[r * col_ + c]; }
+		[[nodiscard]] const Real& get(size_t r, size_t c) const { return arr_[r * col_ + c]; }
+		[[nodiscard]] Real& operator[](std::array<std::size_t, 2> i) { return get(i[0], i[1]); }
+		[[nodiscard]] const Real& operator[](std::array<std::size_t, 2> i) const { return get(i[0], i[1]); }
+		[[nodiscard]] const size_t& size() const noexcept { return sz_; }
+		[[nodiscard]] const size_t& row() const noexcept { return row_; }
+		[[nodiscard]] const size_t& column() const noexcept { return col_; }
+		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
+		[[nodiscard]] Real abs() const { return mpfr::sqrt(norm()); }
+		[[nodiscard]] Real norm() const
 		{
-			nonzero_ -= a[r].size();
-			a[r] = v;
-			nonzero_ += a[r].size();
+			Real s(0);
+			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
+			return s;
 		}
-		Matrix null_space();
-		[[nodiscard]] Matrix orthogonalize() const;
-		[[nodiscard]] size_t rank() const;
-		void row_reduce();
-		template <class InIt>
-		static Matrix diagonal(InIt first, InIt last)
+		[[nodiscard]] Matrix clone() const
 		{
-			Matrix m(0, 0);
-			size_t r = 0;
-			while (first != last)
+			Matrix v(row_, col_);
+			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i];
+			return v;
+		}
+		void negate()
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+		}
+		Vector<Real> flatten()
+		{
+			Vector<Real> v(arr_.release(), sz_);
+			row_ = col_ = sz_ = 0;
+			return v;
+		}
+		void transpose()
+		{
+			if (row_ == col_)
 			{
-				SparseRow v;
-				v.set(r++, *(first++));
-				m.a.push_back(v);
+				Real t;
+				for (size_t i = 0; i < row_; i++)
+					for (size_t j = 0; j < i; j++) get(i, j).swap(get(j, i));
 			}
-			m.row_ = m.column_ = r;
-			return m;
+			else
+			{
+				auto t = clone();
+				for (size_t i = 0; i < row_; i++)
+					for (size_t j = 0; j < col_; j++) get(i, j) = std::move(t.get(j, i));
+			}
 		}
-		static Matrix constant(const Complex& v, size_t len);
-		[[nodiscard]] Matrix inverse() const;
-		[[nodiscard]] std::string str(size_t R1, size_t C) const;
-		[[nodiscard]] std::string str2() const;
-		static Matrix kronecker_product(const Matrix& x, const Matrix& y);
-		static Matrix identity(size_t size);
-		SparseRow& operator[](size_t r);
-		const SparseRow& operator[](size_t r) const;
-		const Complex& operator[](std::initializer_list<size_t> rc) const;
+		friend Matrix operator+(const Matrix& x) { return x.clone(); }
+		friend Matrix operator-(const Matrix& x)
+		{
+			auto z = x.clone();
+			z.negate();
+			return z;
+		}
+		friend Matrix operator+(const Matrix& x, const Matrix& y)
+		{
+			assert(x.row_ == y.row_ && x.col_ == y.col_);
+			Matrix z(x.row_, x.col_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
+			return z;
+		}
+		friend Matrix operator-(const Matrix& x, const Matrix& y)
+		{
+			assert(x.row_ == y.row_ && x.col_ == y.col_);
+			Matrix z(x.row_, x.col_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
+			return z;
+		}
+		friend Matrix operator*(const Matrix& x, const Real& r)
+		{
+			Matrix z(x.row_, x.col_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
+			return z;
+		}
+		friend Matrix operator*(const Real& r, const Matrix& x) { return x * r; }
+		friend Matrix operator/(const Matrix& x, const Real& r)
+		{
+			Matrix z(x.row_, x.col_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
+			return z;
+		}
+		friend Vector<Real> operator*(const Matrix& x, const Vector<Real>& y)
+		{
+			assert(x.col_ == y.size());
+			Vector<Real> z(x.row_);
+			Real s;
+			for (size_t i = 0; i < x.row_; i++)
+			{
+				s = 0;
+				for (size_t j = 0, p = i * x.col_; j < x.col_; j++, p++) s += x.arr_[p] * y[j];
+				z[i] = s;
+			}
+			return z;
+		}
+		friend Vector<Real> operator*(const Vector<Real>& x, const Matrix& y)
+		{
+			assert(x.size() == y.row_);
+			Vector<Real> z(y.col_);
+			Real s;
+			for (size_t i = 0; i < y.col_; i++)
+			{
+				s = 0;
+				for (size_t j = 0; j < y.row_; j++) s += x[j] * y.get(j, i);
+				z[i] = s;
+			}
+			return z;
+		}
+		friend Matrix operator*(const Matrix& x, const Matrix& y)
+		{
+			assert(x.col_ == y.row_);
+			Matrix<Real> z(x.row_, y.col_);
+			Real s;
+			for (size_t i = 0; i < x.row_; i++)
+			{
+				for (size_t j = 0; j < y.col_; j++)
+				{
+					s = 0;
+					for (size_t k = 0; k < x.col_; k++) s += x.get(i, k) * y.get(k, j);
+					z.get(i, j) = s;
+				}
+			}
+			return z;
+		}
+		friend bool operator==(const Matrix& x, const Matrix& y)
+		{
+			if (x.row_ != y.row_ || x.col_ != y.col_) return false;
+			for (size_t i = 0; i < x.sz_; i++)
+				if (x.arr_[i] != y.arr_[i]) return false;
+			return true;
+		}
+		friend bool operator!=(const Matrix& x, const Matrix& y) { return !(x == y); }
+		// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
+		// this == L L^t and L is lower triangular.
+		[[nodiscard]] Matrix cholesky_decomposition() const
+		{
+			assert(is_square());
+			Matrix L(row_, row_);
+			Real s;
+			for (size_t i = 0; i < row_; i++)
+			{
+				for (size_t j = 0; j <= i; j++)
+				{
+					s = 0;
+					for (size_t k = 0; k < j; k++) s += L.get(i, k) * L.get(j, k);
+					s = get(i, j) - s;
+					L.get(i, j) = i == j ? mpfr::sqrt(s) : s / L.get(j, j);
+				}
+			}
+			return L;
+		}
+		// calculate the inverse matrix of lower triangular matrix
+		[[nodiscard]] Matrix lower_triangular_inverse() const
+		{
+			// this must be lower triangular, i.e., get(i, j) == 0 for i < j
+			assert(is_square());
+			Matrix res(row_, row_);
+			Real s;
+			for (size_t i = 0; i < row_; i++)
+			{
+				res.get(i, i) = 1 / get(i, i);
+				for (size_t j = 0; j < i; j++)
+				{
+					s = 0;
+					for (size_t k = j; k < i; k++) s += get(i, k) * res.get(k, j);
+					res.get(i, j) = -s / get(i, i);
+				}
+			}
+			return res;
+		}
 	};
 
-	template <class Char, class Traits>
-	std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os, const Matrix& g)
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	class Tensor
 	{
-		os << "{";
-		for (size_t r = 0; r < g.row(); r++)
+		std::unique_ptr<Real[]> arr_;
+		size_t row_, col_, len_, sz_;
+
+	public:
+		Tensor(size_t r, size_t c, size_t l)
+		    : arr_(std::make_unique<Real[]>(r * c * l)), row_(r), col_(c), len_(l), sz_(r * c * l)
 		{
-			if (r > 0) os << ", ";
-			os << '{';
-			for (size_t c = 0; c < g.column(); c++)
-			{
-				if (c > 0) os << ", ";
-				os << g.at(r, c);
-			}
-			os << '}';
 		}
-		return os << "}";
+		Tensor(Tensor&& v) noexcept = default;
+		Tensor& operator=(Tensor&& v) noexcept = default;
+		~Tensor() = default;
+		Tensor(const Tensor& v) = delete;
+		Tensor& operator=(const Tensor& v) = default;
+		[[nodiscard]] Real* get() noexcept { return arr_.get(); }
+		[[nodiscard]] const Real* get() const noexcept { return arr_.get(); }
+		[[nodiscard]] Real& get(size_t r, size_t c, size_t i) { return arr_[(r * col_ + c) * len_ + i]; }
+		[[nodiscard]] const Real& get(size_t r, size_t c, size_t i) const { return arr_[(r * col_ + c) * len_ + i]; }
+		[[nodiscard]] Real& operator[](std::array<std::size_t, 3> i) { return get(i[0], i[1], i[2]); }
+		[[nodiscard]] const Real& operator[](std::array<std::size_t, 3> i) const { return get(i[0], i[1], i[2]); }
+		[[nodiscard]] const size_t& size() const noexcept { return sz_; }
+		[[nodiscard]] const size_t& row() const noexcept { return row_; }
+		[[nodiscard]] const size_t& column() const noexcept { return col_; }
+		[[nodiscard]] const size_t& length() const noexcept { return len_; }
+		[[nodiscard]] Real abs() const { return mpfr::sqrt(norm()); }
+		[[nodiscard]] Real norm() const
+		{
+			Real s(0);
+			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
+			return s;
+		}
+		[[nodiscard]] Tensor clone() const
+		{
+			Tensor v(row_, col_, len_);
+			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i];
+			return v;
+		}
+		void negate()
+		{
+			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+		}
+		Vector<Real> flatten()
+		{
+			Vector<Real> v(arr_.release(), sz_);
+			row_ = col_ = len_ = sz_ = 0;
+			return v;
+		}
+		friend Tensor operator+(const Tensor& x) { return x.clone(); }
+		friend Tensor operator-(const Tensor& x)
+		{
+			auto z = x.clone();
+			z.negate();
+			return z;
+		}
+		friend Tensor operator+(const Tensor& x, const Tensor& y)
+		{
+			assert(x.row_ == y.row_ && x.col_ == y.col_ && x.len_ == y.len_);
+			Tensor z(x.row_, x.col_, x.len_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
+			return z;
+		}
+		friend Tensor operator-(const Tensor& x, const Tensor& y)
+		{
+			assert(x.row_ == y.row_ && x.col_ == y.col_ && x.len_ == y.len_);
+			Tensor z(x.row_, x.col_, x.len_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
+			return z;
+		}
+		friend Tensor operator*(const Tensor& x, const Real& r)
+		{
+			Tensor z(x.row_, x.col_, x.len_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
+			return z;
+		}
+		friend Tensor operator*(const Real& r, const Tensor& x) { return x * r; }
+		friend Tensor operator/(const Tensor& x, const Real& r)
+		{
+			Tensor z(x.row_, x.col_, x.len_);
+			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
+			return z;
+		}
+		friend bool operator==(const Tensor& x, const Tensor& y)
+		{
+			if (x.row_ != y.row_ || x.col_ != y.col_ || x.len_ != y.len_) return false;
+			for (size_t i = 0; i < x.sz_; i++)
+				if (x.arr_[i] != y.arr_[i]) return false;
+			return true;
+		}
+		friend bool operator!=(const Tensor& x, const Tensor& y) { return !(x == y); }
+	};
+
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	std::ostream& operator<<(std::ostream& out, const algebra::Vector<Real>& v)
+	{
+		out << "[";
+		auto f = false;
+		for (size_t i = 0; i < v.size(); i++)
+		{
+			if (f) out << ", ";
+			out << v[i];
+			f = true;
+		}
+		return out << "]";
 	}
-	class Tensor2 : public SparseRow
-	{
-		size_t dim2_;
 
-	public:
-		[[nodiscard]] const size_t& dim2() const noexcept { return dim2_; }
-		explicit Tensor2(size_t d2) : dim2_(d2) {}
-		Tensor2() noexcept : Tensor2(1) {}
-		Tensor2(size_t d2, const SparseRow& v) : SparseRow(v), dim2_(d2) {}
-		~Tensor2() = default;
-		Tensor2(const Tensor2& v) = default;
-		Tensor2& operator=(const Tensor2& r)
-		{
-			if (this != &r)
-			{
-				dim2_ = r.dim2_;
-				elements(r.elements());
-			}
-			return *this;
-		}
-		Tensor2(Tensor2&&) = default;
-		Tensor2& operator=(Tensor2&&) = default;
-		[[nodiscard]] Complex get(const std::tuple<size_t, size_t>& id) const
-		{
-			auto [a, b] = id;
-			return get(a, b);
-		}
-		[[nodiscard]] Complex get(size_t a, size_t b) const { return SparseRow::get(dim2_ * a + b); }
-		int set(size_t a, size_t b, const Complex& v) { return SparseRow::set(dim2_ * a + b, v); }
-		int set(const std::tuple<size_t, size_t>& id, const Complex& v)
-		{
-			auto [a, b] = id;
-			return set(a, b, v);
-		}
-		[[nodiscard]] std::tuple<size_t, size_t> to_index(size_t x) const
-		{
-			auto b = x % dim2_;
-			x /= dim2_;
-			return std::tuple(x, b);
-		}
-	};
-	class Tensor3 : public SparseRow
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	std::ostream& operator<<(std::ostream& out, const algebra::Matrix<Real>& v)
 	{
-		size_t dim2_, dim3_;
-
-	public:
-		[[nodiscard]] const size_t& dim2() const { return dim2_; }
-		[[nodiscard]] const size_t& dim3() const { return dim3_; }
-		Tensor3() noexcept : Tensor3(1, 1) {}
-		Tensor3(size_t d2, size_t d3) : dim2_(d2), dim3_(d3) {}
-		Tensor3(size_t d2, size_t d3, const SparseRow& v) : SparseRow(v), dim2_(d2), dim3_(d3) {}
-		~Tensor3() = default;
-		Tensor3(const Tensor3& v) = default;
-		Tensor3& operator=(const Tensor3& r)
+		out << "[";
+		auto f = false;
+		for (size_t i = 0; i < v.row(); i++)
 		{
-			if (this != &r)
+			if (f) out << ", ";
+			auto g = false;
+			out << "[";
+			for (size_t j = 0; j < v.column(); j++)
 			{
-				dim2_ = r.dim2_;
-				dim3_ = r.dim3_;
-				elements(r.elements());
+				if (g) out << ", ";
+				out << v.get(i, j);
+				g = true;
 			}
-			return *this;
+			out << "]";
+			f = true;
 		}
-		Tensor3(Tensor3&&) = default;
-		Tensor3& operator=(Tensor3&&) = default;
-		[[nodiscard]] Complex get(const std::tuple<size_t, size_t, size_t>& id) const
-		{
-			auto [a, b, c] = id;
-			return get(a, b, c);
-		}
-		[[nodiscard]] Complex get(size_t a, size_t b, size_t c) const
-		{
-			return SparseRow::get((dim2_ * a + b) * dim3_ + c);
-		}
-		int set(const std::tuple<size_t, size_t, size_t>& id, const Complex& v)
-		{
-			auto [a, b, c] = id;
-			return set(a, b, c, v);
-		}
-		int set(size_t a, size_t b, size_t c, const Complex& v)
-		{
-			return SparseRow::set((dim2_ * a + b) * dim3_ + c, v);
-		}
-		[[nodiscard]] std::tuple<size_t, size_t, size_t> to_index(size_t x) const
-		{
-			auto c = x % dim3_;
-			x /= dim3_;
-			auto b = x % dim2_;
-			x /= dim2_;
-			return std::tuple(x, b, c);
-		}
-	};
-	class Tensor4 : public SparseRow
-	{
-		size_t dim2_, dim3_, dim4_;
+		return out << "]";
+	}
 
-	public:
-		[[nodiscard]] const size_t& dim2() const { return dim2_; }
-		[[nodiscard]] const size_t& dim3() const { return dim3_; }
-		[[nodiscard]] const size_t& dim4() const { return dim4_; }
-		Tensor4() noexcept : Tensor4(1, 1, 1) {}
-		Tensor4(size_t d2, size_t d3, size_t d4) : dim2_(d2), dim3_(d3), dim4_(d4) {}
-		Tensor4(size_t d2, size_t d3, size_t d4, const SparseRow& v) : SparseRow(v), dim2_(d2), dim3_(d3), dim4_(d4) {}
-		~Tensor4() = default;
-		Tensor4(const Tensor4& v) = default;
-		Tensor4& operator=(const Tensor4& r)
-		{
-			if (this != &r)
-			{
-				dim2_ = r.dim2_;
-				dim3_ = r.dim3_;
-				dim4_ = r.dim4_;
-				elements(r.elements());
-			}
-			return *this;
-		}
-		Tensor4(Tensor4&&) = default;
-		Tensor4& operator=(Tensor4&&) = default;
-		[[nodiscard]] Complex get(const std::tuple<size_t, size_t, size_t, size_t>& id) const
-		{
-			auto [a, b, c, d] = id;
-			return get(a, b, c, d);
-		}
-		[[nodiscard]] Complex get(size_t a, size_t b, size_t c, size_t d) const
-		{
-			return SparseRow::get(((dim2_ * a + b) * dim3_ + c) * dim4_ + d);
-		}
-		int set(const std::tuple<size_t, size_t, size_t, size_t>& id, const Complex& v)
-		{
-			auto [a, b, c, d] = id;
-			return set(a, b, c, d, v);
-		}
-		int set(size_t a, size_t b, size_t c, size_t d, const Complex& v)
-		{
-			return SparseRow::set(((dim2_ * a + b) * dim3_ + c) * dim4_ + d, v);
-		}
-		[[nodiscard]] std::tuple<size_t, size_t, size_t, size_t> to_index(size_t x) const
-		{
-			auto d = x % dim4_;
-			x /= dim4_;
-			auto c = x % dim3_;
-			x /= dim3_;
-			auto b = x % dim2_;
-			x /= dim2_;
-			return std::tuple(x, b, c, d);
-		}
-	};
-	class Vector : public SparseRow
-	{
-		size_t dim_;
-
-	public:
-		[[nodiscard]] const size_t& dim() const { return dim_; }
-		Vector() noexcept : Vector(1) {}
-		explicit Vector(size_t d) : dim_(d) {}
-		Vector(size_t d, const SparseRow& v) : SparseRow(v), dim_(d) {}
-		Vector(const Vector& v) = default;
-		~Vector() = default;
-		Vector& operator=(const Vector& r)
-		{
-			if (this != &r)
-			{
-				dim_ = r.dim_;
-				elements(r.elements());
-			}
-			return *this;
-		}
-		Vector(Vector&&) = default;
-		Vector& operator=(Vector&&) = default;
-		static Vector kronecker_product(const Vector& x, const Vector& y);
-	};
 }  // namespace algebra
 
 #endif  // MATRIX_HPP_

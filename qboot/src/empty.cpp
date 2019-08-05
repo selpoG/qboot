@@ -1,8 +1,0 @@
-#include "complex.hpp"
-#include "complex_io.hpp"
-#include "io.hpp"
-#include "matrix.hpp"
-#include "multi_array.hpp"
-#include "my_hash.hpp"
-#include "real.hpp"
-#include "real_io.hpp"

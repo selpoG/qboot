@@ -1552,7 +1552,7 @@ namespace mpfr
 	};
 
 	template <real_prec_t _prec1, real_prec_t _prec2, real_rnd_t _rnd1, real_rnd_t _rnd2>
-	struct promote<real<_prec1, _rnd1>, real<_prec2, _rnd2> >
+	struct promote<real<_prec1, _rnd1>, real<_prec2, _rnd2>>
 	{
 		typedef const real<_prec2, _rnd2>& type;
 	};
@@ -1771,7 +1771,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	acos(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1781,7 +1781,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	acosh(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1791,7 +1791,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	asin(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1801,7 +1801,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	asinh(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1811,7 +1811,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	atan(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1821,7 +1821,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	atanh(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1831,7 +1831,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	cbrt(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1841,7 +1841,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	ceil(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1851,7 +1851,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	cos(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1861,7 +1861,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	cosh(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1871,7 +1871,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	erf(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1881,7 +1881,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	erfc(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1891,7 +1891,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	exp(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1901,7 +1901,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	exp2(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1911,7 +1911,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	expm1(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1921,7 +1921,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	fabs(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1931,7 +1931,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	abs(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1941,7 +1941,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	floor(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1951,7 +1951,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	log(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1961,7 +1961,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	log10(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1971,7 +1971,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	log1p(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1981,7 +1981,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	log2(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -1991,7 +1991,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	nearbyint(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2001,7 +2001,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	rint(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2011,7 +2011,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	round(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2021,7 +2021,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	sin(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2031,7 +2031,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	sinh(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2041,7 +2041,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	sqrt(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2051,7 +2051,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	tan(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2061,7 +2061,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	tanh(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2071,7 +2071,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	tgamma(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2081,7 +2081,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	trunc(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2091,7 +2091,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	j0(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2101,7 +2101,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	j1(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2111,7 +2111,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	y0(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2121,7 +2121,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	y1(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2131,7 +2131,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	ai(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2141,7 +2141,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	cot(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2151,7 +2151,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	coth(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2161,7 +2161,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	csc(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2171,7 +2171,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	csch(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2181,7 +2181,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	digamma(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2191,7 +2191,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	exp10(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2201,7 +2201,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	expint(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2211,7 +2211,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	frac(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2235,7 +2235,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	li2(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2245,7 +2245,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	rec_sqrt(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2255,7 +2255,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	sec(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2265,7 +2265,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	sech(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2282,7 +2282,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	zeta(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2292,7 +2292,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	frexp(const real<_prec, _rnd>& r, real_exp_t* exp)
 	{
 		if (MPFR_NS mpfr_zero_p(r._x))
@@ -2333,7 +2333,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	ldexp(const real<_prec, _rnd>& r, const mpfr_old_long exp)
 	{
 		real<_prec, _rnd> temp;
@@ -2343,7 +2343,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	lgamma(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2354,7 +2354,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	logb(const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2374,7 +2374,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	scalbln(const real<_prec, _rnd>& r, const mpfr_old_long exp)
 	{
 		return ldexp(r, exp);  // FLT_RADIX == 2???
@@ -2382,7 +2382,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	scalbn(const real<_prec, _rnd>& r, const int exp)
 	{
 		return ldexp(r, static_cast<mpfr_old_long>(exp));  // FLT_RADIX == 2???
@@ -2390,7 +2390,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	jn(const mpfr_old_long n, const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2400,7 +2400,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	yn(const mpfr_old_long n, const real<_prec, _rnd>& r)
 	{
 		real<_prec, _rnd> temp;
@@ -2410,7 +2410,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	cyl_bessel_j(const mpfr_old_long n, const real<_prec, _rnd>& r)
 	{
 		return jn(n, r);
@@ -2418,7 +2418,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	cyl_neumann(const mpfr_old_long n, const real<_prec, _rnd>& r)
 	{
 		return yn(n, r);
@@ -2426,7 +2426,7 @@ namespace mpfr
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	root(const real<_prec, _rnd>& r, const mpfr_old_ulong n)
 	{
 		real<_prec, _rnd> temp;
@@ -2662,6 +2662,43 @@ namespace mpfr
 		return temp;
 	}
 
+	template <real_prec_t _prec, real_rnd_t _rnd>
+	inline real<_prec, _rnd> pow(const real<_prec, _rnd>& op1, unsigned long op2)
+	{
+		real<_prec, _rnd> temp;
+		MPFR_NS mpfr_pow_ui(temp._x, op1._x, op2, _rnd);
+		return temp;
+	}
+
+	template <real_prec_t _prec, real_rnd_t _rnd>
+	inline real<_prec, _rnd> pow(const real<_prec, _rnd>& op1, long op2)
+	{
+		real<_prec, _rnd> temp;
+		MPFR_NS mpfr_pow_si(temp._x, op1._x, op2, _rnd);
+		return temp;
+	}
+	template <real_prec_t _prec, real_rnd_t _rnd>
+	inline real<_prec, _rnd> pow(const real<_prec, _rnd>& op1, mpz_t op2)
+	{
+		real<_prec, _rnd> temp;
+		MPFR_NS mpfr_pow_z(temp._x, op1._x, op2, _rnd);
+		return temp;
+	}
+	template <real_prec_t _prec, real_rnd_t _rnd>
+	inline real<_prec, _rnd> pow(unsigned long op1, const real<_prec, _rnd>& op2)
+	{
+		real<_prec, _rnd> temp;
+		MPFR_NS mpfr_ui_pow(temp._x, op1, op2._x, _rnd);
+		return temp;
+	}
+	template <real_prec_t _prec, real_rnd_t _rnd>
+	inline real<_prec, _rnd> pow(unsigned long op1, unsigned long op2)
+	{
+		real<_prec, _rnd> temp;
+		MPFR_NS mpfr_ui_pow_ui(temp._x, op1, op2, _rnd);
+		return temp;
+	}
+
 	template <class _Tp1, class _Tp2>
 	inline typename enable_if<
 	    type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp1, true>::enable_math_funcs &&
@@ -2787,7 +2824,7 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	zero(const int n)
 	{
 		real<_prec, _rnd> temp;
@@ -2797,7 +2834,7 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	inf(const int n)
 	{
 		real<_prec, _rnd> temp;
@@ -2807,7 +2844,7 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	nan([[maybe_unused]] const char* tagp)
 	{
 		real<_prec, _rnd> temp;
@@ -2817,7 +2854,7 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	const_log2()
 	{
 		real<_prec, _rnd> temp;
@@ -2827,7 +2864,7 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	const_pi() noexcept
 	{
 		real<_prec, _rnd> temp;
@@ -2837,7 +2874,7 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	const_euler()
 	{
 		real<_prec, _rnd> temp;
@@ -2847,7 +2884,7 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
+	                          const real<_prec, _rnd>>::type
 	const_catalan()
 	{
 		real<_prec, _rnd> temp;
@@ -2857,8 +2894,8 @@ namespace mpfr
 
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd> >::type
-	factorial(const mpfr_old_long n)
+	                          const real<_prec, _rnd>>::type
+	factorial(const mpfr_old_ulong n)
 	{
 		real<_prec, _rnd> temp;
 		MPFR_NS mpfr_fac_ui(temp._x, n, _rnd);
@@ -2874,6 +2911,9 @@ namespace mpfr
 	{
 	public:
 		mpfr_t _x;
+
+		static constexpr real_prec_t prec = _prec;
+		static constexpr real_rnd_t rnd = _rnd;
 
 		// //////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
@@ -2893,6 +2933,12 @@ namespace mpfr
 			MPFR_NS mpfr_set(_x, o._x, _rnd);
 		}
 
+		inline real(real&& o)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_swap(_x, o._x);
+		}
+
 		// default assignment operator
 
 		inline real& operator=(const real& o)
@@ -2901,9 +2947,17 @@ namespace mpfr
 			return *this;
 		}
 
+		inline real& operator=(real&& o)
+		{
+			if (&o != this) MPFR_NS mpfr_swap(_x, o._x);
+			return *this;
+		}
+
 		// destructor
 
 		inline ~real() { MPFR_NS mpfr_clear(_x); }
+
+		void swap(real& o) { MPFR_NS mpfr_swap(_x, o._x); }
 
 		// //////////////////////////////////////////////////////////////
 		// converting constructors and converting assignment operators
@@ -2924,6 +2978,20 @@ namespace mpfr
 		{
 			MPFR_NS mpfr_init2(_x, _prec);
 			type_traits<real, _Tp, true>::set(_x, o, _rnd);
+		}
+
+		template <class = std::void_t<std::enable_if<!std::is_same_v<mpfr_old_ulong, uintmax_t>>>>
+		explicit inline real(uintmax_t o)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_set_uj(_x, o, _rnd);
+		}
+
+		template <class = std::void_t<std::enable_if<!std::is_same_v<mpfr_old_long, intmax_t>>>>
+		explicit inline real(intmax_t o)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_set_sj(_x, o, _rnd);
 		}
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
@@ -2957,6 +3025,34 @@ namespace mpfr
 		{
 			MPFR_NS mpfr_init2(_x, _prec);
 			MPFR_NS mpfr_set(_x, o._x, _rnd);
+		}
+
+		inline real(unsigned long op, mpfr_exp_t e)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_set_ui_2exp(_x, op, e, _rnd);
+		}
+		inline real(long op, mpfr_exp_t e)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_set_si_2exp(_x, op, e, _rnd);
+		}
+		template <class = std::void_t<std::enable_if<!std::is_same_v<uintmax_t, mpfr_old_ulong>>>>
+		inline real(uintmax_t op, mpfr_exp_t e)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_set_uj_2exp(_x, op, e, _rnd);
+		}
+		template <class = std::void_t<std::enable_if<!std::is_same_v<intmax_t, mpfr_old_long>>>>
+		inline real(intmax_t op, mpfr_exp_t e)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_set_sj_2exp(_x, op, e, _rnd);
+		}
+		inline real(mpz_t op, mpfr_exp_t e)
+		{
+			MPFR_NS mpfr_init2(_x, _prec);
+			MPFR_NS mpfr_set_z_2exp(_x, op, e, _rnd);
 		}
 
 	private:
@@ -3241,6 +3337,18 @@ namespace mpfr
 
 		// conversion operators
 
+		template <class = std::void_t<std::enable_if<!std::is_same_v<mpfr_old_ulong, uintmax_t>>>>
+		explicit inline operator uintmax_t() const
+		{
+			return MPFR_NS mpfr_get_uj(_x, _rnd);
+		}
+
+		template <class = std::void_t<std::enable_if<!std::is_same_v<mpfr_old_long, intmax_t>>>>
+		explicit inline operator intmax_t() const
+		{
+			return MPFR_NS mpfr_get_sj(_x, _rnd);
+		}
+
 		explicit inline operator mpfr_old_ulong() const { return MPFR_NS mpfr_get_ui(_x, _rnd); }
 
 		explicit inline operator mpfr_old_long() const { return MPFR_NS mpfr_get_si(_x, _rnd); }
@@ -3376,227 +3484,227 @@ namespace mpfr
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		acos(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		acosh(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		asin(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		asinh(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		atan(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		atanh(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		cbrt(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		ceil(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		cos(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		cosh(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		erf(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		erfc(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		exp(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		exp2(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		expm1(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		fabs(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		abs(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		floor(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		log(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		log10(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		log1p(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		log2(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		nearbyint(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		rint(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		round(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		sin(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		sinh(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		sqrt(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		tan(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		tanh(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		tgamma(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		trunc(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		j0(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		j1(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		y0(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		y1(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		ai(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		cot(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		coth(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		csc(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		csch(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		digamma(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		exp10(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		expint(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		frac(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
@@ -3611,22 +3719,22 @@ namespace mpfr
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		li2(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		rec_sqrt(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		sec(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		sech(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
@@ -3636,12 +3744,12 @@ namespace mpfr
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		zeta(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		frexp(const real<_prec1, _rnd1>& r, real_exp_t* exp);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
@@ -3651,52 +3759,52 @@ namespace mpfr
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		ldexp(const real<_prec1, _rnd1>& r, const mpfr_old_long exp);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		lgamma(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		logb(const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		scalbln(const real<_prec1, _rnd1>& r, const mpfr_old_long exp);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		scalbn(const real<_prec1, _rnd1>& r, const int exp);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		jn(const mpfr_old_long n, const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		yn(const mpfr_old_long n, const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		cyl_bessel_j(const mpfr_old_long n, const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		cyl_neumann(const mpfr_old_long n, const real<_prec1, _rnd1>& r);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		root(const real<_prec1, _rnd1>& r, const mpfr_old_ulong n);
 
 		// //////////////////////////////////////////////////////////////
@@ -3873,52 +3981,44 @@ namespace mpfr
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		zero(const int n);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		inf(const int n);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		nan([[maybe_unused]] const char* tagp);
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		const_log2();
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		const_pi() noexcept;
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		const_euler();
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		const_catalan();
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1> >::type
+		                          const real<_prec1, _rnd1>>::type
 		factorial(const mpfr_old_long n);
 	};  // class real
-
-	template <real_prec_t _prec, real_rnd_t _rnd>
-	inline real<_prec, _rnd> pow2(mpfr_old_long s, mpfr_exp_t e) noexcept
-	{
-		real<_prec, _rnd> x;
-		mpfr_set_si_2exp(static_cast<__mpfr_struct*>(x._x), s, e, _rnd);
-		return x;
-	}
 }  // namespace mpfr
 
 #endif  // REAL_HPP_

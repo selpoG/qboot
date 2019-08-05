@@ -34,6 +34,7 @@ namespace util
 	struct MyHash
 	{
 		constexpr size_t operator()(const int64_t& r) const noexcept { return size_t(r); }
+		constexpr size_t operator()(const int32_t& r) const noexcept { return size_t(r); }
 		constexpr size_t operator()(const size_t& r) const noexcept { return r; }
 		constexpr size_t operator()(const double& r) const noexcept
 		{
