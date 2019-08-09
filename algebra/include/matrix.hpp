@@ -3,32 +3,151 @@
 
 #include <array>             // for array
 #include <cassert>           // for assert
-#include <cstddef>           // for size_t
+#include <cstdint>           // for uint32_t
 #include <initializer_list>  // for initializer_list
-#include <iostream>          // for <<
-#include <memory>            // for unique_ptr
-#include <ostream>           // for basic_ostream
-#include <string>            // for string
-#include <vector>            // for vector
+#include <memory>            // for unique_ptr, make_unique
+#include <ostream>           // for ostream
+#include <type_traits>       // for true_type, false_type, is_same_v, enable_if_t, enable_if, integral_constant
+#include <utility>           // for move, swap
 
-#include "real.hpp"  // for iszero, complex, real_prec_t, real_rnd_t
+#include "real.hpp"     // for real, abs, mpfr_prec_t, mpfr_rnd_t
+#include "real_io.hpp"  // for operator<<
 
 namespace algebra
 {
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	class Polynomial;
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	class Vector;
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	class Matrix;
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	class Tensor;
+	// meta functions
+	// T is a ring or not (ring is mpfr::real or a polynomial ring of some ring)
+	template <class T>
+	struct is_ring;
+	template <class T>
+	inline constexpr bool is_ring_v = is_ring<T>::value;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct is_ring<mpfr::real<prec, rnd>> : std::true_type
+	{
+	};
+	template <class R>
+	struct is_ring<Polynomial<R>> : is_ring<R>
+	{
+	};
+	template <class R>
+	struct is_ring : std::false_type
+	{
+	};
+	// T is mpfr::real or not
 	template <class T>
 	struct is_mpfr_real;
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	struct is_mpfr_real<mpfr::real<prec, rnd>>
-	{
-		static constexpr bool value = true;
-	};
-	template <class T>
-	struct is_mpfr_real
-	{
-		static constexpr bool value = false;
-	};
 	template <class T>
 	inline constexpr bool is_mpfr_real_v = is_mpfr_real<T>::value;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct is_mpfr_real<mpfr::real<prec, rnd>> : std::true_type
+	{
+	};
+	template <class T>
+	struct is_mpfr_real : std::false_type
+	{
+	};
+	// calculate base ring (= mpfr::real) of T
+	template <class T>
+	struct base_ring;
+	template <class T>
+	using base_ring_t = typename base_ring<T>::type;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct base_ring<mpfr::real<prec, rnd>>
+	{
+		using type = mpfr::real<prec, rnd>;
+	};
+	template <class Ring>
+	struct base_ring<Polynomial<Ring>>
+	{
+		using type = base_ring_t<Ring>;
+	};
+	template <class Ring>
+	struct base_ring<Vector<Ring>>
+	{
+		using type = base_ring_t<Ring>;
+	};
+	template <class Ring>
+	struct base_ring<Matrix<Ring>>
+	{
+		using type = base_ring_t<Ring>;
+	};
+	template <class Ring>
+	struct base_ring<Tensor<Ring>>
+	{
+		using type = base_ring_t<Ring>;
+	};
+	// R is a non-trivial (R != E and R != mpfr::real) intermediate ring of E / mpfr::real or not
+	template <class E, class R, class = void>
+	struct is_intermediate;
+	template <class E, class R>
+	constexpr bool is_intermediate_v = is_intermediate<E, R>::value;
+	template <class E>
+	struct is_intermediate<Polynomial<E>, E, std::enable_if_t<!is_mpfr_real_v<E>>> : std::true_type
+	{
+	};
+	template <class E, class R>
+	struct is_intermediate<
+	    Polynomial<E>, R,
+	    std::enable_if_t<!std::is_same_v<Polynomial<E>, R> && !std::is_same_v<E, R> && !is_mpfr_real_v<R>>>
+	    : is_intermediate<E, R>
+	{
+	};
+	template <class E, class R, class>
+	struct is_intermediate : std::false_type
+	{
+	};
+	template <class R, uint32_t n>
+	struct add_variables;
+	template <class R, uint32_t n>
+	using add_variables_t = typename add_variables<R, n>::type;
+	template <class R>
+	struct add_variables<R, 0>
+	{
+		using type = R;
+	};
+	template <class R, uint32_t n>
+	struct add_variables
+	{
+		using type = Polynomial<add_variables_t<R, n - 1>>;
+	};
+	template <class R>
+	struct ring_dimension;
+	template <class R>
+	constexpr uint32_t ring_dimension_v = ring_dimension<R>::value;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct ring_dimension<mpfr::real<prec, rnd>> : std::integral_constant<uint32_t, 0>
+	{
+	};
+	template <class R>
+	struct ring_dimension<Polynomial<R>> : std::integral_constant<uint32_t, ring_dimension_v<R> + 1>
+	{
+	};
+	template <class R1, class R2, class = void>
+	struct union_ring;
+	template <class R1, class R2>
+	using union_ring_t = typename union_ring<R1, R2>::type;
+	template <class R1, class R2>
+	struct union_ring<R1, R2,
+	                  std::enable_if_t<std::is_same_v<base_ring_t<R1>, base_ring_t<R2>> &&
+	                                   ring_dimension_v<R1> >= ring_dimension_v<R2>>>
+	{
+		using type = R1;
+	};
+	template <class R1, class R2>
+	    struct union_ring < R1,
+	    R2,
+	    std::enable_if_t<std::is_same_v<base_ring_t<R1>, base_ring_t<R2>> && ring_dimension_v<R1><ring_dimension_v<R2>>>
+	{
+		using type = R2;
+	};
 	// interface Swappable<T> {
 	//	void swap(T&);
 	// };
@@ -39,40 +158,67 @@ namespace algebra
 	//	bool iszero() const;
 	// }
 	// assert(T{}.iszero());  // where T: DefaultConstructible, ZeroCheckable
-	// Real: Swappable, Clonable, ZeroCheckable, DefaultConstructible
+	// Ring: Swappable, Clonable, ZeroCheckable, DefaultConstructible
 	// Polynomial: Swappable, Clonable, ZeroCheckable, DefaultConstructible
-	// Vector<Real>: Swappable, Clonable
-	// Matrix<Real>: Swappable, Clonable
-	// Tensor<Real>: Swappable, Clonable
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	// Vector<Ring>: Swappable, Clonable
+	// Matrix<Ring>: Swappable, Clonable
+	// Tensor<Ring>: Swappable, Clonable
+	// definitions
+	template <class Ring>
 	class Vector
 	{
-		std::unique_ptr<Real[]> arr_;
-		size_t sz_;
-		Vector(Real* ptr, size_t len) : arr_(ptr), sz_(len) {}
+		std::unique_ptr<Ring[]> arr_;
+		uint32_t sz_;
+		Vector(Ring* ptr, uint32_t len) : arr_(ptr), sz_(len) {}
 
 	public:
-		explicit Vector(size_t len) : arr_(std::make_unique<Real[]>(len)), sz_(len) {}
-		Vector(size_t len, const Real& val) : arr_(std::make_unique<Real[]>(len)), sz_(len)
+		template <class Ring2>
+		friend class Vector;
+		template <class Ring2>
+		friend class Matrix;
+		template <class Ring2>
+		friend class Tensor;
+		using base = typename base_ring<Ring>::type;
+		using ring = Ring;
+		using type = Vector<Ring>;
+		explicit Vector(uint32_t len) : arr_(std::make_unique<Ring[]>(len)), sz_(len) {}
+		Vector(uint32_t len, const Ring& val) : arr_(std::make_unique<Ring[]>(len)), sz_(len)
 		{
-			for (size_t i = 0; i < len; i++) arr_[i] = val.clone();
+			for (uint32_t i = 0; i < len; i++) arr_[i] = val.clone();
 		}
 		Vector(Vector&& v) noexcept = default;
 		Vector& operator=(Vector&& v) noexcept = default;
 		~Vector() = default;
 		Vector(const Vector& v) = delete;
 		Vector& operator=(const Vector& v) = default;
-		[[nodiscard]] Real* get() noexcept { return arr_.get(); }
-		[[nodiscard]] const Real* get() const noexcept { return arr_.get(); }
-		[[nodiscard]] Real& get(std::size_t i) { return arr_[i]; }
-		[[nodiscard]] const Real& get(std::size_t i) const { return arr_[i]; }
-		[[nodiscard]] Real& operator[](std::size_t i) { return get(i); }
-		[[nodiscard]] const Real& operator[](std::size_t i) const { return get(i); }
-		[[nodiscard]] const size_t& size() const noexcept { return sz_; }
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> ||
+		                                            (std::is_same_v<T, base> && !std::is_same_v<T, Ring>)>>
+		explicit Vector(const Vector<T>& v) : Vector(v.sz_)
+		{
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] = Ring(v.arr_[i]);
+		}
+		Vector(std::initializer_list<Ring> v) : Vector(uint32_t(v.size()))
+		{
+			uint32_t i = 0;
+			for (auto& t : v) arr_[i++] = t.clone();
+		}
+		[[nodiscard]] Ring* get() noexcept { return arr_.get(); }
+		[[nodiscard]] const Ring* get() const noexcept { return arr_.get(); }
+		[[nodiscard]] Ring& get(uint32_t i) { return arr_[i]; }
+		[[nodiscard]] const Ring& get(uint32_t i) const { return arr_[i]; }
+		[[nodiscard]] Ring& operator[](uint32_t i) { return get(i); }
+		[[nodiscard]] const Ring& operator[](uint32_t i) const { return get(i); }
+		[[nodiscard]] const uint32_t& size() const noexcept { return sz_; }
+		[[nodiscard]] const Ring* cbegin() const noexcept { return arr_.get(); }
+		[[nodiscard]] const Ring* cend() const noexcept { return arr_.get() + sz_; }
+		[[nodiscard]] const Ring* begin() const noexcept { return arr_.get(); }
+		[[nodiscard]] const Ring* end() const noexcept { return arr_.get() + sz_; }
+		[[nodiscard]] Ring* begin() noexcept { return arr_.get(); }
+		[[nodiscard]] Ring* end() noexcept { return arr_.get() + sz_; }
 		[[nodiscard]] Vector clone() const
 		{
 			Vector v(sz_);
-			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
+			for (uint32_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
 			return v;
 		}
 		void swap(Vector& other)
@@ -82,94 +228,112 @@ namespace algebra
 		}
 		void negate()
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
 		}
-		template <class T = Real>
-		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> abs() const
+		[[nodiscard]] bool iszero() const noexcept
 		{
-			return mpfr::sqrt(norm());
+			for (uint32_t i = 0; i < sz_; i++)
+				if (!arr_[i].iszero()) return false;
+			return true;
 		}
-		[[nodiscard]] Real norm() const
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Ring abs() const
 		{
-			Real s{};
-			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
+			return norm().sqrt();
+		}
+		[[nodiscard]] Ring norm() const
+		{
+			Ring s{};
+			for (uint32_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
 			return s;
 		}
-		Vector& operator+=(const Vector& v)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Vector& operator+=(const Vector<T>& v)
 		{
 			assert(v.sz_ == sz_);
-			for (size_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
 			return *this;
 		}
-		Vector& operator-=(const Vector& v)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Vector& operator-=(const Vector<T>& v)
 		{
 			assert(v.sz_ == sz_);
-			for (size_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
 			return *this;
 		}
-		Vector& operator*=(const Real& r)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Vector& operator*=(const T& r)
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] *= r;
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] *= r;
 			return *this;
 		}
-		template <class T = Vector&>
-		std::enable_if_t<is_mpfr_real_v<Real>, T> operator/=(const Real& r)
+		Vector& operator/=(const base& r)
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] /= r;
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] /= r;
 			return *this;
 		}
 		[[nodiscard]] Vector convolve(const Vector& other) const
 		{
 			assert(sz_ == other.sz_);
 			Vector z(sz_);
-			Real s;
-			for (size_t i = 0; i < sz_; i++)
+			Ring s;
+			for (uint32_t i = 0; i < sz_; i++)
 			{
 				s = {};
-				for (size_t j = 0; j <= i; j++) s += arr_[j] * other.arr_[i - j];
+				for (uint32_t j = 0; j <= i; j++) s += arr_[j] * other.arr_[i - j];
 				z.arr_[i] = std::move(s);
 			}
 			return z;
 		}
-		friend Vector operator+(const Vector& x, const Vector& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Vector<union_ring_t<Ring, R>> operator+(const Vector& x, const Vector<R>& y)
 		{
 			assert(x.sz_ == y.sz_);
-			Vector z(x.sz_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
+			Vector<union_ring_t<Ring, R>> z(x.sz_);
+			for (uint32_t i = 0; i < x.sz_; i++) z[i] = x.arr_[i] + y.arr_[i];
 			return z;
 		}
-		friend Vector operator-(const Vector& x, const Vector& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Vector<union_ring_t<Ring, R>> operator-(const Vector& x, const Vector<R>& y)
 		{
 			assert(x.sz_ == y.sz_);
-			Vector z(x.sz_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
+			Vector<union_ring_t<Ring, R>> z(x.sz_);
+			for (uint32_t i = 0; i < x.sz_; i++) z[i] = x.arr_[i] - y.arr_[i];
 			return z;
 		}
-		friend Vector operator*(const Vector& x, const Real& r)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Vector<union_ring_t<Ring, R>> operator*(const Vector& x, const R& r)
+		{
+			Vector<union_ring_t<Ring, R>> z(x.sz_);
+			for (uint32_t i = 0; i < x.sz_; i++) z[i] = x.arr_[i] * r;
+			return z;
+		}
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Vector<union_ring_t<Ring, R>> operator*(const R& r, const Vector& x)
+		{
+			return x * r;
+		}
+		friend Vector operator/(const Vector& x, const base& r)
 		{
 			Vector z(x.sz_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
 			return z;
 		}
-		friend Vector operator*(const Real& r, const Vector& x) { return x * r; }
-		template <class T = Vector>
-		friend std::enable_if_t<is_mpfr_real_v<Real>, T> operator/(const Vector& x, const Real& r)
-		{
-			Vector z(x.sz_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
-			return z;
-		}
-		friend Real operator*(const Vector& x, const Vector& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend union_ring_t<Ring, R> operator*(const Vector& x, const Vector<R>& y)
 		{
 			assert(x.sz_ == y.sz_);
-			Real s{};
-			for (size_t i = 0; i < x.sz_; i++) s += x.arr_[i] * y.arr_[i];
+			union_ring_t<Ring, R> s{};
+			for (uint32_t i = 0; i < x.sz_; i++) s += x.arr_[i] * y.arr_[i];
 			return s;
 		}
 		friend bool operator==(const Vector& x, const Vector& y)
 		{
 			if (x.sz_ != y.sz_) return false;
-			for (size_t i = 0; i < x.sz_; i++)
+			for (uint32_t i = 0; i < x.sz_; i++)
 				if (x.arr_[i] != y.arr_[i]) return false;
 			return true;
 		}
@@ -181,50 +345,55 @@ namespace algebra
 			y.negate();
 			return y;
 		}
-		template <class Real2>
-		friend class Matrix;
-		template <class Real2>
-		friend class Tensor;
 	};
 
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	class Matrix
 	{
-		std::unique_ptr<Real[]> arr_;
-		size_t row_, col_, sz_;
+		std::unique_ptr<Ring[]> arr_;
+		uint32_t row_, col_, sz_;
 
 	public:
-		Matrix(size_t r, size_t c) : arr_(std::make_unique<Real[]>(r * c)), row_(r), col_(c), sz_(r * c) {}
+		using base = typename base_ring<Ring>::type;
+		using ring = Ring;
+		using type = Matrix<Ring>;
+		Matrix(uint32_t r, uint32_t c) : arr_(std::make_unique<Ring[]>(r * c)), row_(r), col_(c), sz_(r * c) {}
 		Matrix(Matrix&& v) noexcept = default;
 		Matrix& operator=(Matrix&& v) noexcept = default;
 		~Matrix() = default;
 		Matrix(const Matrix& v) = delete;
-		Matrix& operator=(const Matrix& v) = default;
-		[[nodiscard]] Real* get() noexcept { return arr_.get(); }
-		[[nodiscard]] const Real* get() const noexcept { return arr_.get(); }
-		[[nodiscard]] Real& get(size_t r, size_t c) { return arr_[r * col_ + c]; }
-		[[nodiscard]] const Real& get(size_t r, size_t c) const { return arr_[r * col_ + c]; }
-		[[nodiscard]] Real& operator[](std::array<std::size_t, 2> i) { return get(i[0], i[1]); }
-		[[nodiscard]] const Real& operator[](std::array<std::size_t, 2> i) const { return get(i[0], i[1]); }
-		[[nodiscard]] const size_t& size() const noexcept { return sz_; }
-		[[nodiscard]] const size_t& row() const noexcept { return row_; }
-		[[nodiscard]] const size_t& column() const noexcept { return col_; }
-		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
-		template <class T = Real>
-		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> abs() const
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> ||
+		                                            (std::is_same_v<T, base> && !std::is_same_v<T, Ring>)>>
+		explicit Matrix(const Matrix<T>& v) : Matrix(v.row_, v.col_)
 		{
-			return mpfr::sqrt(norm());
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] = Ring(v.arr_[i]);
 		}
-		[[nodiscard]] Real norm() const
+		Matrix& operator=(const Matrix& v) = default;
+		[[nodiscard]] Ring* get() noexcept { return arr_.get(); }
+		[[nodiscard]] const Ring* get() const noexcept { return arr_.get(); }
+		[[nodiscard]] Ring& get(uint32_t r, uint32_t c) { return arr_[r * col_ + c]; }
+		[[nodiscard]] const Ring& get(uint32_t r, uint32_t c) const { return arr_[r * col_ + c]; }
+		[[nodiscard]] Ring& operator[](std::array<std::uint32_t, 2> i) { return get(i[0], i[1]); }
+		[[nodiscard]] const Ring& operator[](std::array<std::uint32_t, 2> i) const { return get(i[0], i[1]); }
+		[[nodiscard]] const uint32_t& size() const noexcept { return sz_; }
+		[[nodiscard]] const uint32_t& row() const noexcept { return row_; }
+		[[nodiscard]] const uint32_t& column() const noexcept { return col_; }
+		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Ring abs() const
 		{
-			Real s{};
-			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
+			return norm().sqrt();
+		}
+		[[nodiscard]] Ring norm() const
+		{
+			Ring s{};
+			for (uint32_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
 			return s;
 		}
 		[[nodiscard]] Matrix clone() const
 		{
 			Matrix v(row_, col_);
-			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
+			for (uint32_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
 			return v;
 		}
 		void swap(Matrix& other)
@@ -234,36 +403,47 @@ namespace algebra
 			std::swap(col_, other.col_);
 			std::swap(sz_, other.sz_);
 		}
+		[[nodiscard]] bool iszero() const noexcept
+		{
+			for (uint32_t i = 0; i < sz_; i++)
+				if (!arr_[i].iszero()) return false;
+			return true;
+		}
 		void negate()
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
 		}
-		Matrix& operator+=(const Matrix& v)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Matrix& operator+=(const Matrix<T>& v)
 		{
 			assert(v.row_ == row_ && v.col_ == col_);
-			for (size_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
 			return *this;
 		}
-		Matrix& operator-=(const Matrix& v)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Matrix& operator-=(const Matrix<T>& v)
 		{
 			assert(v.row_ == row_ && v.col_ == col_);
-			for (size_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
 			return *this;
 		}
-		Matrix& operator*=(const Real& r)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Matrix& operator*=(const T& r)
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] *= r;
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] *= r;
 			return *this;
 		}
-		template <class T = Matrix&>
-		std::enable_if_t<is_mpfr_real_v<Real>, T> operator/=(const Real& r)
+		Matrix& operator/=(const base& r)
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] /= r;
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] /= r;
 			return *this;
 		}
-		Vector<Real> flatten()
+		Vector<Ring> flatten()
 		{
-			Vector<Real> v(arr_.release(), sz_);
+			Vector<Ring> v(arr_.release(), sz_);
 			row_ = col_ = sz_ = 0;
 			return v;
 		}
@@ -271,16 +451,69 @@ namespace algebra
 		{
 			if (row_ == col_)
 			{
-				Real t;
-				for (size_t i = 0; i < row_; i++)
-					for (size_t j = 0; j < i; j++) get(i, j).swap(get(j, i));
+				for (uint32_t i = 0; i < row_; i++)
+					for (uint32_t j = 0; j < i; j++) get(i, j).swap(get(j, i));
 			}
 			else
 			{
 				auto t = clone();
-				for (size_t i = 0; i < row_; i++)
-					for (size_t j = 0; j < col_; j++) get(i, j) = std::move(t.get(j, i));
+				for (uint32_t i = 0; i < row_; i++)
+					for (uint32_t j = 0; j < col_; j++) get(i, j) = std::move(t.get(j, i));
 			}
+		}
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Matrix inverse() const
+		{
+			assert(row_ == col_);
+			Matrix m = clone(), inv = Matrix::constant(base(1), row_);
+			for (uint32_t j = 0; j < row_; j++)
+			{
+				uint32_t p = j;
+				auto max = Ring{};
+				for (uint32_t i = p; i < row_; i++)
+				{
+					auto abs = mpfr::abs(m.get(i, j));
+					if (abs > max)
+					{
+						max = abs;
+						p = i;
+					}
+				}
+				inv.swap_row(p, j);
+				m.swap_row(p, j, j);
+				inv.multiply_row(j, 1 / m.get(j, j));
+				m.multiply_row(j, 1 / m.get(j, j), j);
+				for (uint32_t i = j + 1; i < row_; i++)
+				{
+					inv.add_row(j, i, -m.get(i, j));
+					m.add_row(j, i, -m.get(i, j), j);
+				}
+			}
+			for (uint32_t j = row_ - 1; j < row_; j--)
+				for (uint32_t r = j - 1; r < j; r--)
+				{
+					inv.add_row(j, r, -m.get(r, j));
+					m.add_row(j, r, -m.get(r, j), j);
+				}
+			return inv;
+		}
+		void add_row(uint32_t f, uint32_t t, const Ring& x, uint32_t c0 = 0)
+		{
+			for (uint32_t c = c0; c < col_; c++) get(t, c) += x * get(f, c);
+		}
+		void multiply_row(uint32_t r, const Ring& x, uint32_t c0 = 0)
+		{
+			for (uint32_t c = c0; c < col_; c++) get(r, c) *= x;
+		}
+		void swap_row(uint32_t r1, uint32_t r2, uint32_t c0 = 0)
+		{
+			for (uint32_t c = c0; c < col_; c++) get(r1, c).swap(get(r2, c));
+		}
+		static Matrix constant(const Ring& c, uint32_t n)
+		{
+			Matrix m(n, n);
+			for (uint32_t i = 0; i < n; i++) m.get(i, i) = c.clone();
+			return m;
 		}
 		friend Matrix operator+(const Matrix& x) { return x.clone(); }
 		friend Matrix operator-(const Matrix& x)
@@ -289,71 +522,80 @@ namespace algebra
 			z.negate();
 			return z;
 		}
-		friend Matrix operator+(const Matrix& x, const Matrix& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Matrix<union_ring_t<Ring, R>> operator+(const Matrix& x, const Matrix<R>& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_);
-			Matrix z(x.row_, x.col_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
+			Matrix<union_ring_t<Ring, R>> z(x.row_, x.col_);
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
 			return z;
 		}
-		friend Matrix operator-(const Matrix& x, const Matrix& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Matrix<union_ring_t<Ring, R>> operator-(const Matrix& x, const Matrix<R>& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_);
-			Matrix z(x.row_, x.col_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
+			Matrix<union_ring_t<Ring, R>> z(x.row_, x.col_);
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
 			return z;
 		}
-		friend Matrix operator*(const Matrix& x, const Real& r)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Matrix<union_ring_t<Ring, R>> operator*(const Matrix& x, const R& r)
+		{
+			Matrix<union_ring_t<Ring, R>> z(x.row_, x.col_);
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
+			return z;
+		}
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Matrix<union_ring_t<Ring, R>> operator*(const R& r, const Matrix& x)
+		{
+			return x * r;
+		}
+		friend Matrix operator/(const Matrix& x, const base& r)
 		{
 			Matrix z(x.row_, x.col_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
 			return z;
 		}
-		friend Matrix operator*(const Real& r, const Matrix& x) { return x * r; }
-		template <class T = Matrix>
-		friend std::enable_if_t<is_mpfr_real_v<Real>, T> operator/(const Matrix& x, const Real& r)
-		{
-			Matrix z(x.row_, x.col_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
-			return z;
-		}
-		friend Vector<Real> operator*(const Matrix& x, const Vector<Real>& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Vector<union_ring_t<Ring, R>> operator*(const Matrix& x, const Vector<R>& y)
 		{
 			assert(x.col_ == y.size());
-			Vector<Real> z(x.row_);
-			Real s;
-			for (size_t i = 0; i < x.row_; i++)
+			Vector<union_ring_t<Ring, R>> z(x.row_);
+			union_ring_t<Ring, R> s;
+			for (uint32_t i = 0; i < x.row_; i++)
 			{
 				s = {};
-				for (size_t j = 0, p = i * x.col_; j < x.col_; j++, p++) s += x.arr_[p] * y[j];
+				for (uint32_t j = 0, p = i * x.col_; j < x.col_; j++, p++) s += x.arr_[p] * y[j];
 				z[i] = std::move(s);
 			}
 			return z;
 		}
-		friend Vector<Real> operator*(const Vector<Real>& x, const Matrix& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Vector<union_ring_t<Ring, R>> operator*(const Vector<R>& x, const Matrix& y)
 		{
 			assert(x.size() == y.row_);
-			Vector<Real> z(y.col_);
-			Real s;
-			for (size_t i = 0; i < y.col_; i++)
+			Vector<union_ring_t<Ring, R>> z(y.col_);
+			union_ring_t<Ring, R> s;
+			for (uint32_t i = 0; i < y.col_; i++)
 			{
 				s = {};
-				for (size_t j = 0; j < y.row_; j++) s += x[j] * y.get(j, i);
+				for (uint32_t j = 0; j < y.row_; j++) s += x[j] * y.get(j, i);
 				z[i] = std::move(s);
 			}
 			return z;
 		}
-		friend Matrix operator*(const Matrix& x, const Matrix& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Matrix<union_ring_t<Ring, R>> operator*(const Matrix& x, const Matrix<R>& y)
 		{
 			assert(x.col_ == y.row_);
-			Matrix<Real> z(x.row_, y.col_);
-			Real s;
-			for (size_t i = 0; i < x.row_; i++)
+			Matrix<union_ring_t<Ring, R>> z(x.row_, y.col_);
+			union_ring_t<Ring, R> s;
+			for (uint32_t i = 0; i < x.row_; i++)
 			{
-				for (size_t j = 0; j < y.col_; j++)
+				for (uint32_t j = 0; j < y.col_; j++)
 				{
 					s = {};
-					for (size_t k = 0; k < x.col_; k++) s += x.get(i, k) * y.get(k, j);
+					for (uint32_t k = 0; k < x.col_; k++) s += x.get(i, k) * y.get(k, j);
 					z.get(i, j) = std::move(s);
 				}
 			}
@@ -362,46 +604,46 @@ namespace algebra
 		friend bool operator==(const Matrix& x, const Matrix& y)
 		{
 			if (x.row_ != y.row_ || x.col_ != y.col_) return false;
-			for (size_t i = 0; i < x.sz_; i++)
+			for (uint32_t i = 0; i < x.sz_; i++)
 				if (x.arr_[i] != y.arr_[i]) return false;
 			return true;
 		}
 		friend bool operator!=(const Matrix& x, const Matrix& y) { return !(x == y); }
 		// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
 		// this == L L^t and L is lower triangular.
-		template <class T = Matrix>
-		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> cholesky_decomposition() const
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Matrix cholesky_decomposition() const
 		{
 			assert(is_square());
 			Matrix L(row_, row_);
-			Real s;
-			for (size_t i = 0; i < row_; i++)
+			Ring s;
+			for (uint32_t i = 0; i < row_; i++)
 			{
-				for (size_t j = 0; j <= i; j++)
+				for (uint32_t j = 0; j <= i; j++)
 				{
 					s = {};
-					for (size_t k = 0; k < j; k++) s += L.get(i, k) * L.get(j, k);
+					for (uint32_t k = 0; k < j; k++) s += L.get(i, k) * L.get(j, k);
 					s = get(i, j) - s;
-					L.get(i, j) = i == j ? mpfr::sqrt(s) : s / L.get(j, j);
+					L.get(i, j) = i == j ? s.sqrt() : s / L.get(j, j);
 				}
 			}
 			return L;
 		}
 		// calculate the inverse matrix of lower triangular matrix
-		template <class T = Matrix>
-		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> lower_triangular_inverse() const
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Matrix lower_triangular_inverse() const
 		{
 			// this must be lower triangular, i.e., get(i, j) == 0 for i < j
 			assert(is_square());
 			Matrix res(row_, row_);
-			Real s;
-			for (size_t i = 0; i < row_; i++)
+			Ring s;
+			for (uint32_t i = 0; i < row_; i++)
 			{
 				res.get(i, i) = 1 / get(i, i);
-				for (size_t j = 0; j < i; j++)
+				for (uint32_t j = 0; j < i; j++)
 				{
 					s = {};
-					for (size_t k = j; k < i; k++) s += get(i, k) * res.get(k, j);
+					for (uint32_t k = j; k < i; k++) s += get(i, k) * res.get(k, j);
 					res.get(i, j) = -s / get(i, i);
 				}
 			}
@@ -409,15 +651,18 @@ namespace algebra
 		}
 	};
 
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	class Tensor
 	{
-		std::unique_ptr<Real[]> arr_;
-		size_t row_, col_, len_, sz_;
+		std::unique_ptr<Ring[]> arr_;
+		uint32_t row_, col_, len_, sz_;
 
 	public:
-		Tensor(size_t r, size_t c, size_t l)
-		    : arr_(std::make_unique<Real[]>(r * c * l)), row_(r), col_(c), len_(l), sz_(r * c * l)
+		using base = typename base_ring<Ring>::type;
+		using ring = Ring;
+		using type = Tensor<Ring>;
+		Tensor(uint32_t r, uint32_t c, uint32_t l)
+		    : arr_(std::make_unique<Ring[]>(r * c * l)), row_(r), col_(c), len_(l), sz_(r * c * l)
 		{
 		}
 		Tensor(Tensor&& v) noexcept = default;
@@ -425,31 +670,40 @@ namespace algebra
 		~Tensor() = default;
 		Tensor(const Tensor& v) = delete;
 		Tensor& operator=(const Tensor& v) = default;
-		[[nodiscard]] Real* get() noexcept { return arr_.get(); }
-		[[nodiscard]] const Real* get() const noexcept { return arr_.get(); }
-		[[nodiscard]] Real& get(size_t r, size_t c, size_t i) { return arr_[(r * col_ + c) * len_ + i]; }
-		[[nodiscard]] const Real& get(size_t r, size_t c, size_t i) const { return arr_[(r * col_ + c) * len_ + i]; }
-		[[nodiscard]] Real& operator[](std::array<std::size_t, 3> i) { return get(i[0], i[1], i[2]); }
-		[[nodiscard]] const Real& operator[](std::array<std::size_t, 3> i) const { return get(i[0], i[1], i[2]); }
-		[[nodiscard]] const size_t& size() const noexcept { return sz_; }
-		[[nodiscard]] const size_t& row() const noexcept { return row_; }
-		[[nodiscard]] const size_t& column() const noexcept { return col_; }
-		[[nodiscard]] const size_t& length() const noexcept { return len_; }
-		template <class T = Real>
-		[[nodiscard]] std::enable_if_t<is_mpfr_real_v<Real>, T> abs() const
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> ||
+		                                            (std::is_same_v<T, base> && !std::is_same_v<T, Ring>)>>
+		explicit Tensor(const Tensor<T>& v) : Tensor(v.row_, v.col_, v.len_)
 		{
-			return mpfr::sqrt(norm());
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] = Ring(v.arr_[i]);
 		}
-		[[nodiscard]] Real norm() const
+		[[nodiscard]] Ring* get() noexcept { return arr_.get(); }
+		[[nodiscard]] const Ring* get() const noexcept { return arr_.get(); }
+		[[nodiscard]] Ring& get(uint32_t r, uint32_t c, uint32_t i) { return arr_[(r * col_ + c) * len_ + i]; }
+		[[nodiscard]] const Ring& get(uint32_t r, uint32_t c, uint32_t i) const
 		{
-			Real s{};
-			for (size_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
+			return arr_[(r * col_ + c) * len_ + i];
+		}
+		[[nodiscard]] Ring& operator[](std::array<std::uint32_t, 3> i) { return get(i[0], i[1], i[2]); }
+		[[nodiscard]] const Ring& operator[](std::array<std::uint32_t, 3> i) const { return get(i[0], i[1], i[2]); }
+		[[nodiscard]] const uint32_t& size() const noexcept { return sz_; }
+		[[nodiscard]] const uint32_t& row() const noexcept { return row_; }
+		[[nodiscard]] const uint32_t& column() const noexcept { return col_; }
+		[[nodiscard]] const uint32_t& length() const noexcept { return len_; }
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Ring abs() const
+		{
+			return norm().sqrt();
+		}
+		[[nodiscard]] Ring norm() const
+		{
+			Ring s{};
+			for (uint32_t i = 0; i < sz_; i++) s += arr_[i] * arr_[i];
 			return s;
 		}
 		[[nodiscard]] Tensor clone() const
 		{
 			Tensor v(row_, col_, len_);
-			for (size_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
+			for (uint32_t i = 0; i < sz_; i++) v.arr_[i] = arr_[i].clone();
 			return v;
 		}
 		void swap(Tensor& other)
@@ -460,36 +714,47 @@ namespace algebra
 			std::swap(len_, other.len_);
 			std::swap(sz_, other.sz_);
 		}
+		[[nodiscard]] bool iszero() const noexcept
+		{
+			for (uint32_t i = 0; i < sz_; i++)
+				if (!arr_[i].iszero()) return false;
+			return true;
+		}
 		void negate()
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] = -arr_[i];
 		}
-		Tensor& operator+=(const Tensor& v)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Tensor& operator+=(const Tensor<T>& v)
 		{
 			assert(v.row_ == row_ && v.col_ == col_ && v.len_ == len_);
-			for (size_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] += v.arr_[i];
 			return *this;
 		}
-		Tensor& operator-=(const Tensor& v)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Tensor& operator-=(const Tensor<T>& v)
 		{
 			assert(v.row_ == row_ && v.col_ == col_ && v.len_ == len_);
-			for (size_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] -= v.arr_[i];
 			return *this;
 		}
-		Tensor& operator*=(const Real& r)
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> || std::is_same_v<T, base> ||
+		                                            std::is_same_v<T, Ring>>>
+		Tensor& operator*=(const T& r)
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] *= r;
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] *= r;
 			return *this;
 		}
-		template <class T = Tensor&>
-		std::enable_if_t<is_mpfr_real_v<Real>, T> operator/=(const Real& r)
+		Tensor& operator/=(const base& r)
 		{
-			for (size_t i = 0; i < sz_; i++) arr_[i] /= r;
+			for (uint32_t i = 0; i < sz_; i++) arr_[i] /= r;
 			return *this;
 		}
-		Vector<Real> flatten()
+		Vector<Ring> flatten()
 		{
-			Vector<Real> v(arr_.release(), sz_);
+			Vector<Ring> v(arr_.release(), sz_);
 			row_ = col_ = len_ = sz_ = 0;
 			return v;
 		}
@@ -500,50 +765,56 @@ namespace algebra
 			z.negate();
 			return z;
 		}
-		friend Tensor operator+(const Tensor& x, const Tensor& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Tensor<union_ring_t<Ring, R>> operator+(const Tensor& x, const Tensor<R>& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_ && x.len_ == y.len_);
 			Tensor z(x.row_, x.col_, x.len_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] + y.arr_[i];
 			return z;
 		}
-		friend Tensor operator-(const Tensor& x, const Tensor& y)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Tensor<union_ring_t<Ring, R>> operator-(const Tensor& x, const Tensor<R>& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_ && x.len_ == y.len_);
 			Tensor z(x.row_, x.col_, x.len_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] - y.arr_[i];
 			return z;
 		}
-		friend Tensor operator*(const Tensor& x, const Real& r)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Tensor<union_ring_t<Ring, R>> operator*(const Tensor& x, const R& r)
 		{
 			Tensor z(x.row_, x.col_, x.len_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] * r;
 			return z;
 		}
-		friend Tensor operator*(const Real& r, const Tensor& x) { return x * r; }
-		template <class T = Tensor>
-		friend std::enable_if_t<is_mpfr_real_v<Real>, T> operator/(const Tensor& x, const Real& r)
+		template <class R, class = std::enable_if_t<is_ring_v<R>>>
+		friend Tensor<union_ring_t<Ring, R>> operator*(const R& r, const Tensor& x)
+		{
+			return x * r;
+		}
+		friend Tensor operator/(const Tensor& x, const base& r)
 		{
 			Tensor z(x.row_, x.col_, x.len_);
-			for (size_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
+			for (uint32_t i = 0; i < x.sz_; i++) z.arr_[i] = x.arr_[i] / r;
 			return z;
 		}
 		friend bool operator==(const Tensor& x, const Tensor& y)
 		{
 			if (x.row_ != y.row_ || x.col_ != y.col_ || x.len_ != y.len_) return false;
-			for (size_t i = 0; i < x.sz_; i++)
+			for (uint32_t i = 0; i < x.sz_; i++)
 				if (x.arr_[i] != y.arr_[i]) return false;
 			return true;
 		}
 		friend bool operator!=(const Tensor& x, const Tensor& y) { return !(x == y); }
 	};
 
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	std::ostream& operator<<(std::ostream& out, const Vector<Real>& v)
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	std::ostream& operator<<(std::ostream& out, const Vector<Ring>& v)
 	{
 		out << "[";
 		auto f = false;
-		for (size_t i = 0; i < v.size(); i++)
+		for (uint32_t i = 0; i < v.size(); i++)
 		{
 			if (f) out << ", ";
 			out << v[i];
@@ -552,17 +823,17 @@ namespace algebra
 		return out << "]";
 	}
 
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	std::ostream& operator<<(std::ostream& out, const Matrix<Real>& v)
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	std::ostream& operator<<(std::ostream& out, const Matrix<Ring>& v)
 	{
 		out << "[";
 		auto f = false;
-		for (size_t i = 0; i < v.row(); i++)
+		for (uint32_t i = 0; i < v.row(); i++)
 		{
 			if (f) out << ", ";
 			auto g = false;
 			out << "[";
-			for (size_t j = 0; j < v.column(); j++)
+			for (uint32_t j = 0; j < v.column(); j++)
 			{
 				if (g) out << ", ";
 				out << v.get(i, j);

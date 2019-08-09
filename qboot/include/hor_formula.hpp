@@ -1,9 +1,11 @@
-#ifndef HOR_FORMULA_H
-#define HOR_FORMULA_H
+#ifndef HOR_FORMULA_HPP_
+#define HOR_FORMULA_HPP_
 
-#include <array>
-#include "matrix.hpp"
-#include "real.hpp"
+#include <array>    // for array
+#include <cstdint>  // for uint32_t, int32_t
+
+#include "matrix.hpp"  // for Vector, Matrix
+#include "real.hpp"    // for real, mpfr_t, mpfr_prec_t, mpfr_rnd_t
 
 namespace qboot2
 {
@@ -19,9 +21,9 @@ namespace qboot2
 	void deallocate_spin_nonzero_coeffs_folder(std::array<std::array<mpfr_t, 5>, 8>& a);
 	void deallocate_spin_zero_coeffs_folder(std::array<std::array<mpfr_t, 4>, 6>& a);
 
-	void spin_nonzero_evaluate_at_n(std::array<mpfr_t, 8>& a, std::array<std::array<mpfr_t, 5>, 8>& rho, long n,
-	                                mpfr_prec_t prec, mpfr_rnd_t rnd);
-	void spin_zero_evaluate_at_n(std::array<mpfr_t, 6>& a, std::array<std::array<mpfr_t, 4>, 6>& rho, long n,
+	void spin_nonzero_evaluate_at_n(std::array<mpfr_t, 8>& a, std::array<std::array<mpfr_t, 5>, 8>& rho, int32_t n,
+	                                mpfr_rnd_t rnd);
+	void spin_zero_evaluate_at_n(std::array<mpfr_t, 6>& a, std::array<std::array<mpfr_t, 4>, 6>& rho, int32_t n,
 	                             mpfr_rnd_t rnd);
 }  // namespace qboot2
 
@@ -65,16 +67,16 @@ namespace qboot
 	}
 
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::Vector<Real> _evaluate_at_n(const algebra::Matrix<Real>& rho, size_t n)
+	algebra::Vector<Real> _evaluate_at_n(const algebra::Matrix<Real>& rho, uint32_t n)
 	{
 		// v[i] = sum(rho[i, j] * pow(n, j), j)
 		// j runs over {0, 1, 2} if ell == 0 else {0, 1, 2, 3}
 		algebra::Vector<Real> v(rho.row());
 		auto jmax = rho.row() / 2 - 1;
-		for (size_t i = 0; i < rho.row(); i++)
+		for (uint32_t i = 0; i < rho.row(); i++)
 		{
 			v[i] = rho.get(i, rho.row() / 2);
-			for (size_t j = 0; j <= jmax; j++) v[i] = v[i] * Real(n) + rho.get(i, jmax - j);
+			for (uint32_t j = 0; j <= jmax; j++) v[i] = v[i] * Real(n) + rho.get(i, jmax - j);
 		}
 		return v;
 	}
@@ -424,7 +426,6 @@ namespace qboot
 		_t_0 -= _t_1;
 		// a[0, 2] = -5 * mpfr::pow(Delta - epsilon - 1, 2) + mpfr::pow(ell + epsilon, 2);
 		a.get(0, 2) = _t_0 - 5;
-		a.get(0, 2) = -5 * mpfr::pow(Delta - epsilon - 1, 2) + mpfr::pow(ell + epsilon, 2);
 		_t_0 = Delta * (-4);
 		_t_1 = 4 * epsilon;
 		_t_0 += _t_1;
@@ -2224,4 +2225,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // HOR_FORMULA_H
+#endif  // HOR_FORMULA_HPP_

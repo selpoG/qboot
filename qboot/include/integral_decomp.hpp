@@ -1,16 +1,19 @@
-#ifndef INTEGRAL_DECOMP_H
-#define INTEGRAL_DECOMP_H
+#ifndef INTEGRAL_DECOMP_HPP_
+#define INTEGRAL_DECOMP_HPP_
 
-#include "matrix.hpp"
-#include "real.hpp"
+#include <cstdint>   // for uint32_t, int32_t
+#include <optional>  // for optional
+
+#include "matrix.hpp"  // for Vector
+#include "real.hpp"    // for real
 
 namespace qboot
 {
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::Vector<Real> simple_pole_integral(size_t pole_order_max, const Real& base, const Real& pole_position,
+	algebra::Vector<Real> simple_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position,
 	                                           const Real& incomplete_gamma_factor);
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::Vector<Real> double_pole_integral(size_t pole_order_max, const Real& base, const Real& pole_position,
+	algebra::Vector<Real> double_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position,
 	                                           const Real& incomplete_gamma_factor);
 	// let pole_position = -p, base = \\exp(-k)
 	// calculate \\int_{0}^{\\infty} \\frac{e^{-k x} x^n}{x + p} dx, for n = 0, ..., pole_order_max
@@ -20,7 +23,7 @@ namespace qboot
 	//   + \\frac{1}{k^n}\\sum_{i = 0}^{n - 1} (n - i - 1)! (-p k)^i
 	// incomplete_gamma_factor = e^{p k} \\Gamma(0, p k)
 	template <class Real>
-	algebra::Vector<Real> simple_pole_integral(size_t pole_order_max, const Real& base, const Real& pole_position,
+	algebra::Vector<Real> simple_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position,
 	                                           const Real& incomplete_gamma_factor)
 	{
 		algebra::Vector<Real> result(pole_order_max + 1);
@@ -30,7 +33,7 @@ namespace qboot
 		Real factorial = 1;
 		Real minus_log_base = -1 / mpfr::log(base);
 		Real log_base_power = minus_log_base;
-		for (size_t j = 1; j <= pole_order_max; j++)
+		for (uint32_t j = 1; j <= pole_order_max; j++)
 		{
 			// factorial == (j - 1)!;
 			// pow == incomplete_gamma_factor * pow(pole_position, j);
@@ -54,7 +57,7 @@ namespace qboot
 	// let pole_position = -p, base = \\exp(-k)
 	// calculate \\int_{0}^{\\infty} \\frac{e^{-k x} x^n}{(x + p)^2} dx, for n = 0, ..., pole_order_max
 	template <class Real>
-	algebra::Vector<Real> double_pole_integral(size_t pole_order_max, const Real& base, const Real& pole_position,
+	algebra::Vector<Real> double_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position,
 	                                           const Real& incomplete_gamma_factor)
 	{
 		algebra::Vector<Real> result(pole_order_max + 1);
@@ -69,7 +72,7 @@ namespace qboot
 		result[0] += tmp;
 		// result[0] == 1 / minus_pole_position + incomplete_gamma_factor * log(base);
 
-		for (size_t i = 1; i <= pole_order_max; i++) result[i] = result[i - 1] * pole_position;
+		for (uint32_t i = 1; i <= pole_order_max; i++) result[i] = result[i - 1] * pole_position;
 
 		std::optional<algebra::Vector<Real>> factorial_times_power_lnb = std::nullopt;
 		std::optional<algebra::Vector<Real>> single_pole_coeffs = std::nullopt;
@@ -107,7 +110,7 @@ namespace qboot
 			single_pole_coeffs[0] = 1;
 			result[1] += incomplete_gamma_factor;
 
-			for (size_t j = 1; j + 1 <= pole_order_max; j++)
+			for (uint32_t j = 1; j + 1 <= pole_order_max; j++)
 			{
 				single_pole_coeffs[j] = single_pole_coeffs[j - 1] * pole_position + tmp;
 
@@ -121,11 +124,11 @@ namespace qboot
 			}
 		}
 
-		for (size_t j = 0; j + 2 <= pole_order_max; j++)
-			for (size_t k = 0; k <= j; k++) result[j + 2] += factorial_times_power_lnb[k] * single_pole_coeffs[j - k];
+		for (uint32_t j = 0; j + 2 <= pole_order_max; j++)
+			for (uint32_t k = 0; k <= j; k++) result[j + 2] += factorial_times_power_lnb[k] * single_pole_coeffs[j - k];
 
 		return result;
 	}
 }  // namespace qboot
 
-#endif  // INTEGRAL_DECOMP_H
+#endif  // INTEGRAL_DECOMP_HPP_

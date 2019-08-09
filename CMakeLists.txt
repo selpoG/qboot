@@ -59,3 +59,9 @@ add_subdirectory(qboot)
 add_subdirectory(main)
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT main)
+
+add_custom_target(run
+	COMMAND bin/main
+	DEPENDS main
+	WORKING_DIRECTORY ${CMAKE_PROJECT_DIR}
+)

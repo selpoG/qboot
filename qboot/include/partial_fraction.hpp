@@ -1,16 +1,17 @@
-#ifndef PARTIAL_FRACTION_H
-#define PARTIAL_FRACTION_H
+#ifndef PARTIAL_FRACTION_HPP_
+#define PARTIAL_FRACTION_HPP_
 
-#include <vector>
+#include <cstddef>  // for size_t
+#include <vector>   // for vector
 
-#include "matrix.hpp"
-#include "real.hpp"
+#include "matrix.hpp"  // for Vector
+#include "real.hpp"    // for real
 
 namespace qboot
 {
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	algebra::Vector<Real> fast_partial_fraction(const algebra::Vector<Real>& pole_locations,
-	                                              const std::vector<bool>& is_double, size_t n_poles)
+	                                            const std::vector<bool>& is_double, size_t n_poles)
 	{
 		size_t expected_result_length = n_poles;
 		for (size_t i = 0; i < n_poles; i++)
@@ -44,4 +45,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // PARTIAL_FRACTION_H
+#endif  // PARTIAL_FRACTION_HPP_

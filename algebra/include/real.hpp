@@ -38,6 +38,7 @@
 // //////////////////////////////////////////////////////////////////
 
 #include <limits>
+#include <sstream>
 #include "mpfr.h"
 
 // //////////////////////////////////////////////////////////////////
@@ -1950,6 +1951,12 @@ namespace mpfr
 	}
 
 	template <real_prec_t _prec, real_rnd_t _rnd>
+	inline bool is_integer(const real<_prec, _rnd>& r)
+	{
+		return r == floor(r);
+	}
+
+	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
 	                          const real<_prec, _rnd>>::type
 	log(const real<_prec, _rnd>& r)
@@ -2699,6 +2706,14 @@ namespace mpfr
 		return temp;
 	}
 
+	template <real_prec_t _prec, real_rnd_t _rnd>
+	inline real<_prec, _rnd> pochhammer(const real<_prec, _rnd>& op1, unsigned long op2)
+	{
+		real<_prec, _rnd> temp(1);
+		for (unsigned long i = 0; i < op2; i++) temp *= op1 + i;
+		return temp;
+	}
+
 	template <class _Tp1, class _Tp2>
 	inline typename enable_if<
 	    type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp1, true>::enable_math_funcs &&
@@ -2914,6 +2929,7 @@ namespace mpfr
 
 		static constexpr real_prec_t prec = _prec;
 		static constexpr real_rnd_t rnd = _rnd;
+		using type = real;
 
 		// //////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
@@ -2962,6 +2978,17 @@ namespace mpfr
 		real clone() const { return *this; }
 
 		bool iszero() const { return mpfr::iszero(*this); }
+
+		real sqrt() const { return mpfr::sqrt(*this); }
+
+		void negate() { MPFR_NS mpfr_mul_si(_x, _x, -1, _rnd); }
+
+		std::string str() const
+		{
+			std::ostringstream os;
+			os << *this;
+			return os.str();
+		}
 
 		// //////////////////////////////////////////////////////////////
 		// converting constructors and converting assignment operators
