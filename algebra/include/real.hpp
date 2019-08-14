@@ -2333,7 +2333,7 @@ namespace mpfr
 		else
 		{
 			real_exp_t temp = MPFR_NS mpfr_get_exp(r._x);
-			if (temp != std::numeric_limits<real_exp_t>::min()) temp--;
+			if (temp != std::numeric_limits<real_exp_t>::min()) --temp;
 			return temp;
 		}
 	}
@@ -2710,7 +2710,7 @@ namespace mpfr
 	inline real<_prec, _rnd> pochhammer(const real<_prec, _rnd>& op1, unsigned long op2)
 	{
 		real<_prec, _rnd> temp(1);
-		for (unsigned long i = 0; i < op2; i++) temp *= op1 + i;
+		for (unsigned long i = 0; i < op2; ++i) temp *= op1 + i;
 		return temp;
 	}
 
@@ -2907,13 +2907,13 @@ namespace mpfr
 		return temp;
 	}
 
-	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
-	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
-	                          const real<_prec, _rnd>>::type
+	template <real_prec_t _prec1 = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd1 = MPFR_REAL_CLASS_RND_DFLT>
+	inline typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
+	                          const real<_prec1, _rnd1>>::type
 	factorial(const mpfr_old_ulong n)
 	{
-		real<_prec, _rnd> temp;
-		MPFR_NS mpfr_fac_ui(temp._x, n, _rnd);
+		real<_prec1, _rnd1> temp;
+		MPFR_NS mpfr_fac_ui(temp._x, n, _rnd1);
 		return temp;
 	}
 
@@ -4045,10 +4045,10 @@ namespace mpfr
 		                          const real<_prec1, _rnd1>>::type
 		const_catalan();
 
-		template <real_prec_t _prec1, real_rnd_t _rnd1>
-		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		                          const real<_prec1, _rnd1>>::type
-		factorial(const mpfr_old_long n);
+		//template <real_prec_t _prec1, real_rnd_t _rnd1>
+		//friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
+		//                          const real<_prec1, _rnd1>>::type
+		//factorial(const mpfr_old_long n);
 	};  // class real
 }  // namespace mpfr
 

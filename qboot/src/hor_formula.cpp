@@ -5,26 +5,26 @@ namespace qboot2
 {
 	void initialize_spin_nonzero_coeffs_folder(array<array<mpfr_t, 5>, 8>& a, mpfr_prec_t prec)
 	{
-		for (uint32_t i = 0; i <= 7; i++)
+		for (uint32_t i = 0; i <= 7; ++i)
 		{
-			for (uint32_t j = 0; j <= 4; j++) { mpfr_init2(a.at(i).at(j), prec); }
+			for (uint32_t j = 0; j <= 4; ++j) { mpfr_init2(a.at(i).at(j), prec); }
 		}
 	}
 
 	void deallocate_spin_nonzero_coeffs_folder(array<array<mpfr_t, 5>, 8>& a)
 	{
-		for (uint32_t i = 0; i <= 7; i++)
+		for (uint32_t i = 0; i <= 7; ++i)
 		{
-			for (uint32_t j = 0; j <= 4; j++) { mpfr_clear(a.at(i).at(j)); }
+			for (uint32_t j = 0; j <= 4; ++j) { mpfr_clear(a.at(i).at(j)); }
 		}
 	}
 
 	void spin_nonzero_evaluate_at_n(array<mpfr_t, 8>& a, array<array<mpfr_t, 5>, 8>& rho, int32_t n, mpfr_rnd_t rnd)
 	{
-		for (uint32_t i = 0; i <= 7; i++)
+		for (uint32_t i = 0; i <= 7; ++i)
 		{
 			mpfr_set(a.at(i), rho.at(i).at(4), rnd);
-			for (uint32_t j = 0; j <= 3; j++)
+			for (uint32_t j = 0; j <= 3; ++j)
 			{
 				mpfr_mul_si(a.at(i), a.at(i), n, rnd);
 				mpfr_add(a.at(i), a.at(i), rho.at(i).at(3 - j), rnd);

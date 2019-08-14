@@ -21,7 +21,7 @@ namespace util
 	{
 		std::array<size_t, rank_ + 1> p{};
 		p[rank_] = 1;
-		for (size_t i = rank_ - 1; i < rank_; i--) p[i] = p[i + 1] * a[i];
+		for (size_t i = rank_ - 1; i < rank_; --i) p[i] = p[i + 1] * a[i];
 		return p;
 	}
 	using std::size_t;
@@ -49,8 +49,8 @@ namespace util
 		multi_array(const T& val, const std::array<size_t, rank_>& dim) : multi_array(val, dim, _products(dim)) {}
 		multi_array() : buf(1), dims{}, dim_products{}
 		{
-			for (size_t i = 0; i < rank_; i++) dims[i] = 1;
-			for (size_t i = 0; i <= rank_; i++) dim_products[i] = 1;
+			for (size_t i = 0; i < rank_; ++i) dims[i] = 1;
+			for (size_t i = 0; i <= rank_; ++i) dim_products[i] = 1;
 		}
 		void resize(const std::array<size_t, rank_>& dim)
 		{

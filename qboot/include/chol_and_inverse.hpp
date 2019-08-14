@@ -13,8 +13,8 @@ namespace qboot
 	{
 		auto dim = (1 + ab.size()) / 2;
 		algebra::Matrix<Ring> A(dim, dim);
-		for (size_t i = 0; i < dim; i++)
-			for (size_t j = 0; j < dim; j++) A.get(i, j) = ab[i + j];
+		for (size_t i = 0; i < dim; ++i)
+			for (size_t j = 0; j < dim; ++j) A.get(i, j) = ab[i + j];
 		return A.cholesky_decomposition().lower_triangular_inverse();
 	}
 }  // namespace qboot

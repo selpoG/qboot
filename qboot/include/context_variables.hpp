@@ -10,6 +10,7 @@
 
 #include "matrix.hpp"      // for Vector, Matrix
 #include "polynomial.hpp"  // for Polynomial
+#include "primary_op.hpp"  // for PrimaryOperator
 #include "real.hpp"        // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt, pow
 
 namespace qboot2
@@ -24,7 +25,7 @@ namespace qboot2
 		mpfr_t rho;
 	} cb_context;
 
-	/* basic constructor for cb_context */
+	// basic constructor for cb_context
 	cb_context context_construct(uint32_t n_Max, mpfr_prec_t prec, uint32_t lambda);
 	void clear_cb_context(cb_context& context);
 }  // namespace qboot2
@@ -33,8 +34,8 @@ namespace qboot
 {
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class RationalApproxData;
-	constexpr uint32_t _triangle_num(uint32_t n) noexcept { return n * (n + 1) / 2; }
-	constexpr uint32_t get_dimG(uint32_t lambda) noexcept { return (lambda + 2) * (lambda + 2) / 4; }
+	inline constexpr uint32_t _triangle_num(uint32_t n) noexcept { return n * (n + 1) / 2; }
+	inline constexpr uint32_t get_dimG(uint32_t lambda) noexcept { return (lambda + 2) * (lambda + 2) / 4; }
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	algebra::Matrix<Real> z_zbar_derivative_to_x_y_derivative_Matrix(uint32_t lambda)
 	{
@@ -42,17 +43,15 @@ namespace qboot
 		algebra::Matrix result(dimG, dimG);
 		auto to_index = [lambda](uint32_t a, uint32_t b) { return (lambda + 2 - a) * a + b; };
 		std::vector<algebra::Polynomial<Real>> p, q;
-		for (uint32_t i = 0; i <= lambda; i++)
+		for (uint32_t i = 0; i <= lambda; ++i)
 			p.push_back(algebra::Polynomial<Real>::linear_power(Real(1), Real(1), i));
-		for (uint32_t i = 0; i <= lambda; i++)
+		for (uint32_t i = 0; i <= lambda; ++i)
 			q.push_back(algebra::Polynomial<Real>::linear_power(Real(1), Real(-1), i));
-		for (uint32_t i = 0; i <= lambda / 2; i++)
-			for (uint32_t j = i; j <= lambda - i; j++)
+		for (uint32_t i = 0; i <= lambda / 2; ++i)
+			for (uint32_t j = i; j <= lambda - i; ++j)
 			{
 				auto coeff = i == j ? p[i] * q[i] : p[i] * q[j] + p[j] * q[i];
-				if (coeff.iszero()) continue;
-				auto d = uint32_t(coeff.degree());
-				for (uint32_t k = (i + j) % 2; k <= d; k += 2)
+				for (uint32_t k = (i + j) % 2; k <= i + j; k += 2)
 					result.get(to_index((i + j - k) / 2, k), to_index(i, j - i)) = coeff[k];
 			}
 		return result;
@@ -87,42 +86,50 @@ namespace qboot
 		      rho_to_delta(lambda + 1)
 		{
 			assert(dim >= 3 && dim % 2 == 1);
-			for (uint32_t i = 0; 2 * i <= lambda; i++)
-				for (uint32_t j = 0; j <= lambda - 2 * i; j++) index_list.push_back(std::array{i, j});
+			for (uint32_t i = 0; 2 * i <= lambda; ++i)
+				for (uint32_t j = 0; j <= lambda - 2 * i; ++j) index_list.push_back(std::array{i, j});
 			auto Lambda = lambda + 1;
 			zzbar_to_xy_marix = z_zbar_derivative_to_x_y_derivative_Matrix<Real>(lambda);
+
+			// z = 4 * rho / pow(1 + rho, 2)
+			// (d/dz)^n / n! = sum(rho_to_z_matrix[n, i] * (d/drho)^i / i!, 0 <= i <= n)
 			algebra::Vector<Real> tmps(Lambda);
 			tmps[0] = -mpfr::sqrt(Real(8));
-			for (uint32_t j = 1; j < Lambda; j++) tmps[j] = (tmps[j - 1] * (2 * Real(j) - 3)) / Real(j);
+			for (uint32_t j = 1; j < Lambda; ++j) tmps[j] = (tmps[j - 1] * (2 * int32_t(j) - 3)) / j;
 			tmps[1] -= 2;
 			tmps[0] += 3;
 
 			Real tmp;
 			rho_to_z_matrix.get(0, 0) = 1;
-			for (uint32_t j = 1; j < Lambda; j++)
+			for (uint32_t j = 1; j < Lambda; ++j)
 			{
 				tmp = 1;
-				for (uint32_t k = 0; k <= j; k++)
+				for (uint32_t k = 0; k <= j; ++k)
 				{
 					rho_to_z_matrix.get(1, j) += tmps[j - k] * tmp;
 					tmp *= -2;
 				}
 			}
-			for (uint32_t i = 2; i < Lambda; i++)
-				for (uint32_t j = 1; j < Lambda; j++)
-					for (uint32_t k = i - 1; k < Lambda - j; k++)
+			for (uint32_t i = 2; i < Lambda; ++i)
+				for (uint32_t j = 1; j < Lambda; ++j)
+					for (uint32_t k = i - 1; k < Lambda - j; ++k)
 						rho_to_z_matrix.get(i, k + j) += rho_to_z_matrix.get(i - 1, k) * rho_to_z_matrix.get(1, j);
 
 			rho_to_z_matrix.transpose();
 
 			rho_to_delta[0] = {Real(1)};
-			for (uint32_t i = 1; i <= lambda; i++)
+			for (uint32_t i = 1; i <= lambda; ++i)
 			{
 				tmp = 1 / (rho * i);
-				rho_to_delta[i] = rho_to_delta[i - 1] * algebra::Polynomial<Real>({Real(1 - int32_t(i)) * tmp, tmp});
+				rho_to_delta[i] = rho_to_delta[i - 1] * algebra::Polynomial<Real>({(1 - int32_t(i)) * tmp, tmp});
 			}
 			rho_to_delta = rho_to_z_matrix * rho_to_delta;
 		}
+		Context(Context&&) = default;
+		Context& operator=(Context&&) = default;
+		Context(const Context&) = delete;
+		Context& operator=(const Context&) = delete;
+		~Context() = default;
 		uint32_t dim_f() const noexcept { return _triangle_num((lambda + 1) / 2); }
 		uint32_t dim_h() const noexcept { return _triangle_num((lambda + 2) / 2); }
 		template <class T>
@@ -130,17 +137,20 @@ namespace qboot
 		{
 			return Real(val);
 		}
+		Real unitary_bound(uint32_t spin) const { return spin == 0 ? epsilon : spin + 2 * epsilon; }
+		auto get_primary(const Real& delta, uint32_t spin) const { return PrimaryOperator(delta, spin, *this); }
+		auto get_general_primary(uint32_t spin) const { return general_primary_operator(spin, *this); }
 		// compute the table of derivative of v = (z z_bar) ^ d in the x_y basis
 		algebra::Vector<Real> v_to_d(const Real& d) const
 		{
 			algebra::Vector<Real> table(lambda + 1);
-			table[0] = Real(1);
-			for (uint32_t i = 1; i <= lambda; i++) table[i] = table[i - 1] * (-2 * (d - Real(i - 1))) / Real(i);
+			table[0] = 1;
+			for (uint32_t i = 1; i <= lambda; ++i) table[i] = table[i - 1] * (-2 * (d - (i - 1))) / i;
 			uint32_t dimG = get_dimG(lambda);
 			algebra::Vector<Real> res(dimG);
 			uint32_t pos = 0;
-			for (uint32_t i = 0; i <= lambda; i++)
-				for (uint32_t j = i; j <= lambda - i; j++) res[pos++] = table[i] * table[j];
+			for (uint32_t i = 0; i <= lambda; ++i)
+				for (uint32_t j = i; j <= lambda - i; ++j) res[pos++] = table[i] * table[j];
 			return zzbar_to_xy_marix * res;
 		}
 		// parity = 0 or 1
@@ -172,56 +182,102 @@ namespace qboot
 		}
 		algebra::Matrix<Real> F_minus_matrix(const Real& d) const { return F_matrix_impl(d, 1); }
 		algebra::Matrix<Real> F_plus_matrix(const Real& d) const { return F_matrix_impl(d, 0); }
-		algebra::Vector<Real> h_times_rho_k(uint32_t k, const Real& ell, const Real& Delta, const Real& S,
+		algebra::Vector<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
 		                                    const Real& P) const
 		{
-			return hBlock_times_rho_n(k, epsilon, ell, Delta, S, P, *this);
+			return hBlock_powered(Real(k), op, S, P);
 		}
-		uint32_t aligned_index(uint32_t y, uint32_t x) const noexcept { return (lambda + 2 - y) * y + x; }
-		algebra::Vector<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(epsilon, S, *this); }
-		algebra::Vector<algebra::Polynomial<Real>> c2_expand(algebra::Vector<algebra::Polynomial<Real>>&& array_real,
-		                                                     const Real& ell, const Real& S, const Real& P) const
+		uint32_t aligned_index(int32_t y, int32_t x) const noexcept
 		{
-			algebra::Polynomial<Real> local_c2{ell * (ell + 2 * epsilon), -2 - 2 * epsilon, Real(1)};
-			algebra::Vector<algebra::Polynomial<Real>> ans(get_dimG(lambda));
-			for (uint32_t i = 0; i <= lambda; i++) ans[i] = std::move(array_real[i]);
-			for (uint32_t i = 1; i <= lambda / 2; i++)
+			return uint32_t((int32_t(lambda) + 2 - y) * y + x);
+		}
+		algebra::Vector<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
+		algebra::Vector<algebra::Polynomial<Real>> expand_off_diagonal(
+		    algebra::Vector<algebra::Polynomial<Real>>&& realAxisResult, uint32_t spin, const Real& S,
+		    const Real& P) const
+		{
+			return expand_off_diagonal(std::move(realAxisResult), get_general_primary(spin), S, P);
+		}
+		// recover off-diagonal derivatives of conformal block from the diagonal derivatives.
+		// use recursion relation of eq (C.1) in arXiv:1203.6064.
+		// note:
+		//   z   = x + sqrt(y) = (a + sqrt(b)) / 2
+		//   z^* = x - sqrt(y) = (a - sqrt(b)) / 2
+		//   h_{m, n}(there) := (der a) ^ m (der b) ^ n g_{\Delta, spin}
+		//                    = (1 / 2) ^ {m + n} (der x) ^ m (der y) ^ n g_{\Delta, spin}
+		//   and h_{m, n}(there) = m! n! h_{m, n}(here) / 2 ^ {m + n}
+		//   h_{m, n}(here) = (der x) ^ m (der y) ^ n g_{\Delta, spin} / (m! n!)
+		//   h_{m, n}(here) satisfies g_{\Delta, spin} = \sum_{m, n >= 0} h_{m, n}(here) (x - 1 / 2) ^ m y ^ n
+		//   ((x, y) = (1 / 2, 0) is the crossing symmetric point)
+		template <class T>
+		algebra::Vector<T> expand_off_diagonal(algebra::Vector<T>&& realAxisResult, const PrimaryOperator<Real, T>& op,
+		                                       const Real& S, const Real& P) const
+		{
+			algebra::Vector<T> h(get_dimG(lambda));
+			for (uint32_t m = 0; m <= lambda; ++m) h[m] = std::move(realAxisResult[m]);
+
+			T val{}, term{}, quad_casimir = op.quadratic_casimir();
+
+			for (int32_t n = 1; uint32_t(n) <= lambda / 2; ++n)
 			{
-				Real ri = Real(i);
-				for (uint32_t j = 0; j + 2 * i <= lambda; j++)
+				Real common_factor = (4 * n) * epsilon + (4 * n - 2) * n;
+				for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda; ++m)
 				{
-					Real rj = Real(j);
-					algebra::Polynomial<Real> val{};
-					Real common_factor = 2 * epsilon + ri * 2 - 1;
-					if (j >= 3) val += ans[aligned_index(i, j - 3)] * Real(16);
-					if (j >= 2) val += ans[aligned_index(i, j - 2)] * Real(8);
-					if (j >= 1) val -= ans[aligned_index(i, j - 1)] * Real(4);
-					val *= common_factor;
-					val += (-(rj + 1) * (rj + 2) / ri) * ans[aligned_index(i - 1, j + 2)];
-					val += (2 * (rj + 1) * (2 * S + 2 * epsilon - 4 * ri - rj + 6) / ri) *
-					       ans[aligned_index(i - 1, j + 1)];
-					val += (Real(4) *
-					        (2 * P + 8 * S * ri + 4 * S * rj - 8 * S + Real(2) * local_c2 + 4 * epsilon * ri +
-					         4 * epsilon * rj - 4 * epsilon + 4 * ri * ri + 8 * ri * rj - 2 * ri + rj * rj - 5 * rj -
-					         Real(2)) /
-					        ri) *
-					       ans[aligned_index(i - 1, j)];
-					if (j >= 1)
-						val += (8 *
-						        (2 * P + 8 * S * ri + 2 * S * rj - 10 * S - 4 * epsilon * ri + 2 * epsilon * rj +
-						         2 * epsilon + 12 * ri * ri + 12 * ri * rj - 34 * ri + rj * rj - 13 * rj + 22) /
-						        ri) *
-						       ans[aligned_index(i - 1, j - 1)];
-					if (i >= 2)
+					// The second line
+					val = (-(m + 1) * (m + 2)) * h[aligned_index(n - 1, m + 2)];
+
+					term = T(2 * (epsilon + S) - (m + 4 * n - 6));
+					term *= h[aligned_index(n - 1, m + 1)];
+					term *= 2 * (m + 1);
+					val += term;
+
+					// The third line
+					term = T(epsilon * (4 * (m + n - 1)));
+					term += m * (m + 8 * n - 5) + n * (4 * n - 2) - 2;
+					term += 2 * P;
+					term += S * (8 * n + 4 * m - 8);
+					term += 4 * quad_casimir;
+					term *= h[aligned_index(n - 1, m)];
+					term *= 4;
+					val += term;
+
+					// The fourth line
+					if (m >= 1)
 					{
-						val += (4 * ((rj + 1) * (rj + 2)) / ri) * ans[aligned_index(i - 2, j + 2)];
-						val += (8 * (rj + 1) * (2 * S - 2 * epsilon + 4 * ri + 3 * rj - 6) / ri) *
-						       ans[aligned_index(i - 2, j + 1)];
+						term = T(epsilon * (2 * (m + 1 - 2 * n)));
+						term += m * (m + 12 * n - 13) + n * (12 * n - 34) + 22;
+						term += 2 * P;
+						term += S * (8 * n + 2 * m - 10);
+						term *= h[aligned_index(n - 1, m - 1)];
+						term *= 8;
+						val += term;
 					}
-					ans[aligned_index(i, j)] = val / (2 * common_factor);
+
+					// The last line
+					if (n >= 2)
+					{
+						term = T(2 * epsilon);
+						term += 6 - 3 * m - 4 * n;
+						term += -2 * S;
+						term *= h[aligned_index(n - 2, m + 1)];
+						term *= 8 * (m + 1);
+						term -= h[aligned_index(n - 2, m + 2)] * (4 * (m + 1) * (m + 2));
+						val -= term;
+					}
+
+					// finally divide by 2 * (D + 2 n - 3)
+					val /= common_factor;
+
+					// The first line
+					term = {};
+					if (m >= 3) term += 8 * h[aligned_index(n, m - 3)];
+					if (m >= 2) term += 4 * h[aligned_index(n, m - 2)];
+					if (m >= 1) term -= 2 * h[aligned_index(n, m - 1)];
+
+					h[aligned_index(n, m)] = val + term;
 				}
 			}
-			return ans;
+			return h;
 		}
 	};
 }  // namespace qboot

@@ -11,13 +11,16 @@
 #include "partial_fraction.hpp"
 #include "pole_data.hpp"
 #include "polynomial.hpp"
+#include "primary_op.hpp"
 #include "real.hpp"
 #include "real_io.hpp"
 
 using R = mpfr::real<1000, MPFR_RNDN>;
-using algebra::Polynomial, algebra::Matrix;
+using algebra::Polynomial, algebra::Vector, algebra::Matrix;
 template <class R>
 using P = Polynomial<R>;
+template <class R>
+using V = Vector<R>;
 
 namespace qboot
 {
@@ -44,6 +47,7 @@ namespace qboot
 	static_assert(std::is_same_v<algebra::add_variables_t<R, 1>, P<R>>);
 	static_assert(std::is_same_v<algebra::add_variables_t<R, 2>, P<P<R>>>);
 	static_assert(std::is_same_v<algebra::add_variables_t<P<R>, 1>, P<P<R>>>);
+	static_assert(algebra::is_polynomial_v<P<R>>);
 	auto hoge = P<R>::linear_power(R(1), R(1), 3) * P<R>::linear_power(R(1), R(-1), 5);
 	auto fuga = P<R>::linear_power(R(1), R(1), 5) * P<R>::linear_power(R(1), R(-1), 3);
 	std::cout << hoge << std::endl;
@@ -51,10 +55,16 @@ namespace qboot
 	std::cout << (hoge + fuga) * R(0.5) << std::endl;
 	std::cout << P<P<R>>::linear_power(P<R>{R(-1), R(2)}, P<R>{R(2), R(-3), R(1)}, 3) << std::endl;
 	P<P<R>> afo{+fuga, hoge + fuga};
-	afo += P<P<R>>(R(2));
+	afo *= R(2);
 	afo = afo * hoge;
 	std::cout << afo + R(-0.3) << std::endl;
 	P<P<R>> baka(fuga);
+	// V<P<R>> vec{P<R>{R(2), R(-3)}, P<R>{R(-1), R(4), R(0.5)}};
+	// vec *= R(2);
+	V<R> vec{R(2), R(-3), R(0.5)};
+	vec *= 2;
+	vec /= 3.0;
+	vec * 2 / 3;
 	// (p * x + q) / (r * x + s)
 	// q == r == 0 && p == s => Id
 	// r == 0 && p == s => S(q / s)

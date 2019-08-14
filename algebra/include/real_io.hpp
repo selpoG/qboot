@@ -101,7 +101,7 @@ namespace mpfr
 			{
 				const real_exp_t exp_prev = exp;
 				volatile real_exp_t* exp_ptr = &exp;
-				exp--;
+				--exp;
 				if (*exp_ptr > exp_prev)
 					throw exception_real(
 					    "in std::ostream& operator <<(std::ostream& s, const real<_prec, _rnd>& r):\n  exponent out of "

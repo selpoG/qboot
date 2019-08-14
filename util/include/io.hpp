@@ -92,7 +92,7 @@ namespace util
 				if (v.val.size() == 0 && v.on_empty.has_value()) return os << v.on_empty.value();
 				auto flag = false;
 				os << v.left;
-				for (size_t x = 0; x < v.val.size(); x++)
+				for (size_t x = 0; x < v.val.size(); ++x)
 				{
 					if (flag) os << v.sep;
 					os << _out_array_wrap<T, r, fixed_ + 1, Printer>(v.val[x], v.left, v.right, v.sep, v.on_empty,
