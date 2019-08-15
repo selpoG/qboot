@@ -143,9 +143,15 @@ int main()
 	{
 		const auto& c = cs[dim_].value();
 		auto op = c.get_primary(R(0.81), 0);
-		std::cout << c.F_minus_matrix(R(0.7)) * gBlock_full(op, R(0), R(0)).as_vector() << std::endl;
-		qboot::RationalApproxData<R> ag(numax, 0, c, d12, d34);
-		std::cout << ag.approx_g() << std::endl;
+		std::cout << "op = " << op.str() << std::endl;
+		auto g = gBlock_full(op, R(0), R(0));
+		auto F = c.F_block(R(0.7), g, qboot::FunctionSymmetry::Odd);
+		auto H = c.F_block(R(0.7), g, qboot::FunctionSymmetry::Even);
+		std::cout << "g = " << g << std::endl;
+		std::cout << "F_{-} = " << F << std::endl;
+		std::cout << "F_{+} = " << H << std::endl;
+		/*qboot::RationalApproxData<R> ag(numax, 0, c, d12, d34);
+		std::cout << ag.approx_g() << std::endl;*/
 	}
 	for (uint32_t dim = 3; dim < 10; dim += 2)
 	{
