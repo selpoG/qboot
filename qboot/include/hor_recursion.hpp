@@ -4,6 +4,7 @@
 #include <cstdint>  // for uint32_t, int32_t
 #include <memory>   // for unique_ptr
 
+#include "complex_function.hpp"   // for ComplexFunction
 #include "context_variables.hpp"  // for Context, cb_context
 #include "hor_formula.hpp"        // for _get_rec_coeffs, _evaluate_at_n
 #include "matrix.hpp"             // for Vector
@@ -41,7 +42,7 @@ namespace qboot
 	algebra::Vector<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S,
 	                                     const Real& P);
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::Vector<Real> gBlock_full(const PrimaryOperator<Real>& op, const Real& S, const Real& P);
+	ComplexFunction<Real> gBlock_full(const PrimaryOperator<Real>& op, const Real& S, const Real& P);
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	algebra::Vector<Real> h_asymptotic(const Real& S, const Context<Real>& context);
 
@@ -128,7 +129,7 @@ namespace qboot
 	}
 
 	template <class Real>
-	algebra::Vector<Real> gBlock_full(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
+	ComplexFunction<Real> gBlock_full(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
 	{
 		return op.context().expand_off_diagonal(hBlock_powered(op, S, P), op, S, P);
 	}

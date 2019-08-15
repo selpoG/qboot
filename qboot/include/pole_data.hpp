@@ -5,6 +5,7 @@
 #include <cstdint>  // for uint32_t, int32_t
 #include <vector>   // for vector
 
+#include "complex_function.hpp"   // for ComplexFunction
 #include "context_variables.hpp"  // for Context
 #include "matrix.hpp"             // for Vector, Matrix
 #include "polynomial.hpp"         // for Polynomial
@@ -178,7 +179,7 @@ namespace qboot
 			}
 			return res;
 		}
-		algebra::Vector<algebra::Polynomial<Real>> approx_g()
+		ComplexFunction<algebra::Polynomial<Real>> approx_g()
 		{
 			const auto& v1 = context.rho_to_delta;
 			auto v2 = approx_h();

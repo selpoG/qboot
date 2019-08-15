@@ -1,4 +1,5 @@
 #include "chol_and_inverse.hpp"
+#include "complex_function.hpp"
 #include "context_variables.hpp"
 #include "damped_rational.hpp"
 #include "hor_formula.hpp"

@@ -8,10 +8,11 @@
 #include <string>   // for string
 #include <vector>   // for vector
 
-#include "matrix.hpp"      // for Vector, Matrix
-#include "polynomial.hpp"  // for Polynomial
-#include "primary_op.hpp"  // for PrimaryOperator
-#include "real.hpp"        // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt, pow
+#include "complex_function.hpp"  // for ComplexFunction
+#include "matrix.hpp"            // for Vector, Matrix
+#include "polynomial.hpp"        // for Polynomial
+#include "primary_op.hpp"        // for PrimaryOperator
+#include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt, pow
 
 namespace qboot2
 {
@@ -187,12 +188,8 @@ namespace qboot
 		{
 			return hBlock_powered(Real(k), op, S, P);
 		}
-		uint32_t aligned_index(int32_t y, int32_t x) const noexcept
-		{
-			return uint32_t((int32_t(lambda) + 2 - y) * y + x);
-		}
 		algebra::Vector<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
-		algebra::Vector<algebra::Polynomial<Real>> expand_off_diagonal(
+		ComplexFunction<algebra::Polynomial<Real>> expand_off_diagonal(
 		    algebra::Vector<algebra::Polynomial<Real>>&& realAxisResult, uint32_t spin, const Real& S,
 		    const Real& P) const
 		{
@@ -209,12 +206,14 @@ namespace qboot
 		//   h_{m, n}(here) = (der x) ^ m (der y) ^ n g_{\Delta, spin} / (m! n!)
 		//   h_{m, n}(here) satisfies g_{\Delta, spin} = \sum_{m, n >= 0} h_{m, n}(here) (x - 1 / 2) ^ m y ^ n
 		//   ((x, y) = (1 / 2, 0) is the crossing symmetric point)
+		//   h_{m, n}(here) is returned as a vector
+		//   (h_{0, 0}, ..., h_{lambda, 0}, h_{0, 1}, ..., h_{lambda - 2, 1}, h_{0, 2}, ...)
 		template <class T>
-		algebra::Vector<T> expand_off_diagonal(algebra::Vector<T>&& realAxisResult, const PrimaryOperator<Real, T>& op,
+		ComplexFunction<T> expand_off_diagonal(algebra::Vector<T>&& realAxisResult, const PrimaryOperator<Real, T>& op,
 		                                       const Real& S, const Real& P) const
 		{
-			algebra::Vector<T> h(get_dimG(lambda));
-			for (uint32_t m = 0; m <= lambda; ++m) h[m] = std::move(realAxisResult[m]);
+			ComplexFunction<T> f(lambda);
+			for (uint32_t m = 0; m <= lambda; ++m) f.get(m, 0u) = std::move(realAxisResult[m]);
 
 			T val{}, term{}, quad_casimir = op.quadratic_casimir();
 
@@ -224,10 +223,10 @@ namespace qboot
 				for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda; ++m)
 				{
 					// The second line
-					val = (-(m + 1) * (m + 2)) * h[aligned_index(n - 1, m + 2)];
+					val = (-(m + 1) * (m + 2)) * f.get(m + 2, n - 1);
 
 					term = T(2 * (epsilon + S) - (m + 4 * n - 6));
-					term *= h[aligned_index(n - 1, m + 1)];
+					term *= f.get(m + 1, n - 1);
 					term *= 2 * (m + 1);
 					val += term;
 
@@ -237,7 +236,7 @@ namespace qboot
 					term += 2 * P;
 					term += S * (8 * n + 4 * m - 8);
 					term += 4 * quad_casimir;
-					term *= h[aligned_index(n - 1, m)];
+					term *= f.get(m, n - 1);
 					term *= 4;
 					val += term;
 
@@ -248,7 +247,7 @@ namespace qboot
 						term += m * (m + 12 * n - 13) + n * (12 * n - 34) + 22;
 						term += 2 * P;
 						term += S * (8 * n + 2 * m - 10);
-						term *= h[aligned_index(n - 1, m - 1)];
+						term *= f.get(m - 1, n - 1);
 						term *= 8;
 						val += term;
 					}
@@ -259,9 +258,9 @@ namespace qboot
 						term = T(2 * epsilon);
 						term += 6 - 3 * m - 4 * n;
 						term += -2 * S;
-						term *= h[aligned_index(n - 2, m + 1)];
+						term *= f.get(m + 1, n - 2);
 						term *= 8 * (m + 1);
-						term -= h[aligned_index(n - 2, m + 2)] * (4 * (m + 1) * (m + 2));
+						term -= f.get(m + 2, n - 2) * (4 * (m + 1) * (m + 2));
 						val -= term;
 					}
 
@@ -270,14 +269,14 @@ namespace qboot
 
 					// The first line
 					term = {};
-					if (m >= 3) term += 8 * h[aligned_index(n, m - 3)];
-					if (m >= 2) term += 4 * h[aligned_index(n, m - 2)];
-					if (m >= 1) term -= 2 * h[aligned_index(n, m - 1)];
+					if (m >= 3) term += 8 * f.get(m - 3, n);
+					if (m >= 2) term += 4 * f.get(m - 2, n);
+					if (m >= 1) term -= 2 * f.get(m - 1, n);
 
-					h[aligned_index(n, m)] = val + term;
+					f.get(m, n) = val + term;
 				}
 			}
-			return h;
+			return f;
 		}
 	};
 }  // namespace qboot
