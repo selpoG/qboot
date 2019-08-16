@@ -9,6 +9,7 @@
 namespace qboot
 {
 	// a complex function is even, odd or mixed under z -> 1 - z
+	// Mixed means the function may contain both Even and Odd parts.
 	enum class FunctionSymmetry : uint32_t
 	{
 		Even = 0,
@@ -34,14 +35,16 @@ namespace qboot
 		return s == t ? s : FunctionSymmetry::Mixed;
 	}
 	inline constexpr uint32_t _triangle_num(uint32_t n) noexcept { return n * (n + 1) / 2; }
-	inline constexpr uint32_t get_dimG(uint32_t lambda, FunctionSymmetry sym = FunctionSymmetry::Mixed) noexcept
+	// #{(m, n) | 0 <= m, n and m + 2 n <= lambda and m mod 2 == sym}
+	inline constexpr uint32_t function_dimension(uint32_t lambda,
+	                                             FunctionSymmetry sym = FunctionSymmetry::Mixed) noexcept
 	{
 		switch (sym)
 		{
 		case FunctionSymmetry::Even: return _triangle_num((lambda + 2) / 2);
 		case FunctionSymmetry::Odd: return _triangle_num((lambda + 1) / 2);
 		case FunctionSymmetry::Mixed:
-		default: return (lambda + 2) * (lambda + 2) / 4;
+		default: return (lambda + 2) * (lambda + 2) / 4;  // equals to dim(lambda, Even) + dim(lambda, Odd)
 		}
 	}
 	// complex function of z = x + sqrt(y) (z^* = x - sqrt(y))
@@ -56,6 +59,9 @@ namespace qboot
 		FunctionSymmetry sym_ = FunctionSymmetry::Mixed;
 		uint32_t lambda_;
 		algebra::Vector<Ring> coeffs_;
+		// indices are aligned by lexicographical order of (dy, dx)
+		// i.e., (dx, dy) is the index(dx, dy)-th element in
+		//   [(dx, dy) for dy in range(lambda // 2) for dx in range(lambda - 2 * dy) if sym is Mixed or dx % 2 == sym]
 		uint32_t index(uint32_t dx, uint32_t dy) const noexcept
 		{
 			switch (sym_)
@@ -69,7 +75,7 @@ namespace qboot
 
 	public:
 		explicit ComplexFunction(uint32_t lambda, FunctionSymmetry sym = FunctionSymmetry::Mixed)
-		    : sym_(sym), lambda_(lambda), coeffs_(get_dimG(lambda, sym))
+		    : sym_(sym), lambda_(lambda), coeffs_(function_dimension(lambda, sym))
 		{
 		}
 		[[nodiscard]] FunctionSymmetry symmetry() const { return sym_; }
@@ -119,6 +125,7 @@ namespace qboot
 			return norm().sqrt();
 		}
 		[[nodiscard]] Ring norm() const { return coeffs_.norm(); }
+
 		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) &&
 		{
 			if (sym_ == sym) return std::move(*this);
@@ -137,6 +144,7 @@ namespace qboot
 			}
 			return z;
 		}
+		// project this function to sym-symmetric part
 		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) const&
 		{
 			ComplexFunction z(lambda_, sym);
@@ -156,6 +164,7 @@ namespace qboot
 			// otherwise (even to odd or odd to even), proj is vanishing
 			return z;
 		}
+
 		template <class R, class = std::enable_if_t<algebra::is_addable_v<Ring, R>>>
 		friend ComplexFunction<algebra::union_ring_t<Ring, R>> operator+(const ComplexFunction& x,
 		                                                                 const ComplexFunction<R>& y)
@@ -215,6 +224,7 @@ namespace qboot
 			auto f = false;
 			for (uint32_t dy = 0; dy <= v.lambda_ / 2; ++dy)
 			{
+				// do not show an empty array []
 				if (v.sym_ == FunctionSymmetry::Odd && 2 * dy == v.lambda_) continue;
 				if (f) out << ", ";
 				auto g = false;

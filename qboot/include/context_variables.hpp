@@ -13,6 +13,7 @@
 #include "polynomial.hpp"        // for Polynomial
 #include "primary_op.hpp"        // for PrimaryOperator
 #include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt, pow
+#include "real_function.hpp"     // for RealFunction, RealConverter
 
 namespace qboot2
 {
@@ -33,6 +34,25 @@ namespace qboot2
 
 namespace qboot
 {
+	// z = 4 r / (1 + r) ^ 2
+	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	RealFunction<Real> z_as_func_rho(uint32_t lambda)
+	{
+		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqt(2) + r') ^ {-2}
+		// f = (4 - 2sqt(2) + r') ^ {-2}
+		auto f = qboot::power_function<Real>(4 - mpfr::sqrt(Real(8)), Real(1), Real(-2), lambda);
+		// g1 = 2 sqrt(2) r' f
+		auto g1 = f.clone();
+		g1.shift(1);
+		g1 *= mpfr::sqrt(Real(8));
+		// g2 = -r' ^ 2 f / 2
+		auto g2 = f.clone();
+		g2.shift(2);
+		g2 /= -2;
+		// z - 1 / 2 = g1 + g2
+		return g1 + g2;
+	}
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class RationalApproxData;
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
@@ -44,7 +64,8 @@ namespace qboot
 		static constexpr mpfr_rnd_t rnd = Real::rnd;
 		const uint32_t n_Max, lambda, dimension;
 		const Real epsilon, rho;
-		algebra::Matrix<Real> rho_to_z_matrix;
+		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
+		RealConverter<Real> rho_to_z;
 		algebra::Vector<algebra::Polynomial<Real>> rho_to_delta;
 		std::string str() const
 		{
@@ -58,45 +79,19 @@ namespace qboot
 		      dimension(dim),
 		      epsilon(Real(dim - 2) / 2),
 		      rho(3 - mpfr::sqrt(Real(8))),
-		      rho_to_z_matrix(lambda + 1, lambda + 1),
+		      rho_to_z(RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse()),
 		      rho_to_delta(lambda + 1)
 		{
 			assert(dim >= 3 && dim % 2 == 1);
-			auto Lambda = lambda + 1;
 
-			// z = 4 * rho / pow(1 + rho, 2)
-			// (d/dz)^n / n! = sum(rho_to_z_matrix[n, i] * (d/drho)^i / i!, 0 <= i <= n)
-			algebra::Vector<Real> tmps(Lambda);
-			tmps[0] = -mpfr::sqrt(Real(8));
-			for (uint32_t j = 1; j < Lambda; ++j) tmps[j] = (tmps[j - 1] * (2 * int32_t(j) - 3)) / j;
-			tmps[1] -= 2;
-			tmps[0] += 3;
-
-			Real tmp;
-			rho_to_z_matrix.get(0, 0) = 1;
-			for (uint32_t j = 1; j < Lambda; ++j)
-			{
-				tmp = 1;
-				for (uint32_t k = 0; k <= j; ++k)
-				{
-					rho_to_z_matrix.get(1, j) += tmps[j - k] * tmp;
-					tmp *= -2;
-				}
-			}
-			for (uint32_t i = 2; i < Lambda; ++i)
-				for (uint32_t j = 1; j < Lambda; ++j)
-					for (uint32_t k = i - 1; k < Lambda - j; ++k)
-						rho_to_z_matrix.get(i, k + j) += rho_to_z_matrix.get(i - 1, k) * rho_to_z_matrix.get(1, j);
-
-			rho_to_z_matrix.transpose();
-
+			// (rho + r') ^ Delta = rho ^ Delta \sum_{i = 0}^{lambda} rho_to_delta[i] r' ^ i + O(r' ^ {lambda + 1})
 			rho_to_delta[0] = {Real(1)};
 			for (uint32_t i = 1; i <= lambda; ++i)
 			{
-				tmp = 1 / (rho * i);
+				Real tmp = 1 / (rho * i);
 				rho_to_delta[i] = rho_to_delta[i - 1] * algebra::Polynomial<Real>({(1 - int32_t(i)) * tmp, tmp});
 			}
-			rho_to_delta = rho_to_z_matrix * rho_to_delta;
+			rho_to_delta = rho_to_delta * rho_to_z.matrix();
 		}
 		Context(Context&&) = default;
 		Context& operator=(Context&&) = default;
@@ -117,91 +112,88 @@ namespace qboot
 		{
 			return (v_to_d(d, lambda) * gBlock).proj(sym);
 		}
-		algebra::Vector<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
-		                                    const Real& P) const
+		RealFunction<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
+		                                 const Real& P) const
 		{
 			return hBlock_powered(Real(k), op, S, P);
 		}
-		algebra::Vector<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
+		RealFunction<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
 		ComplexFunction<algebra::Polynomial<Real>> expand_off_diagonal(
-		    algebra::Vector<algebra::Polynomial<Real>>&& realAxisResult, uint32_t spin, const Real& S,
-		    const Real& P) const
+		    RealFunction<algebra::Polynomial<Real>>&& realAxisResult, uint32_t spin, const Real& S, const Real& P) const
 		{
 			return expand_off_diagonal(std::move(realAxisResult), get_general_primary(spin), S, P);
 		}
 		// recover off-diagonal derivatives of conformal block from the diagonal derivatives.
-		// use recursion relation of eq (C.1) in arXiv:1203.6064.
+		// use recursion relation of eq (2.17) in arXiv:1602.02810 (generalized ver. of eq (C.1) in arXiv:1203.6064).
 		// note:
 		//   z   = x + sqrt(y) = (a + sqrt(b)) / 2
 		//   z^* = x - sqrt(y) = (a - sqrt(b)) / 2
-		//   h_{m, n}(there) := (der a) ^ m (der b) ^ n g_{\Delta, spin}
-		//                    = (1 / 2) ^ {m + n} (der x) ^ m (der y) ^ n g_{\Delta, spin}
-		//   and h_{m, n}(there) = m! n! h_{m, n}(here) / 2 ^ {m + n}
-		//   h_{m, n}(here) = (der x) ^ m (der y) ^ n g_{\Delta, spin} / (m! n!)
-		//   h_{m, n}(here) satisfies g_{\Delta, spin} = \sum_{m, n >= 0} h_{m, n}(here) (x - 1 / 2) ^ m y ^ n
-		//   ((x, y) = (1 / 2, 0) is the crossing symmetric point)
-		//   h_{m, n}(here) is returned as a vector
-		//   (h_{0, 0}, ..., h_{lambda, 0}, h_{0, 1}, ..., h_{lambda - 2, 1}, h_{0, 2}, ...)
+		//   a = 2 x, b = 4 y
+		//   h_{m, n} := (der a) ^ m (der b) ^ n g_{\Delta, spin}
+		//             = (1 / 2) ^ {m + 2 n} (der x) ^ m (der y) ^ n g_{\Delta, spin}
+		//   and h_{m, n} = m! n! f[m, n] / 2 ^ {m + 2 n}
 		template <class T>
-		ComplexFunction<T> expand_off_diagonal(algebra::Vector<T>&& realAxisResult, const PrimaryOperator<Real, T>& op,
+		ComplexFunction<T> expand_off_diagonal(RealFunction<T>&& realAxisResult, const PrimaryOperator<Real, T>& op,
 		                                       const Real& S, const Real& P) const
 		{
+			assert(realAxisResult.lambda() == lambda);
 			ComplexFunction<T> f(lambda);
-			for (uint32_t m = 0; m <= lambda; ++m) f.get(m, 0u) = std::move(realAxisResult[m]);
+			for (uint32_t m = 0; m <= lambda; ++m) f.get(m, 0u) = std::move(realAxisResult.get(m));
 
 			T val{}, term{}, quad_casimir = op.quadratic_casimir();
 
 			for (int32_t n = 1; uint32_t(n) <= lambda / 2; ++n)
 			{
+				// multiply n * (4 * epsilon + 4 * n - 2) and divide
 				Real common_factor = (4 * n) * epsilon + (4 * n - 2) * n;
 				for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda; ++m)
 				{
-					// The second line
+					// h[m + 2, n - 1]
 					val = (-(m + 1) * (m + 2)) * f.get(m + 2, n - 1);
 
+					// h[m + 1, n - 1]
 					term = T(2 * (epsilon + S) - (m + 4 * n - 6));
-					term *= f.get(m + 1, n - 1);
 					term *= 2 * (m + 1);
+					term *= f.get(m + 1, n - 1);
 					val += term;
 
-					// The third line
+					// h[m, n - 1]
 					term = T(epsilon * (4 * (m + n - 1)));
 					term += m * (m + 8 * n - 5) + n * (4 * n - 2) - 2;
 					term += 2 * P;
 					term += S * (8 * n + 4 * m - 8);
 					term += 4 * quad_casimir;
-					term *= f.get(m, n - 1);
 					term *= 4;
+					term *= f.get(m, n - 1);
 					val += term;
 
-					// The fourth line
+					// h[m - 1, n - 1]
 					if (m >= 1)
 					{
 						term = T(epsilon * (2 * (m + 1 - 2 * n)));
 						term += m * (m + 12 * n - 13) + n * (12 * n - 34) + 22;
 						term += 2 * P;
 						term += S * (8 * n + 2 * m - 10);
-						term *= f.get(m - 1, n - 1);
 						term *= 8;
+						term *= f.get(m - 1, n - 1);
 						val += term;
 					}
 
-					// The last line
+					// h[m + 1, n - 2] and h[m + 2, n - 2]
 					if (n >= 2)
 					{
-						term = T(2 * epsilon);
-						term += 6 - 3 * m - 4 * n;
-						term += -2 * S;
-						term *= f.get(m + 1, n - 2);
+						term = T(-2 * epsilon);
+						term += 3 * m + 4 * n - 6;
+						term += 2 * S;
 						term *= 8 * (m + 1);
-						term -= f.get(m + 2, n - 2) * (4 * (m + 1) * (m + 2));
-						val -= term;
+						term *= f.get(m + 1, n - 2);
+						term += f.get(m + 2, n - 2) * (4 * (m + 1) * (m + 2));
+						val += term;
 					}
 
-					// finally divide by 2 * (D + 2 n - 3)
 					val /= common_factor;
 
-					// The first line
+					// h[m - 1, n], h[m - 2, n] and h[m - 3, n]
 					term = {};
 					if (m >= 3) term += 8 * f.get(m - 3, n);
 					if (m >= 2) term += 4 * f.get(m - 2, n);

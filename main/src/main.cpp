@@ -17,10 +17,11 @@
 #include "polynomial.hpp"
 #include "primary_op.hpp"
 #include "real.hpp"
+#include "real_function.hpp"
 #include "real_io.hpp"
 
 using algebra::Vector, algebra::Matrix, algebra::Tensor, algebra::Polynomial;
-using qboot::h_asymptotic, qboot::gBlock_full, qboot::Context, qboot::PrimaryOperator, qboot::ComplexFunction;
+using qboot::h_asymptotic, qboot::gBlock, qboot::Context, qboot::PrimaryOperator, qboot::ComplexFunction;
 using std::array;
 
 using R = mpfr::real<1000, MPFR_RNDN>;
@@ -62,7 +63,7 @@ void test_rec(const PrimaryOperator<R>& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
 	auto nMax = op.context().n_Max;
-	auto p = qboot::power_series_in_rho(op, S, P);
+	auto p = qboot::hBlock_shifted(op, S, P).as_vector();
 	std::unique_ptr<mpfr_t[]> q_ptr =
 	    op.spin() == 0
 	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, delta._x, S._x, P._x, 1000, MPFR_RNDN)
@@ -82,7 +83,7 @@ void test_rec(const PrimaryOperator<R>& op, const R& d12, const R& d34)
 void test_real(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = qboot::hBlock_powered(op, S, P);
+	auto p = qboot::gBlock_real(op, S, P).as_vector();
 	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::real_axis_result(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb));
 	auto q = to_vec(q_ptr.get(), p.size());
 	auto err = (q - p).norm();
@@ -99,7 +100,7 @@ void test_real(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const
 void test_g(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = gBlock_full(op, S, P);
+	auto p = gBlock(op, S, P);
 	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::gBlock_full(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb));
 	auto q = to_hol(q_ptr.get(), cb.lambda);
 	auto err = (q - p).norm();
@@ -118,7 +119,7 @@ void test_g(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R&
 void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& eps, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b;
-	auto p = h_asymptotic(S, cb1);
+	auto p = h_asymptotic(S, cb1).as_vector();
 	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::h_asymptotic(eps._x, S._x, cb2));
 	auto q = to_vec(q_ptr.get(), p.size());
 	auto err = (q - p).norm();
@@ -142,16 +143,17 @@ int main()
 	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);
 	{
 		const auto& c = cs[dim_].value();
+		std::cout << "rho_to_z = " << c.rho_to_z.matrix() << std::endl;
 		auto op = c.get_primary(R(0.81), 0);
 		std::cout << "op = " << op.str() << std::endl;
-		auto g = gBlock_full(op, R(0), R(0));
+		auto g = gBlock(op, R(0), R(0));
 		auto F = c.F_block(R(0.7), g, qboot::FunctionSymmetry::Odd);
 		auto H = c.F_block(R(0.7), g, qboot::FunctionSymmetry::Even);
 		std::cout << "g = " << g << std::endl;
 		std::cout << "F_{-} = " << F << std::endl;
 		std::cout << "F_{+} = " << H << std::endl;
-		/*qboot::RationalApproxData<R> ag(numax, 0, c, d12, d34);
-		std::cout << ag.approx_g() << std::endl;*/
+		qboot::RationalApproxData<R> ag(numax, 0, c, d12, d34);
+		std::cout << ag.approx_g() << std::endl;
 	}
 	for (uint32_t dim = 3; dim < 10; dim += 2)
 	{
