@@ -1,7 +1,7 @@
 #ifndef INTEGRAL_DECOMP_HPP_
 #define INTEGRAL_DECOMP_HPP_
 
-#include <cstdint>  // for uint32_t, int32_t
+#include <cstdint>  // for uint32_t
 
 #include "matrix.hpp"  // for Vector
 #include "real.hpp"    // for real
@@ -14,13 +14,13 @@ namespace qboot
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	algebra::Vector<Real> double_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position,
 	                                           const Real& incomplete_gamma_factor);
-	// let pole_position = -p, base = \\exp(-k)
-	// calculate \\int_{0}^{\\infty} \\frac{e^{-k x} x^n}{x + p} dx, for n = 0, ..., pole_order_max
+	// let pole_position = -p, base = exp(-k)
+	// calculate \int_{0}^{\infty} e ^ {-k x} x ^ n / (x + p) dx, for n = 0, ..., pole_order_max
 	// this integral equals to
-	// n! p^n e^{p k} \\Gamma(-n, p k)
-	// = (-p)^n e^{p k} \\Gamma(0, p k)
-	//   + \\frac{1}{k^n}\\sum_{i = 0}^{n - 1} (n - i - 1)! (-p k)^i
-	// incomplete_gamma_factor = e^{p k} \\Gamma(0, p k)
+	// n! p ^ n e ^ {p k} \Gamma(-n, p k)
+	// = (-p) ^ n e ^ {p k} \Gamma(0, p k)
+	//   + (1 / k ^ n) \sum_{i = 0}^{n - 1} (n - i - 1)! (-p k) ^ i
+	// incomplete_gamma_factor = e ^ {p k} \Gamma(0, p k)
 	template <class Real>
 	algebra::Vector<Real> simple_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position,
 	                                           const Real& incomplete_gamma_factor)
@@ -53,8 +53,8 @@ namespace qboot
 		return result;
 	}
 
-	// let pole_position = -p, base = \\exp(-k)
-	// calculate \\int_{0}^{\\infty} \\frac{e^{-k x} x^n}{(x + p)^2} dx, for n = 0, ..., pole_order_max
+	// let pole_position = -p, base = \exp(-k)
+	// calculate \int_{0}^{\infty} e ^ {-k x} x ^ n / (x + p) ^ 2 dx, for n = 0, ..., pole_order_max
 	template <class Real>
 	algebra::Vector<Real> double_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position,
 	                                           const Real& incomplete_gamma_factor)

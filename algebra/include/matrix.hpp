@@ -696,7 +696,7 @@ namespace algebra
 		}
 		friend bool operator!=(const Matrix& x, const Matrix& y) { return !(x == y); }
 		// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
-		// this == L L^t and L is lower triangular.
+		// this = L L^t and L is lower triangular.
 		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
 		[[nodiscard]] Matrix cholesky_decomposition() const
 		{
@@ -719,7 +719,7 @@ namespace algebra
 		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
 		[[nodiscard]] Matrix lower_triangular_inverse() const
 		{
-			// this must be lower triangular, i.e., get(i, j) == 0 for i < j
+			// this must be lower triangular, i.e., get(i, j) = 0 for i < j
 			assert(is_square());
 			Matrix res(row_, row_);
 			Ring s;

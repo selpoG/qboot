@@ -21,15 +21,17 @@
 #include "real_io.hpp"
 
 using algebra::Vector, algebra::Matrix, algebra::Tensor, algebra::Polynomial;
-using qboot::h_asymptotic, qboot::gBlock, qboot::Context, qboot::PrimaryOperator, qboot::ComplexFunction;
+using qboot::h_asymptotic, qboot::gBlock, qboot::Context, qboot::PrimaryOperator, qboot::ComplexFunction,
+    qboot::RealFunction;
 using std::array;
 
 using R = mpfr::real<1000, MPFR_RNDN>;
 static R very_small = R("5e-568");
 
-static Vector<R> to_vec(const mpfr_t* a, uint32_t s);
+[[maybe_unused]] static Vector<R> to_vec(const mpfr_t* a, uint32_t s);
 [[maybe_unused]] static Matrix<R> to_mat(const mpfr_t* a, uint32_t r, uint32_t c);
 static ComplexFunction<R> to_hol(const mpfr_t* a, uint32_t l);
+static RealFunction<R> to_func(const mpfr_t* a, uint32_t l);
 static void test_rec(const PrimaryOperator<R>& op, const R& d12, const R& d34);
 static void test_real(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34);
 static void test_g(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34);
@@ -54,8 +56,15 @@ ComplexFunction<R> to_hol(const mpfr_t* a, uint32_t l)
 {
 	ComplexFunction f(l);
 	uint32_t i = 0;
-	for (uint32_t dy = 0; dy <= l / 2; dy++)
-		for (uint32_t dx = 0; dx + 2 * dy <= l; dx++) f.get(dx, dy) = R(a[i++]);
+	for (uint32_t dy = 0; dy <= l / 2; ++dy)
+		for (uint32_t dx = 0; dx + 2 * dy <= l; ++dx) f.get(dx, dy) = R(a[i++]);
+	return f;
+}
+
+RealFunction<R> to_func(const mpfr_t* a, uint32_t l)
+{
+	RealFunction f(l);
+	for (uint32_t k = 0; k <= l; ++k) f.get(k) = R(a[k]);
 	return f;
 }
 
@@ -63,12 +72,12 @@ void test_rec(const PrimaryOperator<R>& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
 	auto nMax = op.context().n_Max;
-	auto p = qboot::hBlock_shifted(op, S, P).as_vector();
+	auto p = qboot::hBlock_shifted(op, S, P);
 	std::unique_ptr<mpfr_t[]> q_ptr =
 	    op.spin() == 0
 	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, delta._x, S._x, P._x, 1000, MPFR_RNDN)
 	        : qboot2::recursionNonZeroVector(nMax, op.epsilon()._x, ell._x, delta._x, S._x, P._x, 1000, MPFR_RNDN);
-	auto q = to_vec(q_ptr.get(), p.size());
+	auto q = to_func(q_ptr.get(), p.lambda());
 	auto err = (q - p).norm();
 	if (err > very_small)
 	{
@@ -83,9 +92,9 @@ void test_rec(const PrimaryOperator<R>& op, const R& d12, const R& d34)
 void test_real(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = qboot::gBlock_real(op, S, P).as_vector();
+	auto p = qboot::gBlock_real(op, S, P);
 	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::real_axis_result(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb));
-	auto q = to_vec(q_ptr.get(), p.size());
+	auto q = to_func(q_ptr.get(), p.lambda());
 	auto err = (q - p).norm();
 	if (err > very_small)
 	{
@@ -119,9 +128,9 @@ void test_g(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R&
 void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& eps, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b;
-	auto p = h_asymptotic(S, cb1).as_vector();
+	auto p = h_asymptotic(S, cb1);
 	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::h_asymptotic(eps._x, S._x, cb2));
-	auto q = to_vec(q_ptr.get(), p.size());
+	auto q = to_func(q_ptr.get(), p.lambda());
 	auto err = (q - p).norm();
 	if (err > very_small)
 	{
@@ -143,7 +152,6 @@ int main()
 	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);
 	{
 		const auto& c = cs[dim_].value();
-		std::cout << "rho_to_z = " << c.rho_to_z.matrix() << std::endl;
 		auto op = c.get_primary(R(0.81), 0);
 		std::cout << "op = " << op.str() << std::endl;
 		auto g = gBlock(op, R(0), R(0));
@@ -152,8 +160,8 @@ int main()
 		std::cout << "g = " << g << std::endl;
 		std::cout << "F_{-} = " << F << std::endl;
 		std::cout << "F_{+} = " << H << std::endl;
-		qboot::RationalApproxData<R> ag(numax, 0, c, d12, d34);
-		std::cout << ag.approx_g() << std::endl;
+		/*qboot::RationalApproxData<R> ag(numax, 0, c, d12, d34);
+		std::cout << ag.approx_g() << std::endl;*/
 	}
 	for (uint32_t dim = 3; dim < 10; dim += 2)
 	{

@@ -16,9 +16,9 @@ namespace algebra
 	template <class Ring>
 	class Polynomial
 	{
-		// sum(coeff_[i] * pow(x, i), i)
+		// \sum_{i} coeff_[i] x ^ i
 		// the last value of coeff_ must be non-zero
-		// zero polynomial is represented by empty coeff_ (coeff_.size() == 0)
+		// zero polynomial is represented by empty coeff_ (coeff_.size() = 0)
 		Vector<Ring> coeff_;
 
 	public:
@@ -53,7 +53,7 @@ namespace algebra
 			else
 				coeff_[0] = c.clone();
 		}
-		// c * pow(x, d) (c != 0)
+		// c x ^ d (c != 0)
 		Polynomial(const Ring& c, uint32_t degree) : coeff_(degree + 1)
 		{
 			assert(!c.iszero());
@@ -182,7 +182,7 @@ namespace algebra
 			for (uint32_t i = 0; i < coeff_.size(); ++i) coeff_[i] /= c;
 			return *this;
 		}
-		// coefficient of pow(x, p)
+		// coefficient of x ^ p
 		const Ring& operator[](uint32_t p) const { return coeff_[p]; }
 		Polynomial operator+() const { return clone(); }
 		Polynomial operator-() const
@@ -325,7 +325,7 @@ namespace algebra
 			static Polynomial val{1u};
 			return val;
 		}
-		// pow(a * x + b, d)
+		// (a * x + b) ^ d
 		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
 		static Polynomial linear_power(const Ring& a, const Ring& b, uint32_t degree)
 		{
@@ -335,7 +335,7 @@ namespace algebra
 				if (a.iszero()) return Polynomial(mpfr::pow(b, degree));
 				if (b.iszero()) return Polynomial(mpfr::pow(a, degree), degree);
 				Polynomial p(degree);
-				// p = sum(binom(d, i) * pow(a, i) * pow(b, d - i) * pow(x, i), i)
+				// p = \sum_{i = 0}^{degree} binom(d, i) a ^ i b ^ {d - i} x ^ i
 				p.coeff_[0] = p.coeff_[degree] = 1;
 				for (uint32_t i = 1; 2 * i <= degree; ++i)
 					p.coeff_[i] = p.coeff_[degree - i] = base(degree - i + 1) * p[i - 1] / base(i);

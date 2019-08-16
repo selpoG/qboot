@@ -4,7 +4,7 @@
 #include <array>    // for array
 #include <cstdint>  // for uint32_t, int32_t
 
-#include "matrix.hpp"      // for Vector, Matrix
+#include "matrix.hpp"      // for Vector
 #include "primary_op.hpp"  // for PrimaryOperator
 #include "real.hpp"        // for real, mpfr_t, mpfr_prec_t, mpfr_rnd_t
 
@@ -51,7 +51,7 @@ namespace qboot
 	                                                                     const Real& P);
 
 	// gives coefficient polynomials p[i] of recursion equation of b[i].
-	// \sum_i b[n - i] * p[i] = 0
+	// \sum_{i = 0}^{p.size() - 1} b[n - i] p[i] = 0
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	algebra::Vector<algebra::Polynomial<Real>> _get_rec_coeffs(const PrimaryOperator<Real>& op, const Real& S,
 	                                                           const Real& P)
@@ -399,7 +399,6 @@ namespace qboot
 		uint32_t spin = op.spin();
 		algebra::Vector<Real> b(5);
 		algebra::Vector<algebra::Polynomial<Real>> ps(8);
-		algebra::Matrix a(8, 5);
 		Real t0, t1, t2, t3, t4;
 		// a[0, 0] = 0;
 		b[0] = 0;

@@ -1,18 +1,17 @@
 #ifndef CONTEXT_VARIABLES_HPP_
 #define CONTEXT_VARIABLES_HPP_
 
-#include <array>    // for array
 #include <cstdint>  // for uint32_t, int32_t
 #include <memory>   // for unique_ptr
 #include <sstream>  // for ostringstream
 #include <string>   // for string
-#include <vector>   // for vector
+#include <utility>  // for move
 
 #include "complex_function.hpp"  // for ComplexFunction
-#include "matrix.hpp"            // for Vector, Matrix
+#include "matrix.hpp"            // for Vector
 #include "polynomial.hpp"        // for Polynomial
 #include "primary_op.hpp"        // for PrimaryOperator
-#include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt, pow
+#include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt
 #include "real_function.hpp"     // for RealFunction, RealConverter
 
 namespace qboot2
@@ -129,8 +128,8 @@ namespace qboot
 		//   z   = x + sqrt(y) = (a + sqrt(b)) / 2
 		//   z^* = x - sqrt(y) = (a - sqrt(b)) / 2
 		//   a = 2 x, b = 4 y
-		//   h_{m, n} := (der a) ^ m (der b) ^ n g_{\Delta, spin}
-		//             = (1 / 2) ^ {m + 2 n} (der x) ^ m (der y) ^ n g_{\Delta, spin}
+		//   h_{m, n} := (der a) ^ m (der b) ^ n g_{Delta, spin}
+		//             = (1 / 2) ^ {m + 2 n} (der x) ^ m (der y) ^ n g_{Delta, spin}
 		//   and h_{m, n} = m! n! f[m, n] / 2 ^ {m + 2 n}
 		template <class T>
 		ComplexFunction<T> expand_off_diagonal(RealFunction<T>&& realAxisResult, const PrimaryOperator<Real, T>& op,
@@ -144,7 +143,7 @@ namespace qboot
 
 			for (int32_t n = 1; uint32_t(n) <= lambda / 2; ++n)
 			{
-				// multiply n * (4 * epsilon + 4 * n - 2) and divide
+				// multiply n (4 epsilon + 4 n - 2) and divide
 				Real common_factor = (4 * n) * epsilon + (4 * n - 2) * n;
 				for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda; ++m)
 				{

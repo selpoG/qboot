@@ -1,10 +1,13 @@
 #ifndef REAL_FUNCTION_HPP_
 #define REAL_FUNCTION_HPP_
 
-#include <cstddef>  // for uint32_t
+#include <cstddef>      // for uint32_t
+#include <ostream>      // for ostream
+#include <type_traits>  // for true_type, false_type, enable_if, enable_if_t, is_same_v
+#include <utility>      // for swap, move
 
-#include "matrix.hpp"
-#include "real.hpp"
+#include "matrix.hpp"  // for Vector, Matrix, base_ring, is_intermediate_v, is_mpfr_real_v, is_iaddable_v, is_imultipliable_v, is_idividable_v, is_addable_v, is_subtractable_v, is_multipliable_v, union_ring_t
+#include "real.hpp"    // for real, pow
 
 namespace qboot
 {
@@ -178,7 +181,7 @@ namespace qboot
 		RealConverter(const RealFunction<Ring>& func)
 		    : lambda_(func.lambda()), mat_(func.lambda() + 1, func.lambda() + 1)
 		{
-			// assert(func.get(0) == 0);
+			// assert(func.get(0).iszero());
 			mat_.get(0, 0) = 1;
 			auto pf = func.clone();
 			for (uint32_t n = 1; n <= lambda_; ++n)

@@ -6,10 +6,9 @@
 
 #include "complex_function.hpp"   // for ComplexFunction
 #include "context_variables.hpp"  // for Context, cb_context
-#include "hor_formula.hpp"        // for _get_rec_coeffs, _evaluate_at_n
-#include "matrix.hpp"             // for Vector
+#include "hor_formula.hpp"        // for _get_rec_coeffs
 #include "primary_op.hpp"         // for PrimaryOperator
-#include "real.hpp"               // for real, mpfr_prec_t, mpfr_rnd_t, mpfr_t, is_integer, factorial, pow
+#include "real.hpp"               // for real, mpfr_prec_t, mpfr_rnd_t, mpfr_t, pow
 #include "real_function.hpp"      // for RealFunction, RealFunctionWithPower
 
 namespace qboot2
@@ -53,7 +52,7 @@ namespace qboot
 	}
 
 	// a function f(rho) of rho at rho = 0 (not crossing symmetric point)
-	// f(rho) = h_{\Delta, spin}^{d12, d34}(z, z),
+	// f(rho) = h_{Delta, spin}^{d12, d34}(z, z),
 	// g_{Delta, spin}^{d12, d34}(z, z) = (4 rho) ^ {Delta} f(rho)
 	// if p[0] may be 0, we use continuity of conformal block.
 	template <class Real>
@@ -81,7 +80,7 @@ namespace qboot
 		return b;
 	}
 
-	// a function of z - 1 / 2 expanded at z = 1 / 2, g_{\Delta, spin}^{d12, d34}(z, z)
+	// a function of z - 1 / 2 expanded at z = 1 / 2, g_{Delta, spin}^{d12, d34}(z, z)
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	RealFunction<Real> gBlock_real(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
 	{
@@ -89,8 +88,8 @@ namespace qboot
 	}
 
 	// a function of z - 1 / 2 expanded at z = 1 / 2,
-	// (4 * rho) ^ {exp} * h_{\Delta, spin}^{d12, d34}(z, z)
-	// = (4 * rho) ^ {exp - \Delta} * g_{\Delta, spin}^{d12, d34}(z, z)
+	// (4 * rho) ^ {exp} * h_{Delta, spin}^{d12, d34}(z, z)
+	// = (4 * rho) ^ {exp - Delta} * g_{Delta, spin}^{d12, d34}(z, z)
 	template <class Real>
 	RealFunction<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S, const Real& P)
 	{

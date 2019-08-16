@@ -1,10 +1,13 @@
 #ifndef COMPLEX_FUNCTION_HPP_
 #define COMPLEX_FUNCTION_HPP_
 
-#include <cstddef>  // for uint32_t
+#include <cstddef>      // for uint32_t
+#include <ostream>      // for ostream
+#include <type_traits>  // for enable_if_t, enable_if
+#include <utility>      // for move, swap
 
-#include "matrix.hpp"
-#include "real.hpp"
+#include "matrix.hpp"  // for Vector, is_mpfr_real_v, is_addable_v, union_ring_t, is_subtractable_v, is_multipliable_v
+#include "real.hpp"    // for real, pow
 
 namespace qboot
 {
@@ -48,9 +51,9 @@ namespace qboot
 		}
 	}
 	// complex function of z = x + sqrt(y) (z^* = x - sqrt(y))
-	// take derivatives (der x) ^ m (der y) ^ n upto m + 2 * n <= lambda
+	// take derivatives (der x) ^ m (der y) ^ n upto m + 2 n <= lambda
 	// namely, a function is represented as
-	//   \sum_{n = 0}^{lambda / 2}\sum_{m = 0}^{lambda - 2 * n} this->get(n, m) (x - x0) ^ m (y - y0) ^ n + ...
+	//   \sum_{n = 0}^{lambda / 2} \sum_{m = 0}^{lambda - 2 n} this->get(n, m) (x - x0) ^ m (y - y0) ^ n + ...
 	// we take (x0, y0) = (1 / 2, 0)
 	// if a nontrivial symmetry even (resp. odd) is given, m runs over even (resp. odd) number only.
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
@@ -248,7 +251,7 @@ namespace qboot
 	{
 		// f.get(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
 		//             = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
-		// where lf(x, n) = x * (x - 1) * ... * (x - (n - 1)) (falling factorial)
+		// where lf(x, n) = x (x - 1) ... (x - (n - 1)) (falling factorial)
 		ComplexFunction f(lambda);
 		f.get(0, 0) = mpfr::pow(Real(0.25), d);
 		for (uint32_t n = 0; n <= lambda / 2; ++n)

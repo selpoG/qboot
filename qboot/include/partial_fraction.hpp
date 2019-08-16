@@ -21,7 +21,7 @@ namespace qboot
 		for (size_t i = 0, pos = 0; i < n_poles; ++i, ++pos)
 		{
 			result[pos] = 1;
-			// product (pole[i] - pole[j]) ^ (1 or 2), j != i
+			// \prod_{j != i} (pole[i] - pole[j]) ^ (1 or 2)
 			for (size_t j = 0; j < n_poles; ++j)
 			{
 				if (i == j) continue;

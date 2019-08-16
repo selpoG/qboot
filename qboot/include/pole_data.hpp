@@ -3,6 +3,7 @@
 
 #include <cassert>  // for assert
 #include <cstdint>  // for uint32_t, int32_t
+#include <utility>  // for move
 #include <vector>   // for vector
 
 #include "complex_function.hpp"   // for ComplexFunction
@@ -39,7 +40,7 @@ namespace qboot
 			{
 			case 1: return Real(-int32_t(spin + k - 1));
 			case 2: return epsilon - (k - 1);
-			default: return 2 * epsilon + (1 + spin - k);  // note: k <= spin, 1 + spin - k >= 1
+			default: return 2 * epsilon + (1 + spin - k);  // note: k <= spin -> 1 + spin - k >= 1
 			}
 		}
 		Real residueDelta() const
@@ -155,8 +156,8 @@ namespace qboot
 				pole_pol.push_back(algebra::Polynomial<Real>{-poles[i].pole_position(), Real(1)});
 			auto res = RealFunction<algebra::Polynomial<Real>>(context.h_asymptotic_form(S));
 			for (uint32_t i = 0; i < N; ++i) res *= pole_pol[i];
-			// prod_left[i] = pole_pol[0] * ... * pole_pol[i - 1]
-			// prod_right[i] = pole_pol[N - i] * ... * pole_pol[N - 1]
+			// prod_left[i] = pole_pol[0] ... pole_pol[i - 1]
+			// prod_right[i] = pole_pol[N - i] ... pole_pol[N - 1]
 			std::vector<algebra::Polynomial<Real>> prod_left, prod_right;
 			prod_left.emplace_back(0);
 			prod_right.emplace_back(0);

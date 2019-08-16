@@ -2,10 +2,11 @@
 #define PRIMARY_OP_HPP_
 
 #include <cstdint>  // for uint32_t
-#include <string>   //for string
+#include <sstream>  // for ostringstream
+#include <string>   // for string
 
 #include "polynomial.hpp"  // for Polynomial
-#include "real.hpp"        // for real
+#include "real.hpp"        // for real, is_integer
 
 namespace qboot
 {
