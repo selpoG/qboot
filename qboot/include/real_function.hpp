@@ -159,7 +159,7 @@ namespace qboot
 	RealFunction<Ring> power_function(const Ring& a, const Ring& b, const Ring& p, uint32_t lambda)
 	{
 		assert(a != 0);
-		RealFunction f(lambda);
+		RealFunction<Ring> f(lambda);
 		f.get(0) = mpfr::pow(a, p);
 		Ring tmp = b / a;
 		for (uint32_t k = 1; k <= lambda; ++k) { f.get(k) = f.get(k - 1) * tmp * (p - (k - 1)) / k; }
@@ -200,10 +200,11 @@ namespace qboot
 			return RealConverter(f);
 		}
 		// convert a function f of x to a function of y where x = func(y)
-		RealFunction<Ring> convert(const RealFunction<Ring>& f) const
+		template <class R>
+		RealFunction<R> convert(const RealFunction<R>& f) const
 		{
 			assert(lambda_ == f.lambda_);
-			RealFunction<Ring> g(lambda_);
+			RealFunction<R> g(lambda_);
 			g.coeffs_ = f.coeffs_ * mat_;
 			return g;
 		}

@@ -252,7 +252,7 @@ namespace qboot
 		// f.get(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
 		//             = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
 		// where lf(x, n) = x (x - 1) ... (x - (n - 1)) (falling factorial)
-		ComplexFunction f(lambda);
+		ComplexFunction<Real> f(lambda);
 		f.get(0, 0) = mpfr::pow(Real(0.25), d);
 		for (uint32_t n = 0; n <= lambda / 2; ++n)
 		{

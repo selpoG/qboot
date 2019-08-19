@@ -114,6 +114,15 @@ namespace qboot
 		return op.context().expand_off_diagonal(gBlock_real(op, S, P), op, S, P);
 	}
 
+	template <class Real>
+	ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
+	                             const Real& d4)
+	{
+		Real d12 = d1 - d2, d34 = d3 - d4;
+		Real S = (d34 - d12) / 2, P = -d12 * d34 / 2;
+		return op.context().expand_off_diagonal(gBlock_real(op, S, P), op, S, P);
+	}
+
 	// calculate \tilde{h}(r, 1) as a function of z - 1 / 2 eq (4.6) in arXiv:1406:4858
 	// \tilde{h}(r, 1)
 	//   = (1 - r ^ 2) ^ {-epsilon} (1 + r) ^ {-1 - d12 + d34} (1 - r) ^ {-1 + d12 - d34}

@@ -30,15 +30,15 @@ namespace qboot2
 
 // Hogervorst-Osborn-Rycykov recursion relation (derived from eq (4.9) in arXiv:1305.1321) takes the form
 //
-//   \sum_{i = 0}^{7} b[n - i] * p[i] (n, parameters (epsilon, spin, Delta, S, P)) = 0,
-//   \sum_{i = 0}^{5} b[n - i] * p[i] (n, parameters (epsilon, spin = 0, Delta, S, P)) = 0
+//   \sum_{i = 0}^{7} b[n - i] p[i] (n, parameters (epsilon, spin, Delta, S, P)) = 0,
+//   \sum_{i = 0}^{5} b[n - i] p[i] (n, parameters (epsilon, spin = 0, Delta, S, P)) = 0
 //
 // and each coefficients p[i] is a polynomial of n whose coefficients are functions of other params.
 //
-// Let f(z) be the diagonal conformal block g_{\Delta, spin}^{d12, d34}(z, z).
+// Let f(z) be the diagonal conformal block g_{Delta, spin}^{d12, d34}(z, z).
 // f(z) can be expanded at z = 0 as
-//   f(z) = (4 * \rho) ^ \Delta * \sum_{n = 0}^{\infty} b[n] * \rho ^ n, b[0] = 1
-//   z = 4 * \rho / (1 + \rho) ^ 2
+//   f(z) = (4 rho) ^ {Delta} \sum_{n = 0}^{\infty} b[n] rho ^ n, b[0] = 1
+//   z = 4 rho / (1 + rho) ^ 2
 
 namespace qboot
 {

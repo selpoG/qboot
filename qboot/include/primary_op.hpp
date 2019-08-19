@@ -51,7 +51,7 @@ namespace qboot
 			return os.str();
 		}
 	};
-	template <class Real = mpfr::real<1000, MPFR_RNDN>, class T = Real>
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	auto general_primary_operator(uint32_t spin, const Context<Real>& context)
 	{
 		return PrimaryOperator(algebra::Polynomial<Real>{Real(0), Real(1)}, spin, context);

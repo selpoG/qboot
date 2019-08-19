@@ -22,7 +22,7 @@
 
 using algebra::Vector, algebra::Matrix, algebra::Tensor, algebra::Polynomial;
 using qboot::h_asymptotic, qboot::gBlock, qboot::Context, qboot::PrimaryOperator, qboot::ComplexFunction,
-    qboot::RealFunction;
+    qboot::RealFunction, qboot::RationalApproxData;
 using std::array;
 
 using R = mpfr::real<1000, MPFR_RNDN>;
@@ -35,7 +35,8 @@ static RealFunction<R> to_func(const mpfr_t* a, uint32_t l);
 static void test_rec(const PrimaryOperator<R>& op, const R& d12, const R& d34);
 static void test_real(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34);
 static void test_g(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34);
-static void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& eps, const R& d12, const R& d34);
+static void test_op(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34);
+static void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, const R& d34);
 
 Vector<R> to_vec(const mpfr_t* a, uint32_t s)
 {
@@ -54,7 +55,7 @@ Matrix<R> to_mat(const mpfr_t* a, uint32_t r, uint32_t c)
 
 ComplexFunction<R> to_hol(const mpfr_t* a, uint32_t l)
 {
-	ComplexFunction f(l);
+	ComplexFunction<R> f(l);
 	uint32_t i = 0;
 	for (uint32_t dy = 0; dy <= l / 2; ++dy)
 		for (uint32_t dx = 0; dx + 2 * dy <= l; ++dx) f.get(dx, dy) = R(a[i++]);
@@ -63,7 +64,7 @@ ComplexFunction<R> to_hol(const mpfr_t* a, uint32_t l)
 
 RealFunction<R> to_func(const mpfr_t* a, uint32_t l)
 {
-	RealFunction f(l);
+	RealFunction<R> f(l);
 	for (uint32_t k = 0; k <= l; ++k) f.get(k) = R(a[k]);
 	return f;
 }
@@ -125,11 +126,18 @@ void test_g(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R&
 	}
 }
 
-void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& eps, const R& d12, const R& d34)
+void test_op(const qboot2::cb_context& cb, const PrimaryOperator<R>& op, const R& d12, const R& d34)
+{
+	test_rec(op, d12, d34);
+	test_real(cb, op, d12, d34);
+	test_g(cb, op, d12, d34);
+}
+
+void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b;
 	auto p = h_asymptotic(S, cb1);
-	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::h_asymptotic(eps._x, S._x, cb2));
+	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::h_asymptotic(cb1.epsilon._x, S._x, cb2));
 	auto q = to_func(q_ptr.get(), p.lambda());
 	auto err = (q - p).norm();
 	if (err > very_small)
@@ -144,56 +152,39 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& eps, 
 
 int main()
 {
-	constexpr uint32_t n_Max = 50, lambda = 6, dim_ = 3;
-	[[maybe_unused]] constexpr uint32_t numax = 2;
+	constexpr uint32_t n_Max = 100, lambda = 16, dim_ = 3;
+	[[maybe_unused]] constexpr uint32_t numax = 20;
 	std::map<uint32_t, std::optional<Context<R>>> cs;
 	for (uint32_t dim = 3; dim < 10; dim += 2) cs.emplace(dim, Context<R>(n_Max, lambda, dim));
-	R delta = mpfr::sqrt(R(2)), d12 = mpfr::sqrt(R(3)), d34 = mpfr::sqrt(R(5)) - 1;
+	R d12 = mpfr::sqrt(R(3)), d34 = mpfr::sqrt(R(5)) - 1;
+	R S = (d34 - d12) / 2, P = -d12 * d34 / 2, d23h = R(0.7);
 	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);
 	{
 		const auto& c = cs[dim_].value();
-		auto op = c.get_primary(R(0.81), 0);
-		std::cout << "op = " << op.str() << std::endl;
-		auto g = gBlock(op, R(0), R(0));
-		auto F = c.F_block(R(0.7), g, qboot::FunctionSymmetry::Odd);
-		auto H = c.F_block(R(0.7), g, qboot::FunctionSymmetry::Even);
-		std::cout << "g = " << g << std::endl;
-		std::cout << "F_{-} = " << F << std::endl;
-		std::cout << "F_{+} = " << H << std::endl;
-		/*qboot::RationalApproxData<R> ag(numax, 0, c, d12, d34);
-		std::cout << ag.approx_g() << std::endl;*/
-	}
-	for (uint32_t dim = 3; dim < 10; dim += 2)
-	{
-		const auto& c = cs[dim].value();
-		for (uint32_t spin = 0; spin < 10; ++spin)
+		R d_s = R(0.5181475), d_e = R(1.412617);
+		for (uint32_t spin = 0; spin <= 2; spin++)
 		{
+			R delta = (spin == 0 ? 3 : spin + 1) + R(0.4);
 			auto op = c.get_primary(delta, spin);
-			test_rec(op, d12, d34);
-			test_real(c2, op, d12, d34);
-			test_g(c2, op, d12, d34);
+			std::cout << "op = " << op.str() << std::endl;
+			auto g = gBlock(op, d_s, d_e, d_s, d_e);
+			std::cout << "F_{-} = " << c.F_block(op, d_s, d_e, d_s, d_e) << std::endl;
+			std::cout << "F_{+} = " << c.H_block(op, d_s, d_e, d_s, d_e) << std::endl;
+			// RationalApproxData<R> ag(numax, spin, c, d_s, d_e, d_s, d_e);
+			// std::cout << "err = " << (ag.my_approx(delta) - g).abs() << std::endl;
+			// std::cout << ag.approx_g() << std::endl;
 		}
-		test_h(c, c2, c.epsilon, d12, d34);
 	}
-	std::cout << "check divergent cases" << std::endl;
 	for (uint32_t dim = 3; dim < 10; dim += 2)
 	{
 		const auto& c = cs[dim].value();
 		for (uint32_t spin = 0; spin < 10; ++spin)
 		{
-			auto op = c.get_primary(c.unitary_bound(spin), spin);
-			test_real(c2, op, d12, d34);
-			test_rec(op, d12, d34);
-			test_g(c2, op, d12, d34);
+			test_op(c2, c.get_primary(c.unitary_bound(spin) + mpfr::sqrt(R(2)), spin), d12, d34);
+			test_op(c2, c.get_primary(c.unitary_bound(spin), spin), d12, d34);
 		}
-	}
-	for (uint32_t dim = 3; dim < 10; dim += 2)
-	{
-		const auto& c = cs[dim].value();
-		auto op = c.get_primary(c.epsilon + R("0.5"), 0);
-		test_real(c2, op, d12, d34);
-		test_rec(op, d12, d34);
-		test_g(c2, op, d12, d34);
+		test_op(c2, c.get_primary(c.epsilon + R("0.5"), 0), d12, d34);
+		test_h(c, c2, d12, d34);
 	}
 	qboot2::clear_cb_context(c2);
 	return 0;

@@ -53,8 +53,6 @@ namespace qboot
 		return g1 + g2;
 	}
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	class RationalApproxData;
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class Context
 	{
 	public:
@@ -65,7 +63,8 @@ namespace qboot
 		const Real epsilon, rho;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		RealConverter<Real> rho_to_z;
-		algebra::Vector<algebra::Polynomial<Real>> rho_to_delta;
+		// rho ^ Delta as a function of z - 1 / 2
+		RealFunction<algebra::Polynomial<Real>> rho_to_delta;
 		std::string str() const
 		{
 			std::ostringstream os;
@@ -79,18 +78,19 @@ namespace qboot
 		      epsilon(Real(dim - 2) / 2),
 		      rho(3 - mpfr::sqrt(Real(8))),
 		      rho_to_z(RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse()),
-		      rho_to_delta(lambda + 1)
+		      rho_to_delta(lambda)
 		{
 			assert(dim >= 3 && dim % 2 == 1);
 
 			// (rho + r') ^ Delta = rho ^ Delta \sum_{i = 0}^{lambda} rho_to_delta[i] r' ^ i + O(r' ^ {lambda + 1})
-			rho_to_delta[0] = {Real(1)};
+			rho_to_delta.get(0) = {Real(1)};
 			for (uint32_t i = 1; i <= lambda; ++i)
 			{
 				Real tmp = 1 / (rho * i);
-				rho_to_delta[i] = rho_to_delta[i - 1] * algebra::Polynomial<Real>({(1 - int32_t(i)) * tmp, tmp});
+				rho_to_delta.get(i) =
+				    rho_to_delta.get(i - 1) * algebra::Polynomial<Real>({(1 - int32_t(i)) * tmp, tmp});
 			}
-			rho_to_delta = rho_to_delta * rho_to_z.matrix();
+			rho_to_delta = rho_to_z.convert(rho_to_delta);
 		}
 		Context(Context&&) = default;
 		Context& operator=(Context&&) = default;
@@ -110,6 +110,29 @@ namespace qboot
 		ComplexFunction<Real> F_block(const Real& d, const ComplexFunction<Real>& gBlock, FunctionSymmetry sym) const
 		{
 			return (v_to_d(d, lambda) * gBlock).proj(sym);
+		}
+		ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
+		                              const Real& d4, FunctionSymmetry sym) const
+		{
+			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4), sym);
+		}
+		ComplexFunction<Real> F_block(const Real& d, const ComplexFunction<Real>& gBlock) const
+		{
+			return F_block(d, gBlock, FunctionSymmetry::Odd);
+		}
+		ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
+		                              const Real& d4) const
+		{
+			return F_block(op, d1, d2, d3, d4, FunctionSymmetry::Odd);
+		}
+		ComplexFunction<Real> H_block(const Real& d, const ComplexFunction<Real>& gBlock) const
+		{
+			return F_block(d, gBlock, FunctionSymmetry::Even);
+		}
+		ComplexFunction<Real> H_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
+		                              const Real& d4) const
+		{
+			return F_block(op, d1, d2, d3, d4, FunctionSymmetry::Even);
 		}
 		RealFunction<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
 		                                 const Real& P) const
