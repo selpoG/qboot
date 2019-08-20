@@ -2096,6 +2096,22 @@ namespace mpfr
 		return temp;
 	}
 
+	template <class _Tp1, class _Tp2>
+	inline typename enable_if<
+	    type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp1, true>::enable_math_funcs &&
+	        type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp2, true>::enable_math_funcs,
+	    typename result_type2<_Tp1, _Tp2, true>::type>::type
+	gamma_inc(const _Tp1& r1, const _Tp2& r2)
+	{
+		typedef typename result_type2<_Tp1, _Tp2, true>::type temp_type;
+		const real_rnd_t rnd = result_type2<_Tp1, _Tp2, true>::rnd;
+		typename promote<temp_type, _Tp1>::type temp1(r1);
+		typename promote<temp_type, _Tp2>::type temp2(r2);
+		temp_type temp;
+		MPFR_NS mpfr_gamma_inc(temp._x, temp1._x, temp2._x, rnd);
+		return temp;
+	}
+
 	template <real_prec_t _prec, real_rnd_t _rnd>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
 	                          const real<_prec, _rnd>>::type
@@ -2930,6 +2946,7 @@ namespace mpfr
 		static constexpr real_prec_t prec = _prec;
 		static constexpr real_rnd_t rnd = _rnd;
 		using type = real;
+		static real pi() { return const_pi<_prec, _rnd>(); }
 
 		// //////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
@@ -3673,6 +3690,13 @@ namespace mpfr
 		                          const real<_prec1, _rnd1>>::type
 		trunc(const real<_prec1, _rnd1>& r);
 
+		template <class _Tp1, class _Tp2>
+		friend typename enable_if<
+		    type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp1, true>::enable_math_funcs &&
+		        type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp2, true>::enable_math_funcs,
+		    typename result_type2<_Tp1, _Tp2, true>::type>::type
+		gamma_inc(const _Tp1& r1, const _Tp2& r2);
+
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
 		                          const real<_prec1, _rnd1>>::type
@@ -4045,10 +4069,10 @@ namespace mpfr
 		                          const real<_prec1, _rnd1>>::type
 		const_catalan();
 
-		//template <real_prec_t _prec1, real_rnd_t _rnd1>
-		//friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
+		// template <real_prec_t _prec1, real_rnd_t _rnd1>
+		// friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
 		//                          const real<_prec1, _rnd1>>::type
-		//factorial(const mpfr_old_long n);
+		// factorial(const mpfr_old_long n);
 	};  // class real
 }  // namespace mpfr
 

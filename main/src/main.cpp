@@ -149,8 +149,8 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, 
 
 int main()
 {
-	constexpr uint32_t n_Max = 100, lambda = 16, dim_ = 3;
-	[[maybe_unused]] constexpr uint32_t numax = 20;
+	constexpr uint32_t n_Max = 100, lambda = 4, dim_ = 3;
+	[[maybe_unused]] constexpr uint32_t numax = 5;
 	std::map<uint32_t, std::optional<Context<R>>> cs;
 	for (uint32_t dim = 3; dim < 10; dim += 2) cs.emplace(dim, Context<R>(n_Max, lambda, dim));
 	R d12 = mpfr::sqrt(R(3)), d34 = mpfr::sqrt(R(5)) - 1;
@@ -161,15 +161,25 @@ int main()
 		R d_s = R(0.5181475), d_e = R(1.412617);
 		for (uint32_t spin = 0; spin <= 2; spin++)
 		{
-			R delta = (spin == 0 ? 3 : spin + 1) + R(0.4);
-			auto op = c.get_primary(delta, spin);
-			std::cout << "op = " << op.str() << std::endl;
-			auto g = gBlock(op, d_s, d_e, d_s, d_e);
-			std::cout << "F_{-} = " << c.F_block(op, d_s, d_e, d_s, d_e) << std::endl;
-			std::cout << "F_{+} = " << c.H_block(op, d_s, d_e, d_s, d_e) << std::endl;
-			// RationalApproxData<R> ag(numax, spin, c, d_s, d_e, d_s, d_e);
-			// std::cout << "err = " << (ag.my_approx(delta) - g).abs() << std::endl;
-			// std::cout << ag.approx_g() << std::endl;
+			R gap = R(spin == 0 ? 3 : spin + 1);
+			RationalApproxData<R> ag(numax, spin, c, d_s, d_e, d_s, d_e);
+			auto sp = ag.sample_points();
+			auto q = ag.get_bilinear_basis(gap);
+			const auto& pol = ag.get_poles();
+			std::cout << "pol = " << pol << std::endl;
+			for (uint32_t i = 0; i < sp.size(); i++)
+			{
+				R delta = gap + sp[i];
+				auto op = c.get_primary(delta, spin);
+				std::cout << "op = " << op.str() << std::endl;
+				// auto g = gBlock(op, d_s, d_e, d_s, d_e);
+				std::cout << "F_{-} = " << c.F_block(op, d_s, d_e, d_s, d_e) << std::endl;
+				// std::cout << "F_{+} = " << c.H_block(op, d_s, d_e, d_s, d_e) << std::endl;
+				// std::cout << "scale = " << ag.get_scale(delta) << std::endl;
+				// Vector<R> q_eval(q.size());
+				// for (uint32_t j = 0; j < q.size(); j++) q_eval[j] = q[j].eval(sp[j]);
+				// std::cout << "q = " << q_eval << std::endl;
+			}
 		}
 	}
 	for (uint32_t dim = 3; dim < 10; dim += 2)

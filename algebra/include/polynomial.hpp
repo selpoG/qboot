@@ -59,6 +59,19 @@ namespace algebra
 			assert(!c.iszero());
 			coeff_[degree] = c.clone();
 		}
+		explicit Polynomial(Vector<Ring>&& coeffs) : coeff_(0)
+		{
+			if (coeffs.size() > 0 && !coeffs[coeffs.size() - 1].iszero())
+			{
+				coeff_ = std::move(coeffs);
+				return;
+			}
+			int32_t deg = int32_t(coeffs.size()) - 1;
+			while (deg >= 0 && coeffs[uint32_t(deg)].iszero()) deg--;
+			if (deg < 0) return;
+			coeff_ = Vector<Ring>{uint32_t(deg + 1)};
+			for (uint32_t i = 0; i <= uint32_t(deg); i++) coeff_[i] = coeffs[i].clone();
+		}
 		Polynomial(std::initializer_list<Ring> coeffs) : coeff_(uint32_t(coeffs.size()))
 		{
 			uint32_t i = 0;
