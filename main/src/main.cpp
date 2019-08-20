@@ -18,8 +18,8 @@
 #include "real_io.hpp"
 
 using algebra::Vector, algebra::Matrix, algebra::Tensor, algebra::Polynomial;
-using qboot::h_asymptotic, qboot::gBlock, qboot::Context, qboot::PrimaryOperator, qboot::ComplexFunction,
-    qboot::RealFunction, qboot::RationalApproxData;
+using qboot::h_asymptotic, qboot::gBlock, qboot::Context, qboot::PrimaryOperator, algebra::ComplexFunction,
+    algebra::RealFunction, qboot::RationalApproxData;
 using std::array;
 
 using R = mpfr::real<1000, MPFR_RNDN>;
@@ -167,9 +167,9 @@ int main()
 			auto q = ag.get_bilinear_basis(gap);
 			const auto& pol = ag.get_poles();
 			std::cout << "pol = " << pol << std::endl;
-			for (uint32_t i = 0; i < sp.size(); i++)
+			for (auto& p : sp)
 			{
-				R delta = gap + sp[i];
+				R delta = gap + p;
 				auto op = c.get_primary(delta, spin);
 				std::cout << "op = " << op.str() << std::endl;
 				// auto g = gBlock(op, d_s, d_e, d_s, d_e);
@@ -177,7 +177,7 @@ int main()
 				// std::cout << "F_{+} = " << c.H_block(op, d_s, d_e, d_s, d_e) << std::endl;
 				// std::cout << "scale = " << ag.get_scale(delta) << std::endl;
 				// Vector<R> q_eval(q.size());
-				// for (uint32_t j = 0; j < q.size(); j++) q_eval[j] = q[j].eval(sp[j]);
+				// for (uint32_t j = 0; j < q.size(); j++) q_eval[j] = q[j].eval(p);
 				// std::cout << "q = " << q_eval << std::endl;
 			}
 		}

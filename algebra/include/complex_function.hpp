@@ -9,7 +9,7 @@
 #include "matrix.hpp"  // for Vector, is_mpfr_real_v, is_addable_v, union_ring_t, is_subtractable_v, is_multipliable_v
 #include "real.hpp"    // for real, pow
 
-namespace qboot
+namespace algebra
 {
 	// a complex function is even, odd or mixed under z -> 1 - z
 	// Mixed means the function may contain both Even and Odd parts.
@@ -61,7 +61,7 @@ namespace qboot
 	{
 		FunctionSymmetry sym_ = FunctionSymmetry::Mixed;
 		uint32_t lambda_;
-		algebra::Vector<Ring> coeffs_;
+		Vector<Ring> coeffs_;
 		// indices are aligned by lexicographical order of (dy, dx)
 		// i.e., (dx, dy) is the index(dx, dy)-th element in
 		//   [(dx, dy) for dy in range(lambda // 2) for dx in range(lambda - 2 * dy) if sym is Mixed or dx % 2 == sym]
@@ -107,22 +107,22 @@ namespace qboot
 		[[nodiscard]] const Ring& get(uint32_t dx, uint32_t dy) const { return coeffs_[index(dx, dy)]; }
 		[[nodiscard]] Ring move_get(uint32_t dx, uint32_t dy) && { return std::move(coeffs_[index(dx, dy)]); }
 
-		[[nodiscard]] algebra::Vector<Ring> as_vector() && { return std::move(coeffs_); }
+		[[nodiscard]] Vector<Ring> as_vector() && { return std::move(coeffs_); }
 		// z -> 1 - z
 		void flip()
 		{
 			switch (sym_)
 			{
-			case qboot::FunctionSymmetry::Even: break;
-			case qboot::FunctionSymmetry::Odd: coeffs_.negate(); break;
-			case qboot::FunctionSymmetry::Mixed:
+			case FunctionSymmetry::Even: break;
+			case FunctionSymmetry::Odd: coeffs_.negate(); break;
+			case FunctionSymmetry::Mixed:
 			default:
 				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
 					for (uint32_t dx = 1; dx + 2 * dy <= lambda_; dx += 2) get(dx, dy).negate();
 				break;
 			}
 		}
-		template <class = std::enable_if<algebra::is_mpfr_real_v<Ring>>>
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
 		[[nodiscard]] Ring abs() const
 		{
 			return norm().sqrt();
@@ -168,12 +168,11 @@ namespace qboot
 			return z;
 		}
 
-		template <class R, class = std::enable_if_t<algebra::is_addable_v<Ring, R>>>
-		friend ComplexFunction<algebra::union_ring_t<Ring, R>> operator+(const ComplexFunction& x,
-		                                                                 const ComplexFunction<R>& y)
+		template <class R, class = std::enable_if_t<is_addable_v<Ring, R>>>
+		friend ComplexFunction<union_ring_t<Ring, R>> operator+(const ComplexFunction& x, const ComplexFunction<R>& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction<algebra::union_ring_t<Ring, R>> z(x.lambda_, plus(x.sym_, y.sym_));
+			ComplexFunction<union_ring_t<Ring, R>> z(x.lambda_, plus(x.sym_, y.sym_));
 			if (x.sym_ == y.sym_)
 				z.coeffs_ = x.coeffs_ + y.coeffs_;
 			else
@@ -185,12 +184,11 @@ namespace qboot
 					}
 			return z;
 		}
-		template <class R, class = std::enable_if_t<algebra::is_subtractable_v<Ring, R>>>
-		friend ComplexFunction<algebra::union_ring_t<Ring, R>> operator-(const ComplexFunction& x,
-		                                                                 const ComplexFunction<R>& y)
+		template <class R, class = std::enable_if_t<is_subtractable_v<Ring, R>>>
+		friend ComplexFunction<union_ring_t<Ring, R>> operator-(const ComplexFunction& x, const ComplexFunction<R>& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction<algebra::union_ring_t<Ring, R>> z(x.lambda_, plus(x.sym_, y.sym_));
+			ComplexFunction<union_ring_t<Ring, R>> z(x.lambda_, plus(x.sym_, y.sym_));
 			if (x.sym_ == y.sym_)
 				z.coeffs_ = x.coeffs_ - y.coeffs_;
 			else
@@ -202,12 +200,11 @@ namespace qboot
 					}
 			return z;
 		}
-		template <class R, class = std::enable_if_t<algebra::is_multipliable_v<Ring, R>>>
-		friend ComplexFunction<algebra::union_ring_t<Ring, R>> operator*(const ComplexFunction& x,
-		                                                                 const ComplexFunction<R>& y)
+		template <class R, class = std::enable_if_t<is_multipliable_v<Ring, R>>>
+		friend ComplexFunction<union_ring_t<Ring, R>> operator*(const ComplexFunction& x, const ComplexFunction<R>& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction<algebra::union_ring_t<Ring, R>> z(x.lambda_, times(x.sym_, y.sym_));
+			ComplexFunction<union_ring_t<Ring, R>> z(x.lambda_, times(x.sym_, y.sym_));
 			for (uint32_t dy1 = 0; dy1 <= x.lambda_ / 2; ++dy1)
 				for (uint32_t dx1 = 0; dx1 + 2 * dy1 <= x.lambda_; ++dx1)
 				{
@@ -262,6 +259,6 @@ namespace qboot
 		}
 		return f;
 	}
-}  // namespace qboot
+}  // namespace algebra
 
 #endif  // COMPLEX_FUNCTION_HPP_

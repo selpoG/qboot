@@ -37,13 +37,14 @@ namespace qboot2
 namespace qboot
 {
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	RealFunction<Real> hBlock_shifted(const PrimaryOperator<Real>& op, const Real& S, const Real& P);
+	algebra::RealFunction<Real> hBlock_shifted(const PrimaryOperator<Real>& op, const Real& S, const Real& P);
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	RealFunction<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S, const Real& P);
+	algebra::RealFunction<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S,
+	                                           const Real& P);
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& S, const Real& P);
+	algebra::ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& S, const Real& P);
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	RealFunction<Real> h_asymptotic(const Real& S, const Context<Real>& context);
+	algebra::RealFunction<Real> h_asymptotic(const Real& S, const Context<Real>& context);
 
 	template <class Real>
 	PrimaryOperator<Real> _shift_op(const PrimaryOperator<Real>& op, const Real& small)
@@ -56,9 +57,9 @@ namespace qboot
 	// g_{Delta, spin}^{d12, d34}(z, z) = (4 rho) ^ {Delta} f(rho)
 	// if p[0] may be 0, we use continuity of conformal block.
 	template <class Real>
-	RealFunction<Real> hBlock_shifted(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
+	algebra::RealFunction<Real> hBlock_shifted(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
 	{
-		RealFunction<Real> b(op.context().n_Max);
+		algebra::RealFunction<Real> b(op.context().n_Max);
 		if (op.is_divergent_hor())
 		{
 			Real small(1ul, -(3 * Real::prec) / 8 + 15);
@@ -82,7 +83,7 @@ namespace qboot
 
 	// a function of z - 1 / 2 expanded at z = 1 / 2, g_{Delta, spin}^{d12, d34}(z, z)
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	RealFunction<Real> gBlock_real(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
+	algebra::RealFunction<Real> gBlock_real(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
 	{
 		return hBlock_powered(op.delta(), op, S, P);
 	}
@@ -91,12 +92,13 @@ namespace qboot
 	// (4 * rho) ^ {exp} * h_{Delta, spin}^{d12, d34}(z, z)
 	// = (4 * rho) ^ {exp - Delta} * g_{Delta, spin}^{d12, d34}(z, z)
 	template <class Real>
-	RealFunction<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S, const Real& P)
+	algebra::RealFunction<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S,
+	                                           const Real& P)
 	{
 		auto h_at_0 = hBlock_shifted(op, S, P);
 		h_at_0 *= mpfr::pow(4, exp);
-		RealFunctionWithPower<Real> f_at_0(h_at_0, exp);
-		RealFunction<Real> f_of_rho(op.context().lambda);
+		algebra::RealFunctionWithPower<Real> f_at_0(h_at_0, exp);
+		algebra::RealFunction<Real> f_of_rho(op.context().lambda);
 		f_of_rho.get(0) = f_at_0.eval(op.context().rho);
 		Real tmp(1);
 		for (uint32_t k = 1; k <= f_of_rho.lambda(); ++k)
@@ -109,18 +111,17 @@ namespace qboot
 	}
 
 	template <class Real>
-	ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
+	algebra::ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& S, const Real& P)
 	{
 		return op.context().expand_off_diagonal(gBlock_real(op, S, P), op, S, P);
 	}
 
 	template <class Real>
-	ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
-	                             const Real& d4)
+	algebra::ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
+	                                      const Real& d3, const Real& d4)
 	{
 		Real d12 = d1 - d2, d34 = d3 - d4;
-		Real S = (d34 - d12) / 2, P = -d12 * d34 / 2;
-		return op.context().expand_off_diagonal(gBlock_real(op, S, P), op, S, P);
+		return gBlock(op, (d34 - d12) / 2, -d12 * d34 / 2);
 	}
 
 	// calculate \tilde{h}(r, 1) as a function of z - 1 / 2 eq (4.6) in arXiv:1406:4858
@@ -128,12 +129,12 @@ namespace qboot
 	//   = (1 - r ^ 2) ^ {-epsilon} (1 + r) ^ {-1 - d12 + d34} (1 - r) ^ {-1 + d12 - d34}
 	//   = (1 + r) ^ {-epsilon - 1 + 2 S} (1 - r) ^ {-epsilon - 1 - 2 S}
 	template <class Real>
-	RealFunction<Real> h_asymptotic(const Real& S, const Context<Real>& context)
+	algebra::RealFunction<Real> h_asymptotic(const Real& S, const Context<Real>& context)
 	{
 		// calculate (1 + sgn r) ^ {-epsilon - 1 + 2 sgn S} as a function of r - rho
 		auto getFactor = [&context, &S](int sign) {
-			return power_function(Real(1) + sign * context.rho, Real(sign), (2 * sign) * S - 1 - context.epsilon,
-			                      context.lambda);
+			return algebra::power_function(Real(1) + sign * context.rho, Real(sign),
+			                               (2 * sign) * S - 1 - context.epsilon, context.lambda);
 		};
 		return context.rho_to_z.convert(getFactor(1) * getFactor(-1));
 	}

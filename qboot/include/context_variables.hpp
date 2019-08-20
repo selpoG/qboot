@@ -36,11 +36,11 @@ namespace qboot
 	// z = 4 r / (1 + r) ^ 2
 	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	RealFunction<Real> z_as_func_rho(uint32_t lambda)
+	algebra::RealFunction<Real> z_as_func_rho(uint32_t lambda)
 	{
 		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqt(2) + r') ^ {-2}
 		// f = (4 - 2sqt(2) + r') ^ {-2}
-		auto f = qboot::power_function<Real>(4 - mpfr::sqrt(Real(8)), Real(1), Real(-2), lambda);
+		auto f = algebra::power_function<Real>(4 - mpfr::sqrt(Real(8)), Real(1), Real(-2), lambda);
 		// g1 = 2 sqrt(2) r' f
 		auto g1 = f.clone();
 		g1.shift(1);
@@ -62,9 +62,9 @@ namespace qboot
 		const uint32_t n_Max, lambda, dimension;
 		const Real epsilon, rho;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
-		RealConverter<Real> rho_to_z;
+		algebra::RealConverter<Real> rho_to_z;
 		// rho ^ Delta as a function of z - 1 / 2
-		RealFunction<algebra::Polynomial<Real>> rho_to_delta;
+		algebra::RealFunction<algebra::Polynomial<Real>> rho_to_delta;
 		std::string str() const
 		{
 			std::ostringstream os;
@@ -77,7 +77,7 @@ namespace qboot
 		      dimension(dim),
 		      epsilon(Real(dim - 2) / 2),
 		      rho(3 - mpfr::sqrt(Real(8))),
-		      rho_to_z(RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse()),
+		      rho_to_z(algebra::RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse()),
 		      rho_to_delta(lambda)
 		{
 			assert(dim >= 3 && dim % 2 == 1);
@@ -107,41 +107,43 @@ namespace qboot
 		auto get_general_primary(uint32_t spin) const { return general_primary_operator(spin, *this); }
 		// calculate v ^ d gBlock and project to sym-symmetric part
 		// F-type corresponds to sym = Odd, H-type to Even
-		ComplexFunction<Real> F_block(const Real& d, const ComplexFunction<Real>& gBlock, FunctionSymmetry sym) const
+		algebra::ComplexFunction<Real> F_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock,
+		                                       algebra::FunctionSymmetry sym) const
 		{
-			return (v_to_d(d, lambda) * gBlock).proj(sym);
+			return (algebra::v_to_d(d, lambda) * gBlock).proj(sym);
 		}
-		ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
-		                              const Real& d4, FunctionSymmetry sym) const
+		algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
+		                                       const Real& d3, const Real& d4, algebra::FunctionSymmetry sym) const
 		{
 			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4), sym);
 		}
-		ComplexFunction<Real> F_block(const Real& d, const ComplexFunction<Real>& gBlock) const
+		algebra::ComplexFunction<Real> F_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock) const
 		{
-			return F_block(d, gBlock, FunctionSymmetry::Odd);
+			return F_block(d, gBlock, algebra::FunctionSymmetry::Odd);
 		}
-		ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
-		                              const Real& d4) const
+		algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
+		                                       const Real& d3, const Real& d4) const
 		{
-			return F_block(op, d1, d2, d3, d4, FunctionSymmetry::Odd);
+			return F_block(op, d1, d2, d3, d4, algebra::FunctionSymmetry::Odd);
 		}
-		ComplexFunction<Real> H_block(const Real& d, const ComplexFunction<Real>& gBlock) const
+		algebra::ComplexFunction<Real> H_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock) const
 		{
-			return F_block(d, gBlock, FunctionSymmetry::Even);
+			return F_block(d, gBlock, algebra::FunctionSymmetry::Even);
 		}
-		ComplexFunction<Real> H_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2, const Real& d3,
-		                              const Real& d4) const
+		algebra::ComplexFunction<Real> H_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
+		                                       const Real& d3, const Real& d4) const
 		{
-			return F_block(op, d1, d2, d3, d4, FunctionSymmetry::Even);
+			return F_block(op, d1, d2, d3, d4, algebra::FunctionSymmetry::Even);
 		}
-		RealFunction<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
-		                                 const Real& P) const
+		algebra::RealFunction<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
+		                                          const Real& P) const
 		{
 			return hBlock_powered(Real(k), op, S, P);
 		}
-		RealFunction<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
-		ComplexFunction<algebra::Polynomial<Real>> expand_off_diagonal(
-		    RealFunction<algebra::Polynomial<Real>>&& realAxisResult, uint32_t spin, const Real& S, const Real& P) const
+		algebra::RealFunction<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
+		algebra::ComplexFunction<algebra::Polynomial<Real>> expand_off_diagonal(
+		    algebra::RealFunction<algebra::Polynomial<Real>>&& realAxisResult, uint32_t spin, const Real& S,
+		    const Real& P) const
 		{
 			return expand_off_diagonal(std::move(realAxisResult), get_general_primary(spin), S, P);
 		}
@@ -155,11 +157,12 @@ namespace qboot
 		//             = (1 / 2) ^ {m + 2 n} (der x) ^ m (der y) ^ n g_{Delta, spin}
 		//   and h_{m, n} = m! n! f[m, n] / 2 ^ {m + 2 n}
 		template <class T>
-		ComplexFunction<T> expand_off_diagonal(RealFunction<T>&& realAxisResult, const PrimaryOperator<Real, T>& op,
-		                                       const Real& S, const Real& P) const
+		algebra::ComplexFunction<T> expand_off_diagonal(algebra::RealFunction<T>&& realAxisResult,
+		                                                const PrimaryOperator<Real, T>& op, const Real& S,
+		                                                const Real& P) const
 		{
 			assert(realAxisResult.lambda() == lambda);
-			ComplexFunction<T> f(lambda);
+			algebra::ComplexFunction<T> f(lambda);
 			for (uint32_t m = 0; m <= lambda; ++m) f.get(m, 0u) = std::move(realAxisResult.get(m));
 
 			T val{}, term{}, quad_casimir = op.quadratic_casimir();

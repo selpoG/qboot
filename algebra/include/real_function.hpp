@@ -9,7 +9,7 @@
 #include "matrix.hpp"  // for Vector, Matrix, base_ring, is_intermediate_v, is_mpfr_real_v, is_iaddable_v, is_imultipliable_v, is_idividable_v, is_addable_v, is_subtractable_v, is_multipliable_v, union_ring_t
 #include "real.hpp"    // for real, pow
 
-namespace qboot
+namespace algebra
 {
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	class RealFunction;
@@ -33,14 +33,14 @@ namespace qboot
 	class RealFunction
 	{
 		uint32_t lambda_;
-		algebra::Vector<Ring> coeffs_;
-		using base = typename algebra::base_ring<Ring>::type;
+		Vector<Ring> coeffs_;
+		using base = typename base_ring<Ring>::type;
 		using ring = Ring;
 		using type = RealFunction;
 
 	public:
 		explicit RealFunction(uint32_t lambda) : lambda_(lambda), coeffs_(lambda + 1) {}
-		template <class T, class = std::enable_if_t<algebra::is_intermediate_v<Ring, T> ||
+		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> ||
 		                                            (std::is_same_v<T, base> && !std::is_same_v<T, Ring>)>>
 		explicit RealFunction(const RealFunction<T>& v) : lambda_(v.lambda_), coeffs_(v.coeffs_)
 		{
@@ -65,8 +65,8 @@ namespace qboot
 		[[nodiscard]] Ring& get(uint32_t k) { return coeffs_[k]; }
 		[[nodiscard]] const Ring& get(uint32_t k) const { return coeffs_[k]; }
 
-		[[nodiscard]] algebra::Vector<Ring> as_vector() && { return std::move(coeffs_); }
-		template <class = std::enable_if<algebra::is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Vector<Ring> as_vector() && { return std::move(coeffs_); }
+		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
 		[[nodiscard]] Ring abs() const
 		{
 			return norm().sqrt();
@@ -79,58 +79,58 @@ namespace qboot
 			for (uint32_t i = 0; i < p; i++) get(i) = {};
 		}
 
-		template <class T, class = std::enable_if_t<algebra::is_iaddable_v<Ring, T>>>
+		template <class T, class = std::enable_if_t<is_iaddable_v<Ring, T>>>
 		RealFunction& operator+=(const RealFunction<T>& v)
 		{
 			coeffs_ += v.coeffs_;
 			return *this;
 		}
-		template <class T, class = std::enable_if_t<algebra::is_imultipliable_v<Ring, T>>>
+		template <class T, class = std::enable_if_t<is_imultipliable_v<Ring, T>>>
 		RealFunction& operator*=(const T& r)
 		{
 			coeffs_ *= r;
 			return *this;
 		}
-		template <class T, class = std::enable_if_t<algebra::is_idividable_v<Ring, T>>>
+		template <class T, class = std::enable_if_t<is_idividable_v<Ring, T>>>
 		RealFunction& operator/=(const T& r)
 		{
 			coeffs_ /= r;
 			return *this;
 		}
-		template <class R, class = std::enable_if_t<algebra::is_addable_v<Ring, R>>>
-		friend RealFunction<algebra::union_ring_t<Ring, R>> operator+(const RealFunction& x, const RealFunction<R>& y)
+		template <class R, class = std::enable_if_t<is_addable_v<Ring, R>>>
+		friend RealFunction<union_ring_t<Ring, R>> operator+(const RealFunction& x, const RealFunction<R>& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			RealFunction<algebra::union_ring_t<Ring, R>> z(x.lambda_);
+			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
 			z.coeffs_ = x.coeffs_ + y.coeffs_;
 			return z;
 		}
-		template <class R, class = std::enable_if_t<algebra::is_subtractable_v<Ring, R>>>
-		friend RealFunction<algebra::union_ring_t<Ring, R>> operator-(const RealFunction& x, const RealFunction<R>& y)
+		template <class R, class = std::enable_if_t<is_subtractable_v<Ring, R>>>
+		friend RealFunction<union_ring_t<Ring, R>> operator-(const RealFunction& x, const RealFunction<R>& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			RealFunction<algebra::union_ring_t<Ring, R>> z(x.lambda_);
+			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
 			z.coeffs_ = x.coeffs_ - y.coeffs_;
 			return z;
 		}
-		template <class R, class = std::enable_if_t<algebra::is_multipliable_v<Ring, R>>>
-		friend RealFunction<algebra::union_ring_t<Ring, R>> operator*(const RealFunction& x, const RealFunction<R>& y)
+		template <class R, class = std::enable_if_t<is_multipliable_v<Ring, R>>>
+		friend RealFunction<union_ring_t<Ring, R>> operator*(const RealFunction& x, const RealFunction<R>& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			RealFunction<algebra::union_ring_t<Ring, R>> z(x.lambda_);
+			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
 			for (uint32_t k1 = 0; k1 <= x.lambda_; ++k1)
 				for (uint32_t k2 = 0; k1 + k2 <= x.lambda_; ++k2) z.get(k1 + k2) += x.get(k1) * y.get(k2);
 			return z;
 		}
-		template <class R, class = std::enable_if_t<!is_realfunc_v<R> && algebra::is_multipliable_v<Ring, R>>>
-		friend RealFunction<algebra::union_ring_t<Ring, R>> operator*(const RealFunction& x, const R& r)
+		template <class R, class = std::enable_if_t<!is_realfunc_v<R> && is_multipliable_v<Ring, R>>>
+		friend RealFunction<union_ring_t<Ring, R>> operator*(const RealFunction& x, const R& r)
 		{
-			RealFunction<algebra::union_ring_t<Ring, R>> z(x.lambda_);
+			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
 			z.coeffs_ = x.coeffs_ * r;
 			return z;
 		}
-		template <class R, class = std::enable_if_t<!is_realfunc_v<R> && algebra::is_multipliable_v<Ring, R>>>
-		friend RealFunction<algebra::union_ring_t<Ring, R>> operator*(const R& r, const RealFunction& x)
+		template <class R, class = std::enable_if_t<!is_realfunc_v<R> && is_multipliable_v<Ring, R>>>
+		friend RealFunction<union_ring_t<Ring, R>> operator*(const R& r, const RealFunction& x)
 		{
 			return x * r;
 		}
@@ -173,7 +173,7 @@ namespace qboot
 	class RealConverter
 	{
 		uint32_t lambda_;
-		algebra::Matrix<Ring> mat_;
+		Matrix<Ring> mat_;
 
 	public:
 		// x = func(y)
@@ -208,7 +208,7 @@ namespace qboot
 			g.coeffs_ = f.coeffs_ * mat_;
 			return g;
 		}
-		const algebra::Matrix<Ring>& matrix() const { return mat_; }
+		const Matrix<Ring>& matrix() const { return mat_; }
 	};
 	// real function multiplied by x ^ {pow} of x at x = 0
 	// take derivatives (der x) ^ k upto k <= lambda
@@ -231,7 +231,7 @@ namespace qboot
 			pow_ -= 1;
 		}
 		// evaluate at x = x
-		template <class R, class = std::enable_if_t<algebra::is_imultipliable_v<Ring, R>>>
+		template <class R, class = std::enable_if_t<is_imultipliable_v<Ring, R>>>
 		[[nodiscard]] Ring eval(const R& x) const
 		{
 			Ring s{};
@@ -244,6 +244,6 @@ namespace qboot
 			return s;
 		}
 	};
-}  // namespace qboot
+}  // namespace algebra
 
 #endif  // REAL_FUNCTION_HPP_
