@@ -53,7 +53,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ../lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ../lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ../lib)
 
-add_subdirectory(util)
 add_subdirectory(algebra)
 add_subdirectory(qboot)
 add_subdirectory(main)

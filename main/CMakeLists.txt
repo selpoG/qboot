@@ -7,7 +7,6 @@ add_executable(${MY_TARGET} ${SOURCES} ${HEADERS})
 
 target_link_libraries(${MY_TARGET} qboot)
 target_include_directories(${MY_TARGET} PUBLIC
-    ../util/include
     ../algebra/include
     ../qboot/include
 )

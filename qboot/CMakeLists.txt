@@ -5,9 +5,8 @@ file(GLOB HEADERS "include/*.hpp" "include/*.h")
 
 add_library(${MY_TARGET} STATIC ${SOURCES} ${HEADERS})
 
-target_link_libraries(${MY_TARGET} INTERFACE algebra util)
+target_link_libraries(${MY_TARGET} INTERFACE algebra)
 target_include_directories(${MY_TARGET} PUBLIC
-	../util/include
 	../algebra/include
 	"${GMP_INCLUDE_DIR}"
 	include
