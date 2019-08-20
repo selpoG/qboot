@@ -10,36 +10,15 @@
 namespace qboot
 {
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::Vector<Real> fast_partial_fraction(const algebra::Vector<Real>& pole_locations,
-	                                            const std::vector<bool>& is_double, size_t n_poles)
+	algebra::Vector<Real> fast_partial_fraction(const algebra::Vector<Real>& poles)
 	{
-		size_t expected_result_length = n_poles;
-		for (size_t i = 0; i < n_poles; ++i)
-			if (is_double[i]) ++expected_result_length;
-		algebra::Vector<Real> result(expected_result_length);
-		Real tmp;
-		for (size_t i = 0, pos = 0; i < n_poles; ++i, ++pos)
+		algebra::Vector<Real> result(poles.size());
+		for (uint32_t i = 0; i < poles.size(); ++i)
 		{
-			result[pos] = 1;
-			// \prod_{j != i} (pole[i] - pole[j]) ^ (1 or 2)
-			for (size_t j = 0; j < n_poles; ++j)
-			{
-				if (i == j) continue;
-				tmp = pole_locations[i] - pole_locations[j];
-				result[pos] *= tmp;
-				if (is_double[j]) result[pos] *= tmp;
-			}
-			result[pos] = 1 / result[pos];
-			if (is_double[i])
-			{
-				++pos;
-				for (size_t j = 0; j < n_poles; ++j)
-				{
-					if (i == j) continue;
-					result[pos] += (is_double[j] ? 2 : 1) / (pole_locations[i] - pole_locations[j]);
-				}
-				result[pos] *= -result[pos - 1];
-			}
+			result[i] = 1;
+			for (uint32_t j = 0; j < poles.size(); ++j)
+				if (i != j) result[i] *= poles[i] - poles[j];
+			result[i] = 1 / result[i];
 		}
 		return result;
 	}

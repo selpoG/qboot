@@ -9,12 +9,12 @@
 namespace qboot
 {
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
-	algebra::Matrix<Ring> anti_band_to_inverse(const std::vector<Ring>& ab)
+	algebra::Matrix<Ring> anti_band_to_inverse(const algebra::Vector<Ring>& ab)
 	{
 		auto dim = (1 + ab.size()) / 2;
 		algebra::Matrix<Ring> A(dim, dim);
-		for (size_t i = 0; i < dim; ++i)
-			for (size_t j = 0; j < dim; ++j) A.get(i, j) = ab[i + j];
+		for (uint32_t i = 0; i < dim; ++i)
+			for (uint32_t j = 0; j < dim; ++j) A.get(i, j) = ab[i + j];
 		return A.cholesky_decomposition().lower_triangular_inverse();
 	}
 }  // namespace qboot
