@@ -2,9 +2,11 @@
 #define HOR_FORMULA_HPP_
 
 #include <array>    // for array
+#include <cassert>  // for assert
 #include <cstdint>  // for uint32_t, int32_t
 
 #include "matrix.hpp"      // for Vector
+#include "polynomial.hpp"  // for Polynomial
 #include "primary_op.hpp"  // for PrimaryOperator
 #include "real.hpp"        // for real, mpfr_t, mpfr_prec_t, mpfr_rnd_t
 

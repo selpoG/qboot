@@ -4,7 +4,7 @@
 #include <cstdint>  // for uint32_t
 
 #include "matrix.hpp"  // for Vector
-#include "real.hpp"    // for real
+#include "real.hpp"    // for real, gamma_inc, pow, log
 
 namespace qboot
 {

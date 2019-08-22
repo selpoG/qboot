@@ -39,6 +39,7 @@
 
 #include <limits>
 #include <sstream>
+#include <type_traits>
 #include "mpfr.h"
 
 // //////////////////////////////////////////////////////////////////
@@ -1590,6 +1591,23 @@ namespace mpfr
 	// //////////////////////////////////////////////////////////////
 
 	template <class _Tp1, class _Tp2>
+	using union_real_t = typename enable_if<
+	    type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp1, true>::enable_arithm_ops &&
+	        type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp2, true>::enable_arithm_ops,
+	    const typename result_type2<_Tp1, _Tp2, true>::type>::type;
+
+	template <class _Tp1, class _Tp2>
+	inline union_real_t<_Tp1, _Tp2> mul(const _Tp1& r1, const _Tp2& r2)
+	{
+		return r1 * r2;
+	}
+	template <class _Tp1, class _Tp2>
+	inline union_real_t<_Tp1, _Tp2> mul_scalar(const _Tp1& r1, const _Tp2& r2)
+	{
+		return r1 * r2;
+	}
+
+	template <class _Tp1, class _Tp2>
 	inline typename enable_if<
 	    type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp1, true>::enable_arithm_ops &&
 	        type_traits<typename result_type2<_Tp1, _Tp2, true>::type, _Tp2, true>::enable_arithm_ops,
@@ -3000,6 +3018,16 @@ namespace mpfr
 
 		void negate() { MPFR_NS mpfr_mul_si(_x, _x, -1, _rnd); }
 
+		real abs() const { return mpfr::abs(*this); }
+
+		real norm() const { return *this * *this; }
+
+		template <class T>
+		real eval(const T&)
+		{
+			return *this;
+		}
+
 		std::string str() const
 		{
 			std::ostringstream os;
@@ -4074,6 +4102,19 @@ namespace mpfr
 		//                          const real<_prec1, _rnd1>>::type
 		// factorial(const mpfr_old_long n);
 	};  // class real
+	// T is mpfr::real or not
+	template <class T>
+	struct is_mpfr_real;
+	template <class T>
+	inline constexpr bool is_mpfr_real_v = is_mpfr_real<T>::value;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct is_mpfr_real<mpfr::real<prec, rnd>> : std::true_type
+	{
+	};
+	template <class T>
+	struct is_mpfr_real : std::false_type
+	{
+	};
 }  // namespace mpfr
 
 #endif  // REAL_HPP_

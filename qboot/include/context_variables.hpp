@@ -1,18 +1,16 @@
 #ifndef CONTEXT_VARIABLES_HPP_
 #define CONTEXT_VARIABLES_HPP_
 
+#include <cassert>  // for assert
 #include <cstdint>  // for uint32_t, int32_t
 #include <memory>   // for unique_ptr
 #include <sstream>  // for ostringstream
 #include <string>   // for string
-#include <utility>  // for move
 
-#include "complex_function.hpp"  // for ComplexFunction
-#include "matrix.hpp"            // for Vector
-#include "polynomial.hpp"        // for Polynomial
+#include "complex_function.hpp"  // for ComplexFunction, FunctionSymmetry
 #include "primary_op.hpp"        // for PrimaryOperator
 #include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt
-#include "real_function.hpp"     // for RealFunction, RealConverter
+#include "real_function.hpp"     // for RealFunction, RealConverter, power_function
 
 namespace qboot2
 {
@@ -56,15 +54,12 @@ namespace qboot
 	class Context
 	{
 	public:
-		using type = Real;
 		static constexpr mpfr_prec_t prec = Real::prec;
 		static constexpr mpfr_rnd_t rnd = Real::rnd;
 		const uint32_t n_Max, lambda, dimension;
 		const Real epsilon, rho;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter<Real> rho_to_z;
-		// rho ^ Delta as a function of z - 1 / 2
-		algebra::RealFunction<algebra::Polynomial<Real>> rho_to_delta;
 		std::string str() const
 		{
 			std::ostringstream os;
@@ -75,22 +70,11 @@ namespace qboot
 		    : n_Max(n_Max),
 		      lambda(lambda),
 		      dimension(dim),
-		      epsilon(Real(dim - 2) / 2),
+		      epsilon(Real(dim) / 2 - 1),
 		      rho(3 - mpfr::sqrt(Real(8))),
-		      rho_to_z(algebra::RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse()),
-		      rho_to_delta(lambda)
+		      rho_to_z(algebra::RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse())
 		{
 			assert(dim >= 3 && dim % 2 == 1);
-
-			// (rho + r') ^ Delta = rho ^ Delta \sum_{i = 0}^{lambda} rho_to_delta[i] r' ^ i + O(r' ^ {lambda + 1})
-			rho_to_delta.get(0) = {Real(1)};
-			for (uint32_t i = 1; i <= lambda; ++i)
-			{
-				Real tmp = 1 / (rho * i);
-				rho_to_delta.get(i) =
-				    rho_to_delta.get(i - 1) * algebra::Polynomial<Real>({(1 - int32_t(i)) * tmp, tmp});
-			}
-			rho_to_delta = rho_to_z.convert(rho_to_delta);
 		}
 		Context(Context&&) = default;
 		Context& operator=(Context&&) = default;
@@ -103,19 +87,17 @@ namespace qboot
 			return Real(val);
 		}
 		Real unitary_bound(uint32_t spin) const { return spin == 0 ? epsilon : spin + 2 * epsilon; }
-		auto get_primary(const Real& delta, uint32_t spin) const { return PrimaryOperator(delta, spin, *this); }
-		auto get_general_primary(uint32_t spin) const { return general_primary_operator(spin, *this); }
 		// calculate v ^ d gBlock and project to sym-symmetric part
 		// F-type corresponds to sym = Odd, H-type to Even
 		algebra::ComplexFunction<Real> F_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock,
 		                                       algebra::FunctionSymmetry sym) const
 		{
-			return (algebra::v_to_d(d, lambda) * gBlock).proj(sym);
+			return mul(algebra::v_to_d(d, lambda), gBlock).proj(sym);
 		}
 		algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
 		                                       const Real& d3, const Real& d4, algebra::FunctionSymmetry sym) const
 		{
-			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4), sym);
+			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4, *this), sym);
 		}
 		algebra::ComplexFunction<Real> F_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock) const
 		{
@@ -138,15 +120,9 @@ namespace qboot
 		algebra::RealFunction<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
 		                                          const Real& P) const
 		{
-			return hBlock_powered(Real(k), op, S, P);
+			return hBlock_powered(Real(k), op, S, P, *this);
 		}
 		algebra::RealFunction<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
-		algebra::ComplexFunction<algebra::Polynomial<Real>> expand_off_diagonal(
-		    algebra::RealFunction<algebra::Polynomial<Real>>&& realAxisResult, uint32_t spin, const Real& S,
-		    const Real& P) const
-		{
-			return expand_off_diagonal(std::move(realAxisResult), get_general_primary(spin), S, P);
-		}
 		// recover off-diagonal derivatives of conformal block from the diagonal derivatives.
 		// use recursion relation of eq (2.17) in arXiv:1602.02810 (generalized ver. of eq (C.1) in arXiv:1203.6064).
 		// note:
@@ -156,16 +132,15 @@ namespace qboot
 		//   h_{m, n} := (der a) ^ m (der b) ^ n g_{Delta, spin}
 		//             = (1 / 2) ^ {m + 2 n} (der x) ^ m (der y) ^ n g_{Delta, spin}
 		//   and h_{m, n} = m! n! f[m, n] / 2 ^ {m + 2 n}
-		template <class T>
-		algebra::ComplexFunction<T> expand_off_diagonal(algebra::RealFunction<T>&& realAxisResult,
-		                                                const PrimaryOperator<Real, T>& op, const Real& S,
-		                                                const Real& P) const
+		algebra::ComplexFunction<Real> expand_off_diagonal(algebra::RealFunction<Real>&& realAxisResult,
+		                                                   const PrimaryOperator<Real>& op, const Real& S,
+		                                                   const Real& P) const
 		{
 			assert(realAxisResult.lambda() == lambda);
-			algebra::ComplexFunction<T> f(lambda);
-			for (uint32_t m = 0; m <= lambda; ++m) f.get(m, 0u) = std::move(realAxisResult.get(m));
+			algebra::ComplexFunction<Real> f(lambda);
+			for (uint32_t m = 0; m <= lambda; ++m) f.at(m, 0u).swap(realAxisResult.at(m));
 
-			T val{}, term{}, quad_casimir = op.quadratic_casimir();
+			Real val{}, term{}, quad_casimir = op.quadratic_casimir();
 
 			for (int32_t n = 1; uint32_t(n) <= lambda / 2; ++n)
 			{
@@ -174,45 +149,45 @@ namespace qboot
 				for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda; ++m)
 				{
 					// h[m + 2, n - 1]
-					val = (-(m + 1) * (m + 2)) * f.get(m + 2, n - 1);
+					val = (-(m + 1) * (m + 2)) * f.at(uint32_t(m + 2), uint32_t(n - 1));
 
 					// h[m + 1, n - 1]
-					term = T(2 * (epsilon + S) - (m + 4 * n - 6));
+					term = 2 * (epsilon + S) - (m + 4 * n - 6);
 					term *= 2 * (m + 1);
-					term *= f.get(m + 1, n - 1);
+					term *= f.at(uint32_t(m + 1), uint32_t(n - 1));
 					val += term;
 
 					// h[m, n - 1]
-					term = T(epsilon * (4 * (m + n - 1)));
+					term = epsilon * (4 * (m + n - 1));
 					term += m * (m + 8 * n - 5) + n * (4 * n - 2) - 2;
 					term += 2 * P;
 					term += S * (8 * n + 4 * m - 8);
 					term += 4 * quad_casimir;
 					term *= 4;
-					term *= f.get(m, n - 1);
+					term *= f.at(uint32_t(m), uint32_t(n - 1));
 					val += term;
 
 					// h[m - 1, n - 1]
 					if (m >= 1)
 					{
-						term = T(epsilon * (2 * (m + 1 - 2 * n)));
+						term = epsilon * (2 * (m + 1 - 2 * n));
 						term += m * (m + 12 * n - 13) + n * (12 * n - 34) + 22;
 						term += 2 * P;
 						term += S * (8 * n + 2 * m - 10);
 						term *= 8;
-						term *= f.get(m - 1, n - 1);
+						term *= f.at(uint32_t(m - 1), uint32_t(n - 1));
 						val += term;
 					}
 
 					// h[m + 1, n - 2] and h[m + 2, n - 2]
 					if (n >= 2)
 					{
-						term = T(-2 * epsilon);
+						term = -2 * epsilon;
 						term += 3 * m + 4 * n - 6;
 						term += 2 * S;
 						term *= 8 * (m + 1);
-						term *= f.get(m + 1, n - 2);
-						term += f.get(m + 2, n - 2) * (4 * (m + 1) * (m + 2));
+						term *= f.at(uint32_t(m + 1), uint32_t(n - 2));
+						term += f.at(uint32_t(m + 2), uint32_t(n - 2)) * (4 * (m + 1) * (m + 2));
 						val += term;
 					}
 
@@ -220,11 +195,11 @@ namespace qboot
 
 					// h[m - 1, n], h[m - 2, n] and h[m - 3, n]
 					term = {};
-					if (m >= 3) term += 8 * f.get(m - 3, n);
-					if (m >= 2) term += 4 * f.get(m - 2, n);
-					if (m >= 1) term -= 2 * f.get(m - 1, n);
+					if (m >= 3) term += 8 * f.at(uint32_t(m - 3), uint32_t(n));
+					if (m >= 2) term += 4 * f.at(uint32_t(m - 2), uint32_t(n));
+					if (m >= 1) term -= 2 * f.at(uint32_t(m - 1), uint32_t(n));
 
-					f.get(m, n) = val + term;
+					f.at(uint32_t(m), uint32_t(n)) = val + term;
 				}
 			}
 			return f;

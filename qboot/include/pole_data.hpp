@@ -3,17 +3,12 @@
 
 #include <cassert>  // for assert
 #include <cstdint>  // for uint32_t, int32_t
-#include <set>      // for set
 #include <utility>  // for move
-#include <vector>   // for vector
 
-#include "complex_function.hpp"   // for ComplexFunction
 #include "context_variables.hpp"  // for Context
-#include "matrix.hpp"             // for Vector, Matrix
+#include "matrix.hpp"             // for Vector
 #include "polynomial.hpp"         // for Polynomial
-#include "primary_op.hpp"         // for PrimaryOperator
-#include "real.hpp"               // for real, factorial, pochhammer, pow
-#include "real_function.hpp"      // for RealFunction
+#include "real.hpp"               // for real, pow, log
 
 namespace qboot
 {
@@ -77,9 +72,9 @@ namespace qboot
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class RationalApproxData
 	{
-		uint32_t spin;
-		Real epsilon, unitarity_bound{};
-		const Context<Real>& context;
+		uint32_t spin, lambda;
+		const Real &epsilon, &rho;
+		Real unitarity_bound{};
 		algebra::Vector<Real> poles;
 
 	public:
@@ -94,7 +89,7 @@ namespace qboot
 		{
 		}
 		RationalApproxData(uint32_t cutoff, uint32_t spin, const Context<Real>& context, bool include_odd)
-		    : spin(spin), epsilon(context.epsilon), context(context), poles(cutoff)
+		    : spin(spin), lambda(context.lambda), epsilon(context.epsilon), rho(context.rho), poles(cutoff)
 		{
 			// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
 			auto get_pols = [this, include_odd](uint32_t type) {
@@ -108,11 +103,11 @@ namespace qboot
 				pole_seq.next();
 			}
 		}
-		uint32_t max_degree() const { return poles.size() + context.lambda; }
+		uint32_t max_degree() const { return poles.size() + lambda; }
 		const algebra::Vector<Real>& get_poles() const { return poles; }
 		Real get_scale(const Real& delta) const
 		{
-			Real ans = mpfr::pow(4 * context.rho, delta);
+			Real ans = mpfr::pow(4 * rho, delta);
 			for (uint32_t i = 0; i < poles.size(); i++) ans /= delta - poles[i];
 			return ans;
 		}
@@ -126,13 +121,13 @@ namespace qboot
 			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
 			algebra::Vector<Real> inner_prods(2 * deg + 1);
 			for (uint32_t i = 0; i < poles.size(); i++)
-				inner_prods += weight[i] * simple_pole_integral(2 * deg, 4 * context.rho, shifted_poles[i]);
+				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho, shifted_poles[i]));
 			auto mat = anti_band_to_inverse(inner_prods);
 			algebra::Vector<algebra::Polynomial<Real>> q(deg + 1);
 			for (uint32_t i = 0; i <= deg; i++)
 			{
 				algebra::Vector<Real> v(i + 1);
-				for (uint32_t j = 0; j <= i; j++) v[j] = mat.get(i, j);
+				for (uint32_t j = 0; j <= i; j++) v[j] = mat.at(i, j);
 				q[i] = algebra::Polynomial<Real>(std::move(v));
 			}
 			return q;
@@ -142,7 +137,7 @@ namespace qboot
 			uint32_t n = max_degree() + 1;
 			algebra::Vector<Real> v(n);
 			for (uint32_t i = 0; i < n; i++) v[i] = mpfr::pow(Real::pi() * (-1 + 4 * int32_t(i)), 2);
-			v /= (-64 * int32_t(n)) * mpfr::log(4 * context.rho);
+			v /= (-64 * int32_t(n)) * mpfr::log(4 * rho);
 			return v;
 		}
 	};

@@ -1,8 +1,7 @@
 #ifndef PARTIAL_FRACTION_HPP_
 #define PARTIAL_FRACTION_HPP_
 
-#include <cstddef>  // for size_t
-#include <vector>   // for vector
+#include <cstdint>  // for uint32_t
 
 #include "matrix.hpp"  // for Vector
 #include "real.hpp"    // for real

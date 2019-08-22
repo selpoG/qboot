@@ -1,30 +1,27 @@
 #ifndef POLYNOMIAL_HPP_
 #define POLYNOMIAL_HPP_
 
+#include <cassert>           // for assert
 #include <cstdint>           // for uint32_t, int32_t
 #include <initializer_list>  // for initializer_list
 #include <ostream>           // for ostream
-#include <type_traits>       // for enable_if, enable_if_t, is_same_v
 #include <utility>           // for move
 
-#include "matrix.hpp"   // for Vector, is_intermediate_v, base_ring, ring_dimension_v
+#include "matrix.hpp"   // for Vector, Matrix
 #include "real.hpp"     // for real, pow, sgn
 #include "real_io.hpp"  // for operator<<
 
 namespace algebra
 {
-	template <class Ring>
+	// \sum_{i} coeff_[i] x ^ i
+	// the last value of coeff_ must be non-zero
+	// zero polynomial is represented by empty coeff_ (coeff_.size() = 0)
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	class Polynomial
 	{
-		// \sum_{i} coeff_[i] x ^ i
-		// the last value of coeff_ must be non-zero
-		// zero polynomial is represented by empty coeff_ (coeff_.size() = 0)
 		Vector<Ring> coeff_;
 
 	public:
-		using base = typename base_ring<Ring>::type;
-		using ring = Ring;
-		using type = Polynomial<Ring>;
 		Polynomial() : coeff_(0) {}
 		Polynomial(Polynomial&&) = default;
 		Polynomial& operator=(Polynomial&&) = default;
@@ -32,19 +29,7 @@ namespace algebra
 		Polynomial& operator=(const Polynomial&) = delete;
 		~Polynomial() = default;
 		// pow(x, d)
-		explicit Polynomial(uint32_t degree) : coeff_(degree + 1) { coeff_[degree] = Ring(base(1)); }
-		template <class = std::enable_if<!std::is_same_v<Ring, base>>>
-		explicit Polynomial(const base& c) : coeff_(1)
-		{
-			assert(!c.iszero());
-			coeff_[0] = Ring(c);
-		}
-		template <class T, class = std::enable_if_t<is_intermediate_v<Polynomial, T>>>
-		explicit Polynomial(const T& c) : coeff_(1)
-		{
-			assert(!c.iszero());
-			coeff_[0] = Ring(c);
-		}
+		explicit Polynomial(uint32_t degree) : coeff_(degree + 1) { coeff_[degree] = Ring(1); }
 		// constant polynomial c
 		explicit Polynomial(const Ring& c) : coeff_(1)
 		{
@@ -70,7 +55,7 @@ namespace algebra
 			while (deg >= 0 && coeffs[uint32_t(deg)].iszero()) deg--;
 			if (deg < 0) return;
 			coeff_ = Vector<Ring>{uint32_t(deg + 1)};
-			for (uint32_t i = 0; i <= uint32_t(deg); i++) coeff_[i] = coeffs[i].clone();
+			for (uint32_t i = 0; i <= uint32_t(deg); i++) coeff_[i].swap(coeffs[i]);
 		}
 		Polynomial(std::initializer_list<Ring> coeffs) : coeff_(uint32_t(coeffs.size()))
 		{
@@ -78,27 +63,22 @@ namespace algebra
 			for (auto& v : coeffs) coeff_[i++] = v.clone();
 			assert(coeff_.size() == 0 || !coeff_[coeff_.size() - 1].iszero());
 		}
+		[[nodiscard]] auto abs() const { return norm().sqrt(); }
+		[[nodiscard]] auto norm() const { return coeff_.norm(); }
 		[[nodiscard]] bool iszero() const noexcept { return coeff_.size() == 0; }
 		[[nodiscard]] int32_t degree() const noexcept { return int32_t(coeff_.size()) - 1; }
-		template <class R, class = std::enable_if_t<is_imultipliable_v<Ring, R>>>
+		template <class R>
 		[[nodiscard]] Ring eval(const R& x) const
 		{
 			if (iszero()) return Ring{};
-			Ring s{};
 			auto d = uint32_t(degree());
-			for (uint32_t i = d; i <= d; --i)
+			auto s = coeff_[d];
+			for (uint32_t i = d - 1; i <= d; --i)
 			{
 				s *= x;
 				s += coeff_[i];
 			}
 			return s;
-		}
-		[[nodiscard]] Polynomial deriv() const
-		{
-			if (degree() <= 0) return Polynomial{};
-			Polynomial p(uint32_t(degree() - 1));
-			for (uint32_t i = 1; i < coeff_.size(); ++i) p.coeff_[i - 1] = i * coeff_[i];
-			return p;
 		}
 		[[nodiscard]] Polynomial clone() const
 		{
@@ -108,8 +88,7 @@ namespace algebra
 		}
 		void swap(Polynomial& other) { coeff_.swap(other.coeff_); }
 		void negate() { coeff_.negate(); }
-		template <class R, class = std::enable_if_t<is_iaddable_v<Ring, R>>>
-		Polynomial& operator+=(const Polynomial<R>& p)
+		Polynomial& operator+=(const Polynomial& p)
 		{
 			if (p.iszero()) return *this;
 			if (iszero())
@@ -124,21 +103,9 @@ namespace algebra
 				for (uint32_t i = 0; i <= pd; ++i) coeff_[i] += p.coeff_[i];
 				return *this;
 			}
-			*this = *this + p;
-			return *this;
+			return *this = *this + p;
 		}
-		template <class R, class = std::enable_if_t<!is_polynomial_v<R> && is_iaddable_v<Ring, R>>>
-		Polynomial& operator+=(const R& c)
-		{
-			if (c == 0) return *this;
-			if (iszero()) return *this = Polynomial(Ring(c));
-			auto t = coeff_[0] + c;
-			if (degree() == 0 && t.iszero()) return *this = {};
-			coeff_[0] = std::move(t);
-			return *this;
-		}
-		template <class R, class = std::enable_if_t<is_isubtractable_v<Ring, R>>>
-		Polynomial& operator-=(const Polynomial<R>& p)
+		Polynomial& operator-=(const Polynomial& p)
 		{
 			if (p.iszero()) return *this;
 			if (iszero())
@@ -157,42 +124,18 @@ namespace algebra
 			*this = *this - p;
 			return *this;
 		}
-		template <class R, class = std::enable_if_t<!is_polynomial_v<R> && is_isubtractable_v<Ring, R>>>
-		Polynomial& operator-=(const R& c)
-		{
-			if (c.iszero()) return *this;
-			if (iszero()) return *this = Polynomial(Ring(-c));
-			auto t = coeff_[0] - c;
-			if (degree() == 0 && t.iszero()) return *this = {};
-			coeff_[0] = std::move(t);
-			return *this;
-		}
-		template <class R, class = std::enable_if_t<is_imultipliable_v<Ring, R>>>
-		Polynomial& operator*=(const Polynomial<R>& p)
-		{
-			*this = *this * p;
-			return *this;
-		}
-		template <class R, class = std::enable_if_t<!is_polynomial_v<R> && is_imultipliable_v<Ring, R>>>
+		template <class R>
 		Polynomial& operator*=(const R& c)
 		{
 			if (iszero()) return *this;
-			if constexpr (is_ring_v<R>)
-			{
-				if (c.iszero()) return *this = {};
-			}
-			else
-			{
-				if (c == 0) return *this = {};
-			}
-			for (uint32_t i = 0; i < coeff_.size(); ++i) coeff_[i] *= c;
+			if (algebra::iszero(c)) return *this = {};
+			coeff_ *= c;
 			return *this;
 		}
-		template <class R, class = std::enable_if_t<is_idividable_v<Ring, R>>>
+		template <class R>
 		Polynomial& operator/=(const R& c)
 		{
-			if (iszero()) return *this;
-			for (uint32_t i = 0; i < coeff_.size(); ++i) coeff_[i] /= c;
+			coeff_ /= c;
 			return *this;
 		}
 		// coefficient of x ^ p
@@ -205,33 +148,25 @@ namespace algebra
 			q.negate();
 			return q;
 		}
-		template <class R, class = std::enable_if_t<is_multipliable_v<Ring, R>>>
-		friend union_ring_t<Polynomial, Polynomial<R>> operator*(const Polynomial& p, const Polynomial<R>& q)
+		friend Polynomial mul(const Polynomial& p, const Polynomial& q)
 		{
-			if (p.iszero() || q.iszero()) return union_ring_t<Polynomial, Polynomial<R>>{};
+			if (p.iszero() || q.iszero()) return Polynomial{};
 			auto dp = uint32_t(p.degree());
 			auto dq = uint32_t(q.degree());
-			union_ring_t<Polynomial, Polynomial<R>> r(dp + dq);
+			Polynomial r(dp + dq);
 			r.coeff_[dp + dq] = {};
 			for (uint32_t i = 0; i <= dp; ++i)
-				for (uint32_t j = 0; j <= dq; ++j) r.coeff_[i + j] += p[i] * q[j];
+				for (uint32_t j = 0; j <= dq; ++j) r.coeff_[i + j] += mul(p[i], q[j]);
 			return r;
 		}
-		template <class R,
-		          class = std::enable_if_t<!is_polynomial_v<R> && !is_linear_space_v<R> && is_multipliable_v<Ring, R>>>
-		friend Polynomial operator*(const Polynomial& p, const R& c)
+		template <class R>
+		friend Polynomial mul_scalar(const R& c, const Polynomial& p)
 		{
-			if (p.iszero() || c == 0) return Polynomial{};
+			if (p.iszero() || algebra::iszero(c)) return Polynomial{};
 			auto d = uint32_t(p.degree());
 			Polynomial r(d);
-			for (uint32_t i = 0; i <= d; ++i) r.coeff_[i] = p[i] * c;
+			r.coeff_ *= c;
 			return r;
-		}
-		template <class R,
-		          class = std::enable_if_t<!is_polynomial_v<R> && !is_linear_space_v<R> && is_multipliable_v<Ring, R>>>
-		friend Polynomial operator*(const R& c, const Polynomial& p)
-		{
-			return p * c;
 		}
 		friend Polynomial operator+(const Polynomial& p, const Polynomial& q)
 		{
@@ -281,104 +216,19 @@ namespace algebra
 			for (uint32_t i = 0; i <= dp; ++i) r.coeff_[i] = p.coeff_[i] - q.coeff_[i];
 			return r;
 		}
-		template <class R, class = std::enable_if_t<is_iaddable_v<Ring, R>>>
-		friend Polynomial operator+(const Polynomial& p, const R& c)
-		{
-			if (p.iszero()) return Polynomial(c);
-			auto t = p.coeff_[0] + c;
-			if (p.degree() == 0 && t.iszero()) return Polynomial{};
-			Polynomial q = +p;
-			q.coeff_[0] = std::move(t);
-			return q;
-		}
-		template <class R, class = std::enable_if_t<is_iaddable_v<Ring, R>>>
-		friend Polynomial operator+(const R& c, const Polynomial& p)
-		{
-			return p + c;
-		}
-		template <class R, class = std::enable_if_t<is_isubtractable_v<Ring, R>>>
-		friend Polynomial operator-(const Polynomial& p, const R& c)
-		{
-			if (p.iszero()) return Polynomial(Ring(-c));
-			auto t = p.coeff_[0] - c;
-			if (p.degree() == 0 && t.iszero()) return Polynomial{};
-			Polynomial q = +p;
-			q.coeff_[0] = std::move(t);
-			return q;
-		}
-		template <class R, class = std::enable_if_t<is_isubtractable_v<Ring, R>>>
-		friend Polynomial operator-(const R& c, const Polynomial& p)
-		{
-			if (p.iszero()) return Polynomial(Ring(c));
-			auto t = p.coeff_[0] - c;
-			t.negate();
-			if (p.degree() == 0 && t.iszero()) return Polynomial{};
-			Polynomial q = -p;
-			q.coeff_[0] = std::move(t);
-			return q;
-		}
-		template <class R, class = std::enable_if_t<is_idividable_v<Ring, R>>>
+		template <class R>
 		friend Polynomial operator/(const Polynomial& p, const R& c)
 		{
 			if (p.iszero()) return Polynomial{};
 			auto d = uint32_t(p.degree());
 			Polynomial r(d);
-			for (uint32_t i = 0; i <= d; ++i) r.coeff_[i] = p[i] / c;
+			r.coeff_ = p.coeff_ / c;
 			return r;
 		}
 		friend bool operator==(const Polynomial& p, const Polynomial& q) { return p.coeff_ == q.coeff_; }
 		friend bool operator!=(const Polynomial& p, const Polynomial& q) { return !(p == q); }
-		static const Polynomial& one()
-		{
-			static Polynomial val{0u};
-			return val;
-		}
-		static const Polynomial& var()
-		{
-			static Polynomial val{1u};
-			return val;
-		}
-		// (a * x + b) ^ d
-		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
-		static Polynomial linear_power(const Ring& a, const Ring& b, uint32_t degree)
-		{
-			if (degree == 0) return Polynomial(0);
-			if constexpr (is_mpfr_real_v<Ring>)
-			{
-				if (a.iszero()) return Polynomial(mpfr::pow(b, degree));
-				if (b.iszero()) return Polynomial(mpfr::pow(a, degree), degree);
-				Polynomial p(degree);
-				// p = \sum_{i = 0}^{degree} binom(d, i) a ^ i b ^ {d - i} x ^ i
-				p.coeff_[0] = p.coeff_[degree] = 1;
-				for (uint32_t i = 1; 2 * i <= degree; ++i)
-					p.coeff_[i] = p.coeff_[degree - i] = base(degree - i + 1) * p[i - 1] / base(i);
-				Ring pow(base(1));
-				for (uint32_t i = 1; i <= degree; ++i)
-				{
-					pow *= a;
-					p.coeff_[i] *= pow;
-				}
-				pow = base(1);
-				for (uint32_t i = degree - 1; i <= degree; --i)
-				{
-					pow *= b;
-					p.coeff_[i] *= pow;
-				}
-				return p;
-			}
-			else
-			{
-				Polynomial p{0}, q{+b, +a};
-				while (degree > 0)
-				{
-					if (degree % 2 == 1) p = p * q;
-					q = q * q;
-					degree /= 2;
-				}
-				return p;
-			}
-		}
 	};
+
 	template <class Ring>
 	std::ostream& operator<<(std::ostream& out, const Polynomial<Ring>& v)
 	{
@@ -396,40 +246,119 @@ namespace algebra
 		for (uint32_t i = 1; i <= d; ++i)
 		{
 			auto& val = v[i];
-			if constexpr (is_mpfr_real_v<Ring>)
+			auto sgn = mpfr::sgn(val);
+			if (sgn == 0) continue;
+			if (f)
 			{
-				auto sgn = mpfr::sgn(val);
-				if (sgn == 0) continue;
-				if (f)
-				{
-					if (val == 1)
-						out << " + ";
-					else if (val == -1)
-						out << " - ";
-					else if (sgn > 0)
-						out << " + " << val << " * ";
-					else
-						out << " - " << -val << " * ";
-				}
+				if (val == 1)
+					out << " + ";
 				else if (val == -1)
-					out << "-";
-				else if (val != -1)
-					out << val << " * ";
-				out << "x";
-			}
-			else
-			{
-				if (val.iszero()) continue;
-				if (f)
-					out << " + (" << val << ") * ";
+					out << " - ";
+				else if (sgn > 0)
+					out << " + " << val << " * ";
 				else
-					out << "(" << val << ") * ";
-				out << "x" << ring_dimension_v<Ring>;
+					out << " - " << -val << " * ";
 			}
+			else if (val == -1)
+				out << "-";
+			else if (val != -1)
+				out << val << " * ";
+			out << "x";
 			if (i > 1) out << "^" << i;
 			f = true;
 		}
 		return out;
+	}
+	template <class T>
+	struct evaluated;
+	template <class T>
+	using evaluated_t = typename evaluated<T>::type;
+	template <class Ring>
+	struct evaluated<Polynomial<Ring>>
+	{
+		using type = Ring;
+	};
+	template <class R, template <class> class Vec>
+	struct evaluated<Vec<R>>
+	{
+		using type = Vec<evaluated<R>>;
+	};
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct evaluated<mpfr::real<prec, rnd>>
+	{
+		using type = mpfr::real<prec, rnd>;
+	};
+	template <class Ring, template <class> class F>
+	struct substitute;
+	// substitute the most inner template argument R by F<R>,
+	// i.e. substitute_t<A<B<...<C<R>>...>>> = A<B<...<C<F<R>>>...>>
+	template <class T, template <class> class F>
+	using substitute_t = typename substitute<T, F>::type;
+	template <class T>
+	using polynomialize_t = substitute_t<T, Polynomial>;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd, template <class> class F>
+	struct substitute<mpfr::real<prec, rnd>, F>
+	{
+		using type = F<mpfr::real<prec, rnd>>;
+	};
+	template <class R, template <class> class Vec, template <class> class F>
+	struct substitute<Vec<R>, F>
+	{
+		using type = Vec<substitute_t<R, F>>;
+	};
+	// do not allow nested polynomial
+	template <class R, template <class> class F>
+	struct substitute<Polynomial<R>, F>
+	{
+	};
+	// schematically, to_pol(Vector<Ring>{a, b, c, ...}) = a + b x + c x ^ 2 + ...
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	auto to_pol(Vector<mpfr::real<prec, rnd>>& coeffs)
+	{
+		return Polynomial<mpfr::real<prec, rnd>>(coeffs.clone());
+	}
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	Matrix<polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>& coeffs)
+	{
+		uint32_t row = coeffs[0].row(), column = coeffs[0].column(), len = coeffs.size();
+		Matrix<polynomialize_t<Ring>> ans(row, column);
+		Vector<Ring> v(len);
+		for (uint32_t r = 0; r < row; ++r)
+			for (uint32_t c = 0; c < column; ++c)
+			{
+				for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(r, c));
+				ans.at(r, c) = to_pol(v);
+			}
+		return ans;
+	}
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	Vector<polynomialize_t<Ring>> to_pol(Vector<Vector<Ring>>& coeffs)
+	{
+		uint32_t sz = coeffs[0].size(), len = coeffs.size();
+		Vector<polynomialize_t<Ring>> ans(sz);
+		Vector<Ring> v(len);
+		for (uint32_t r = 0; r < sz; ++r)
+		{
+			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(r));
+			ans.at(r) = to_pol(v);
+		}
+		return ans;
+	}
+	// calculate coefficients c of polynomial f(x) s.t. for each i, f(points[i]) = eval[i]
+	// eval[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
+	template <class Ring, class Real = mpfr::real<1000, MPFR_RNDN>>
+	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& eval, const Vector<Real>& points)
+	{
+		assert(eval.size() == points.size() && points.size() > 0);
+		auto deg = points.size() - 1;
+		Matrix<Real> mat(deg + 1, deg + 1);
+		for (uint32_t i = 0; i <= deg; ++i)
+		{
+			mat.at(i, 0) = 1;
+			for (uint32_t j = 1; j <= deg; ++j) mat.at(i, j) = points[i] * mat.at(i, j - 1);
+		}
+		auto coeffs = dot(mat.inverse(), eval);
+		return to_pol(coeffs);
 	}
 }  // namespace algebra
 

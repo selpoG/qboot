@@ -30,40 +30,6 @@ namespace qboot
 
 [[maybe_unused]] static void test()
 {
-	static_assert(algebra::is_mpfr_real_v<R>);
-	static_assert(!algebra::is_mpfr_real_v<P<R>>);
-	static_assert(algebra::is_ring_v<P<R>>);
-	static_assert(algebra::is_ring_v<P<P<R>>>);
-	static_assert(!algebra::is_ring_v<Matrix<P<R>>>);
-	static_assert(!algebra::is_intermediate_v<P<P<R>>, R>);
-	static_assert(algebra::is_intermediate_v<P<P<R>>, P<R>>);
-	static_assert(!algebra::is_intermediate_v<P<P<R>>, P<P<R>>>);
-	static_assert(!algebra::is_intermediate_v<P<P<R>>, P<P<P<R>>>>);
-	static_assert(algebra::ring_dimension_v<R> == 0);
-	static_assert(algebra::ring_dimension_v<P<R>> == 1);
-	static_assert(algebra::ring_dimension_v<P<P<R>>> == 2);
-	static_assert(std::is_same_v<algebra::add_variables_t<R, 0>, R>);
-	static_assert(std::is_same_v<algebra::add_variables_t<R, 1>, P<R>>);
-	static_assert(std::is_same_v<algebra::add_variables_t<R, 2>, P<P<R>>>);
-	static_assert(std::is_same_v<algebra::add_variables_t<P<R>, 1>, P<P<R>>>);
-	static_assert(algebra::is_polynomial_v<P<R>>);
-	auto hoge = P<R>::linear_power(R(1), R(1), 3) * P<R>::linear_power(R(1), R(-1), 5);
-	auto fuga = P<R>::linear_power(R(1), R(1), 5) * P<R>::linear_power(R(1), R(-1), 3);
-	std::cout << hoge << std::endl;
-	std::cout << fuga << std::endl;
-	std::cout << (hoge + fuga) * R(0.5) << std::endl;
-	std::cout << P<P<R>>::linear_power(P<R>{R(-1), R(2)}, P<R>{R(2), R(-3), R(1)}, 3) << std::endl;
-	P<P<R>> afo{+fuga, hoge + fuga};
-	afo *= R(2);
-	afo = afo * hoge;
-	std::cout << afo + R(-0.3) << std::endl;
-	P<P<R>> baka(fuga);
-	// V<P<R>> vec{P<R>{R(2), R(-3)}, P<R>{R(-1), R(4), R(0.5)}};
-	// vec *= R(2);
-	V<R> vec{R(2), R(-3), R(0.5)};
-	vec *= 2;
-	vec /= 3.0;
-	vec * 2 / 3;
 	// (p * x + q) / (r * x + s)
 	// q == r == 0 && p == s => Id
 	// r == 0 && p == s => S(q / s)

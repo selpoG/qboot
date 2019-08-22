@@ -1,13 +1,14 @@
 #ifndef COMPLEX_FUNCTION_HPP_
 #define COMPLEX_FUNCTION_HPP_
 
-#include <cstddef>      // for uint32_t
-#include <ostream>      // for ostream
-#include <type_traits>  // for enable_if_t, enable_if
-#include <utility>      // for move, swap
+#include <cassert>  // for assert
+#include <cstdint>  // for uint32_t
+#include <ostream>  // for ostream
+#include <utility>  // for move, swap
 
-#include "matrix.hpp"  // for Vector, is_mpfr_real_v, is_addable_v, union_ring_t, is_subtractable_v, is_multipliable_v
-#include "real.hpp"    // for real, pow
+#include "matrix.hpp"      // for Vector
+#include "polynomial.hpp"  // for polynomialize_t, to_pol
+#include "real.hpp"        // for real, pow
 
 namespace algebra
 {
@@ -53,7 +54,7 @@ namespace algebra
 	// complex function of z = x + sqrt(y) (z^* = x - sqrt(y))
 	// take derivatives (der x) ^ m (der y) ^ n upto m + 2 n <= lambda
 	// namely, a function is represented as
-	//   \sum_{n = 0}^{lambda / 2} \sum_{m = 0}^{lambda - 2 n} this->get(n, m) (x - x0) ^ m (y - y0) ^ n + ...
+	//   \sum_{n = 0}^{lambda / 2} \sum_{m = 0}^{lambda - 2 n} this->at(n, m) (x - x0) ^ m (y - y0) ^ n + ...
 	// we take (x0, y0) = (1 / 2, 0)
 	// if a nontrivial symmetry even (resp. odd) is given, m runs over even (resp. odd) number only.
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
@@ -75,8 +76,13 @@ namespace algebra
 			default: return (lambda_ + 2 - dy) * dy + dx;
 			}
 		}
+		ComplexFunction(Vector<Ring>&& v, uint32_t l, FunctionSymmetry sym)
+		    : sym_(sym), lambda_(l), coeffs_(std::move(v))
+		{
+		}
 
 	public:
+		ComplexFunction() : ComplexFunction(0) {}
 		explicit ComplexFunction(uint32_t lambda, FunctionSymmetry sym = FunctionSymmetry::Mixed)
 		    : sym_(sym), lambda_(lambda), coeffs_(function_dimension(lambda, sym))
 		{
@@ -92,22 +98,13 @@ namespace algebra
 		}
 		void negate() { coeffs_.negate(); }
 		[[nodiscard]] bool iszero() const { return coeffs_.iszero(); }
-		[[nodiscard]] ComplexFunction clone() const
-		{
-			ComplexFunction f(lambda_, sym_);
-			f.coeffs_ = coeffs_.clone();
-			return f;
-		}
+		[[nodiscard]] ComplexFunction clone() const { return ComplexFunction(coeffs_.clone(), lambda_, sym_); }
 		// get coefficient of the term (x - x0) ^ {dx} (y - y0) ^ {dy}
 		// 0 <= dx, dy and dx + 2 dy <= lambda
 		// if symmetry is even or odd, the parity of dx must equals symmetry
-		[[nodiscard]] Ring& get(int32_t dx, int32_t dy) { return get(uint32_t(dx), uint32_t(dy)); }
-		[[nodiscard]] const Ring& get(int32_t dx, int32_t dy) const { return get(uint32_t(dx), uint32_t(dy)); }
-		[[nodiscard]] Ring& get(uint32_t dx, uint32_t dy) { return coeffs_[index(dx, dy)]; }
-		[[nodiscard]] const Ring& get(uint32_t dx, uint32_t dy) const { return coeffs_[index(dx, dy)]; }
-		[[nodiscard]] Ring move_get(uint32_t dx, uint32_t dy) && { return std::move(coeffs_[index(dx, dy)]); }
+		[[nodiscard]] Ring& at(uint32_t dx, uint32_t dy) { return coeffs_[index(dx, dy)]; }
+		[[nodiscard]] const Ring& at(uint32_t dx, uint32_t dy) const { return coeffs_[index(dx, dy)]; }
 
-		[[nodiscard]] Vector<Ring> as_vector() && { return std::move(coeffs_); }
 		// z -> 1 - z
 		void flip()
 		{
@@ -118,17 +115,14 @@ namespace algebra
 			case FunctionSymmetry::Mixed:
 			default:
 				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
-					for (uint32_t dx = 1; dx + 2 * dy <= lambda_; dx += 2) get(dx, dy).negate();
+					for (uint32_t dx = 1; dx + 2 * dy <= lambda_; dx += 2) at(dx, dy).negate();
 				break;
 			}
 		}
-		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
-		[[nodiscard]] Ring abs() const
-		{
-			return norm().sqrt();
-		}
-		[[nodiscard]] Ring norm() const { return coeffs_.norm(); }
+		[[nodiscard]] auto abs() const { return coeffs_.abs(); }
+		[[nodiscard]] auto norm() const { return coeffs_.norm(); }
 
+		// project this function to sym-symmetric part
 		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) &&
 		{
 			if (sym_ == sym) return std::move(*this);
@@ -137,74 +131,79 @@ namespace algebra
 			{
 				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
 					for (uint32_t dx = 0; dx + 2 * dy <= lambda_; ++dx)
-						if (matches(sym, dx)) z.get(dx, dy) = std::move(*this).move_get(dx, dy);
+						if (matches(sym, dx)) z.at(dx, dy).swap(at(dx, dy));
 			}
 			if (sym == FunctionSymmetry::Mixed)
 			{
 				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
 					for (uint32_t dx = 0; dx + 2 * dy <= lambda_; ++dx)
-						if (matches(sym_, dx)) z.get(dx, dy) = std::move(*this).move_get(dx, dy);
-			}
-			return z;
-		}
-		// project this function to sym-symmetric part
-		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) const&
-		{
-			ComplexFunction z(lambda_, sym);
-			if (sym_ == sym) z.coeffs_ = coeffs_.clone();
-			if (sym_ == FunctionSymmetry::Mixed)
-			{
-				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
-					for (uint32_t dx = 0; dx + 2 * dy <= lambda_; ++dx)
-						if (matches(sym, dx)) z.get(dx, dy) = get(dx, dy);
-			}
-			if (sym == FunctionSymmetry::Mixed)
-			{
-				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
-					for (uint32_t dx = 0; dx + 2 * dy <= lambda_; ++dx)
-						if (matches(sym_, dx)) z.get(dx, dy) = get(dx, dy);
+						if (matches(sym_, dx)) z.at(dx, dy).swap(at(dx, dy));
 			}
 			// otherwise (even to odd or odd to even), proj is vanishing
 			return z;
 		}
-
-		template <class R, class = std::enable_if_t<is_addable_v<Ring, R>>>
-		friend ComplexFunction<union_ring_t<Ring, R>> operator+(const ComplexFunction& x, const ComplexFunction<R>& y)
+		// project this function to sym-symmetric part
+		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) const& { return clone().proj(sym); }
+		ComplexFunction operator+() const { return clone(); }
+		ComplexFunction operator-() const { return ComplexFunction(-coeffs_, lambda_, sym_); }
+		ComplexFunction& operator+=(const ComplexFunction& f)
+		{
+			assert(sym_ == f.sym_);
+			coeffs_ += f.coeffs_;
+			return *this;
+		}
+		ComplexFunction& operator-=(const ComplexFunction& f)
+		{
+			assert(sym_ == f.sym_);
+			coeffs_ -= f.coeffs_;
+			return *this;
+		}
+		template <class T>
+		ComplexFunction& operator*=(const T& r)
+		{
+			coeffs_ *= r;
+			return *this;
+		}
+		template <class T>
+		ComplexFunction& operator/=(const T& r)
+		{
+			coeffs_ /= r;
+			return *this;
+		}
+		friend ComplexFunction operator+(const ComplexFunction& x, const ComplexFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction<union_ring_t<Ring, R>> z(x.lambda_, plus(x.sym_, y.sym_));
+			ComplexFunction z(x.lambda_, plus(x.sym_, y.sym_));
 			if (x.sym_ == y.sym_)
 				z.coeffs_ = x.coeffs_ + y.coeffs_;
 			else
 				for (uint32_t dy = 0; dy <= x.lambda_ / 2; ++dy)
 					for (uint32_t dx = 0; dx + 2 * dy <= x.lambda_; ++dx)
 					{
-						if (matches(x.sym_, dx)) z.get(dx, dy) += x.get(dx, dy);
-						if (matches(y.sym_, dx)) z.get(dx, dy) += y.get(dx, dy);
+						if (matches(x.sym_, dx)) z.at(dx, dy) += x.at(dx, dy);
+						if (matches(y.sym_, dx)) z.at(dx, dy) += y.at(dx, dy);
 					}
 			return z;
 		}
-		template <class R, class = std::enable_if_t<is_subtractable_v<Ring, R>>>
-		friend ComplexFunction<union_ring_t<Ring, R>> operator-(const ComplexFunction& x, const ComplexFunction<R>& y)
+		friend ComplexFunction operator-(const ComplexFunction& x, const ComplexFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction<union_ring_t<Ring, R>> z(x.lambda_, plus(x.sym_, y.sym_));
+			ComplexFunction z(x.lambda_, plus(x.sym_, y.sym_));
 			if (x.sym_ == y.sym_)
 				z.coeffs_ = x.coeffs_ - y.coeffs_;
 			else
 				for (uint32_t dy = 0; dy <= x.lambda_ / 2; ++dy)
 					for (uint32_t dx = 0; dx + 2 * dy <= x.lambda_; ++dx)
 					{
-						if (matches(x.sym_, dx)) z.get(dx, dy) += x.get(dx, dy);
-						if (matches(y.sym_, dx)) z.get(dx, dy) -= y.get(dx, dy);
+						if (matches(x.sym_, dx)) z.at(dx, dy) -= x.at(dx, dy);
+						if (matches(y.sym_, dx)) z.at(dx, dy) -= y.at(dx, dy);
 					}
 			return z;
 		}
-		template <class R, class = std::enable_if_t<is_multipliable_v<Ring, R>>>
-		friend ComplexFunction<union_ring_t<Ring, R>> operator*(const ComplexFunction& x, const ComplexFunction<R>& y)
+		friend ComplexFunction mul(const ComplexFunction& x, const ComplexFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction<union_ring_t<Ring, R>> z(x.lambda_, times(x.sym_, y.sym_));
+			ComplexFunction z(x.lambda_, times(x.sym_, y.sym_));
 			for (uint32_t dy1 = 0; dy1 <= x.lambda_ / 2; ++dy1)
 				for (uint32_t dx1 = 0; dx1 + 2 * dy1 <= x.lambda_; ++dx1)
 				{
@@ -213,49 +212,81 @@ namespace algebra
 						for (uint32_t dx2 = 0; dx1 + dx2 + 2 * dy1 + 2 * dy2 <= x.lambda_; ++dx2)
 						{
 							if (!matches(y.sym_, dx2)) continue;
-							z.get(dx1 + dx2, dy1 + dy2) += x.get(dx1, dy1) * y.get(dx2, dy2);
+							z.at(dx1 + dx2, dy1 + dy2) += mul(x.at(dx1, dy1), y.at(dx2, dy2));
 						}
 				}
 			return z;
 		}
-		friend std::ostream& operator<<(std::ostream& out, const ComplexFunction& v)
+		template <class R>
+		friend ComplexFunction mul_scalar(const R& r, const ComplexFunction& x)
 		{
-			out << "[";
-			auto f = false;
-			for (uint32_t dy = 0; dy <= v.lambda_ / 2; ++dy)
-			{
-				// do not show an empty array []
-				if (v.sym_ == FunctionSymmetry::Odd && 2 * dy == v.lambda_) continue;
-				if (f) out << ", ";
-				auto g = false;
-				out << "[";
-				for (uint32_t dx = 0; dx + 2 * dy <= v.lambda_; ++dx)
-				{
-					if (!matches(v.sym_, dx)) continue;
-					if (g) out << ", ";
-					out << v.get(dx, dy);
-					g = true;
-				}
-				out << "]";
-				f = true;
-			}
-			return out << "]";
+			return ComplexFunction(mul_scalar(r, x.coeffs_), x.lambda_, x.sym_);
 		}
+		template <class R>
+		friend ComplexFunction operator/(const ComplexFunction& x, const R& r)
+		{
+			return ComplexFunction(x.coeffs_ / r, x.lambda_, x.sym_);
+		}
+		friend bool operator==(const ComplexFunction& x, const ComplexFunction& y)
+		{
+			return x.lambda_ == y.lambda_ && x.sym_ == y.sym_ && x.coeffs_ == y.coeffs_;
+		}
+		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
 	};
+	template <class Ring>
+	ComplexFunction<polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>& coeffs)
+	{
+		uint32_t lambda = coeffs[0].lambda(), len = coeffs.size();
+		auto sym = coeffs[0].symmetry();
+		ComplexFunction<polynomialize_t<Ring>> ans(lambda, sym);
+		Vector<Ring> v(len);
+		for (uint32_t dy = 0; dy <= lambda / 2; ++dy)
+			for (uint32_t dx = 0; dx + 2 * dy <= lambda; ++dx)
+				if (matches(sym, dx))
+				{
+					for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(dx, dy));
+					ans.at(dx, dy) = to_pol(v);
+				}
+		return ans;
+	}
+	template <class R>
+	std::ostream& operator<<(std::ostream& out, const ComplexFunction<R>& v)
+	{
+		out << "[";
+		auto f = false;
+		for (uint32_t dy = 0; dy <= v.lambda() / 2; ++dy)
+		{
+			// do not show an empty array []
+			if (v.symmetry() == FunctionSymmetry::Odd && 2 * dy == v.lambda()) continue;
+			if (f) out << ", ";
+			auto g = false;
+			out << "[";
+			for (uint32_t dx = 0; dx + 2 * dy <= v.lambda(); ++dx)
+			{
+				if (!matches(v.symmetry(), dx)) continue;
+				if (g) out << ", ";
+				out << v.at(dx, dy);
+				g = true;
+			}
+			out << "]";
+			f = true;
+		}
+		return out << "]";
+	}
 	// v ^ d = ((1 - z) (1 - z_bar)) ^ d as a function of x, y
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	ComplexFunction<Real> v_to_d(const Real& d, uint32_t lambda)
 	{
-		// f.get(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
-		//             = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
+		// f.at(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
+		//            = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
 		// where lf(x, n) = x (x - 1) ... (x - (n - 1)) (falling factorial)
 		ComplexFunction<Real> f(lambda);
-		f.get(0, 0) = mpfr::pow(Real(0.25), d);
+		f.at(0, 0) = mpfr::pow(Real(0.25), d);
 		for (uint32_t n = 0; n <= lambda / 2; ++n)
 		{
-			if (n > 0) f.get(0u, n) = f.get(0u, n - 1) * 4 * (-d + (n - 1)) / n;
+			if (n > 0) f.at(0u, n) = f.at(0u, n - 1) * 4 * (-d + (n - 1)) / n;
 			for (uint32_t m = 1; m + 2 * n <= lambda; ++m)
-				f.get(m, n) = f.get(m - 1, n) * (-4 * d + 2 * (m + 2 * n - 1)) / m;
+				f.at(m, n) = f.at(m - 1, n) * (-4 * d + 2 * (m + 2 * n - 1)) / m;
 		}
 		return f;
 	}

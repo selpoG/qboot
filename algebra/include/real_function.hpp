@@ -1,168 +1,149 @@
 #ifndef REAL_FUNCTION_HPP_
 #define REAL_FUNCTION_HPP_
 
-#include <cstddef>      // for uint32_t
-#include <ostream>      // for ostream
-#include <type_traits>  // for true_type, false_type, enable_if, enable_if_t, is_same_v
-#include <utility>      // for swap, move
+#include <cassert>  // for assert
+#include <cstddef>  // for uint32_t
+#include <ostream>  // for ostream
+#include <utility>  // for swap, move
 
-#include "matrix.hpp"  // for Vector, Matrix, base_ring, is_intermediate_v, is_mpfr_real_v, is_iaddable_v, is_imultipliable_v, is_idividable_v, is_addable_v, is_subtractable_v, is_multipliable_v, union_ring_t
-#include "real.hpp"    // for real, pow
+#include "matrix.hpp"      // for Vector, Matrix
+#include "polynomial.hpp"  // for polynomialize_t, to_pol
+#include "real.hpp"        // for real, pow
 
 namespace algebra
 {
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
-	class RealFunction;
-	template <class T>
-	struct is_realfunc;
-	template <class T>
-	inline constexpr bool is_realfunc_v = is_realfunc<T>::value;
-	template <class R>
-	struct is_realfunc<RealFunction<R>> : std::true_type
-	{
-	};
-	template <class R>
-	struct is_realfunc : std::false_type
-	{
-	};
 	// real function of x at x = 0
 	// take derivatives (der x) ^ k upto k <= lambda
 	// namely, a function is represented as
-	//   \sum_{k = 0}^{lambda} this->get(k) x ^ k + O(x ^ {lambda + 1})
-	template <class Ring>
+	//   \sum_{k = 0}^{lambda} this->at(k) x ^ k + O(x ^ {lambda + 1})
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	class RealFunction
 	{
 		uint32_t lambda_;
 		Vector<Ring> coeffs_;
-		using base = typename base_ring<Ring>::type;
-		using ring = Ring;
-		using type = RealFunction;
+		explicit RealFunction(Vector<Ring>&& vec) : lambda_(vec.size() - 1), coeffs_(std::move(vec)) {}
 
 	public:
+		template <class Ring2>
+		friend class RealConverter;
+		RealFunction() : RealFunction(0) {}
 		explicit RealFunction(uint32_t lambda) : lambda_(lambda), coeffs_(lambda + 1) {}
-		template <class T, class = std::enable_if_t<is_intermediate_v<Ring, T> ||
-		                                            (std::is_same_v<T, base> && !std::is_same_v<T, Ring>)>>
-		explicit RealFunction(const RealFunction<T>& v) : lambda_(v.lambda_), coeffs_(v.coeffs_)
-		{
-		}
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		[[nodiscard]] uint32_t size() const { return coeffs_.size(); }
 		void swap(RealFunction& other)
 		{
-			std::swap(lambda_, other.lambda_);
 			coeffs_.swap(other.coeffs_);
+			std::swap(lambda_, other.lambda_);
 		}
 		void negate() { coeffs_.negate(); }
 		[[nodiscard]] bool iszero() const { return coeffs_.iszero(); }
-		[[nodiscard]] RealFunction clone() const
-		{
-			RealFunction f(lambda_);
-			f.coeffs_ = coeffs_.clone();
-			return f;
-		}
+		[[nodiscard]] RealFunction clone() const { return RealFunction(coeffs_.clone()); }
 		// get coefficient of the term x ^ k
 		// 0 <= k <= lambda
-		[[nodiscard]] Ring& get(uint32_t k) { return coeffs_[k]; }
-		[[nodiscard]] const Ring& get(uint32_t k) const { return coeffs_[k]; }
+		[[nodiscard]] Ring& at(uint32_t k) { return coeffs_[k]; }
+		[[nodiscard]] const Ring& at(uint32_t k) const { return coeffs_[k]; }
 
-		[[nodiscard]] Vector<Ring> as_vector() && { return std::move(coeffs_); }
-		template <class = std::enable_if<is_mpfr_real_v<Ring>>>
-		[[nodiscard]] Ring abs() const
-		{
-			return norm().sqrt();
-		}
-		[[nodiscard]] Ring norm() const { return coeffs_.norm(); }
+		[[nodiscard]] auto abs() const { return coeffs_.abs(); }
+		[[nodiscard]] auto norm() const { return coeffs_.norm(); }
 		// multiply x ^ p
 		void shift(uint32_t p)
 		{
-			for (uint32_t i = lambda_; i >= p; i--) get(i) = get(i - p);
-			for (uint32_t i = 0; i < p; i++) get(i) = {};
+			for (uint32_t i = lambda_; i >= p; i--) at(i) = at(i - p);
+			for (uint32_t i = 0; i < p; i++) at(i) = {};
 		}
 
-		template <class T, class = std::enable_if_t<is_iaddable_v<Ring, T>>>
-		RealFunction& operator+=(const RealFunction<T>& v)
+		RealFunction& operator+=(const RealFunction& v)
 		{
 			coeffs_ += v.coeffs_;
 			return *this;
 		}
-		template <class T, class = std::enable_if_t<is_imultipliable_v<Ring, T>>>
+		RealFunction& operator-=(const RealFunction& v)
+		{
+			coeffs_ -= v.coeffs_;
+			return *this;
+		}
+		template <class T>
 		RealFunction& operator*=(const T& r)
 		{
 			coeffs_ *= r;
 			return *this;
 		}
-		template <class T, class = std::enable_if_t<is_idividable_v<Ring, T>>>
+		template <class T>
 		RealFunction& operator/=(const T& r)
 		{
 			coeffs_ /= r;
 			return *this;
 		}
-		template <class R, class = std::enable_if_t<is_addable_v<Ring, R>>>
-		friend RealFunction<union_ring_t<Ring, R>> operator+(const RealFunction& x, const RealFunction<R>& y)
+		RealFunction operator+() const { return clone(); }
+		RealFunction operator-() const { return RealFunction(-coeffs_); }
+		friend RealFunction operator+(const RealFunction& x, const RealFunction& y)
 		{
-			assert(x.lambda_ == y.lambda_);
-			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
-			z.coeffs_ = x.coeffs_ + y.coeffs_;
-			return z;
+			return RealFunction(x.coeffs_ + y.coeffs_);
 		}
-		template <class R, class = std::enable_if_t<is_subtractable_v<Ring, R>>>
-		friend RealFunction<union_ring_t<Ring, R>> operator-(const RealFunction& x, const RealFunction<R>& y)
+		friend RealFunction operator-(const RealFunction& x, const RealFunction& y)
 		{
-			assert(x.lambda_ == y.lambda_);
-			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
-			z.coeffs_ = x.coeffs_ - y.coeffs_;
-			return z;
+			return RealFunction(x.coeffs_ - y.coeffs_);
 		}
-		template <class R, class = std::enable_if_t<is_multipliable_v<Ring, R>>>
-		friend RealFunction<union_ring_t<Ring, R>> operator*(const RealFunction& x, const RealFunction<R>& y)
+		friend RealFunction mul(const RealFunction& x, const RealFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
+			RealFunction z(x.lambda_);
 			for (uint32_t k1 = 0; k1 <= x.lambda_; ++k1)
-				for (uint32_t k2 = 0; k1 + k2 <= x.lambda_; ++k2) z.get(k1 + k2) += x.get(k1) * y.get(k2);
+				for (uint32_t k2 = 0; k1 + k2 <= x.lambda_; ++k2) z.at(k1 + k2) += mul(x.at(k1), y.at(k2));
 			return z;
 		}
-		template <class R, class = std::enable_if_t<!is_realfunc_v<R> && is_multipliable_v<Ring, R>>>
-		friend RealFunction<union_ring_t<Ring, R>> operator*(const RealFunction& x, const R& r)
+		template <class R>
+		friend RealFunction mul_scalar(const R& r, const RealFunction& x)
 		{
-			RealFunction<union_ring_t<Ring, R>> z(x.lambda_);
-			z.coeffs_ = x.coeffs_ * r;
-			return z;
+			return RealFunction(mul_scalar(r, x.coeffs_));
 		}
-		template <class R, class = std::enable_if_t<!is_realfunc_v<R> && is_multipliable_v<Ring, R>>>
-		friend RealFunction<union_ring_t<Ring, R>> operator*(const R& r, const RealFunction& x)
+		template <class R>
+		friend RealFunction operator/(const RealFunction& x, const R& r)
 		{
-			return x * r;
+			return RealFunction(x.coeffs_ / r);
 		}
-		friend std::ostream& operator<<(std::ostream& out, const RealFunction& v)
+		friend bool operator==(const RealFunction& x, const RealFunction& y)
 		{
-			auto f = false;
-			for (uint32_t k = 0; k <= v.lambda_; ++k)
-			{
-				if (f) out << " + ";
-				out << "(" << v.get(k) << ")";
-				if (k > 0) out << " * x";
-				if (k > 1) out << " ^ " << k;
-				f = true;
-			}
-			return out;
+			return x.lambda_ == y.lambda_ && x.coeffs_ == y.coeffs_;
 		}
-		template <class Ring2>
-		friend class RealFunction;
-		template <class Ring2>
-		friend class RealConverter;
-		template <class Ring2>
-		friend class RealFunctionWithPower;
+		friend bool operator!=(const RealFunction& x, const RealFunction& y) { return !(x == y); }
 	};
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	RealFunction<polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>& coeffs)
+	{
+		uint32_t lambda = coeffs[0].lambda(), len = coeffs.size();
+		RealFunction<polynomialize_t<Ring>> ans(lambda);
+		Vector<Ring> v(len);
+		for (uint32_t r = 0; r <= lambda; ++r)
+		{
+			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(r));
+			ans.at(r) = to_pol(v);
+		}
+		return ans;
+	}
+	template <class R>
+	std::ostream& operator<<(std::ostream& out, const RealFunction<R>& v)
+	{
+		auto f = false;
+		for (uint32_t k = 0; k <= v.lambda(); ++k)
+		{
+			if (f) out << " + ";
+			out << "(" << v.at(k) << ")";
+			if (k > 0) out << " * x";
+			if (k > 1) out << " ^ " << k;
+			f = true;
+		}
+		return out;
+	}
 	// f(x) = (a + b * x) ^ p
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	RealFunction<Ring> power_function(const Ring& a, const Ring& b, const Ring& p, uint32_t lambda)
 	{
 		assert(a != 0);
 		RealFunction<Ring> f(lambda);
-		f.get(0) = mpfr::pow(a, p);
+		f.at(0) = mpfr::pow(a, p);
 		Ring tmp = b / a;
-		for (uint32_t k = 1; k <= lambda; ++k) { f.get(k) = f.get(k - 1) * tmp * (p - (k - 1)) / k; }
+		for (uint32_t k = 1; k <= lambda; ++k) { f.at(k) = f.at(k - 1) * tmp * (p - (k - 1)) / k; }
 		return f;
 	}
 
@@ -181,13 +162,13 @@ namespace algebra
 		RealConverter(const RealFunction<Ring>& func)
 		    : lambda_(func.lambda()), mat_(func.lambda() + 1, func.lambda() + 1)
 		{
-			// assert(func.get(0).iszero());
-			mat_.get(0, 0) = 1;
+			// assert(func.at(0).iszero());
+			mat_.at(0, 0) = 1;
 			auto pf = func.clone();
 			for (uint32_t n = 1; n <= lambda_; ++n)
 			{
-				for (uint32_t i = n; i <= lambda_; ++i) mat_.get(n, i) = pf.get(i);
-				pf = pf * func;
+				for (uint32_t i = n; i <= lambda_; ++i) mat_.at(n, i) = pf.at(i);
+				pf = mul(pf, func);
 			}
 		}
 		RealConverter inverse() const
@@ -196,24 +177,22 @@ namespace algebra
 			invmat.transpose();
 			invmat = invmat.lower_triangular_inverse();
 			RealFunction<Ring> f(lambda_);
-			for (uint32_t k = 1; k <= lambda_; ++k) f.get(k) = invmat.get(k, 1);
+			for (uint32_t k = 1; k <= lambda_; ++k) f.at(k) = invmat.at(k, 1);
 			return RealConverter(f);
 		}
 		// convert a function f of x to a function of y where x = func(y)
 		template <class R>
 		RealFunction<R> convert(const RealFunction<R>& f) const
 		{
-			assert(lambda_ == f.lambda_);
-			RealFunction<R> g(lambda_);
-			g.coeffs_ = f.coeffs_ * mat_;
-			return g;
+			assert(lambda_ == f.lambda());
+			return RealFunction<R>(dot(f.coeffs_, mat_));
 		}
 		const Matrix<Ring>& matrix() const { return mat_; }
 	};
 	// real function multiplied by x ^ {pow} of x at x = 0
 	// take derivatives (der x) ^ k upto k <= lambda
 	// namely, a function is represented as
-	//   \sum_{k = 0}^{lambda} this->get(k) x ^ {k + pow} + O(x ^ {pow + lambda + 1})
+	//   \sum_{k = 0}^{lambda} this->at(k) x ^ {k + pow} + O(x ^ {pow + lambda + 1})
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	class RealFunctionWithPower
 	{
@@ -227,18 +206,24 @@ namespace algebra
 		// take derivative
 		void derivate()
 		{
-			for (uint32_t k = 0; k <= f_.lambda_; ++k) f_.get(k) *= pow_ + k;
+			for (uint32_t k = 0; k <= f_.lambda(); ++k) f_.at(k) *= pow_ + k;
 			pow_ -= 1;
 		}
+		void swap(RealFunctionWithPower& f)
+		{
+			f_.swap(f.f_);
+			pow_.swap(f.pow_);
+		}
+		RealFunctionWithPower clone() const { return RealFunctionWithPower(f_, pow_); }
 		// evaluate at x = x
-		template <class R, class = std::enable_if_t<is_imultipliable_v<Ring, R>>>
-		[[nodiscard]] Ring eval(const R& x) const
+		template <class R>
+		[[nodiscard]] Ring approximate(const R& x) const
 		{
 			Ring s{};
-			for (uint32_t i = f_.lambda_; i <= f_.lambda_; --i)
+			for (uint32_t i = f_.lambda(); i <= f_.lambda(); --i)
 			{
 				s *= x;
-				s += f_.get(i);
+				s += f_.at(i);
 			}
 			s *= mpfr::pow(x, pow_);
 			return s;
