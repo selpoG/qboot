@@ -7,6 +7,7 @@
 #include <sstream>  // for ostringstream
 #include <string>   // for string
 
+#include "block.hpp"             // for ConformalBlock
 #include "complex_function.hpp"  // for ComplexFunction, FunctionSymmetry
 #include "primary_op.hpp"        // for PrimaryOperator
 #include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt
@@ -93,6 +94,16 @@ namespace qboot
 		                                       algebra::FunctionSymmetry sym) const
 		{
 			return mul(algebra::v_to_d(d, lambda), gBlock).proj(sym);
+		}
+		algebra::ComplexFunction<Real> evaluate(const ConformalBlock<Real>& block) const
+		{
+			return F_block(block.delta_half(), gBlock(block.get_op(), block.S(), block.P(), *this), block.symmetry());
+		}
+		algebra::ComplexFunction<Real> evaluate(const ConformalBlock<Real, GeneralPrimaryOperator<Real>>& block,
+		                                        const Real& delta) const
+		{
+			return F_block(block.delta_half(), gBlock(block.get_op(delta), block.S(), block.P(), *this),
+			               block.symmetry());
 		}
 		algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
 		                                       const Real& d3, const Real& d4, algebra::FunctionSymmetry sym) const

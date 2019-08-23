@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <iostream>
 
+#include "block.hpp"
 #include "chol_and_inverse.hpp"
 #include "complex_function.hpp"
 #include "context_variables.hpp"
@@ -25,6 +26,8 @@ using std::array;
 
 using R = mpfr::real<1000, MPFR_RNDN>;
 using Op = qboot::PrimaryOperator<R>;
+using GOp = qboot::GeneralPrimaryOperator<R>;
+using GBlock = qboot::ConformalBlock<R, GOp>;
 static R very_small = R("2e-591");
 
 [[maybe_unused]] static Vector<R> to_vec(const mpfr_t* a, uint32_t s);
@@ -155,11 +158,13 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, 
 	});
 }
 
-void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax, uint32_t maxspin)
+void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax = 20, uint32_t maxspin = 24)
 {
 	for (uint32_t spin = 0; spin <= maxspin; spin += 2)
 	{
 		R gap = spin == 0 ? de : c.unitary_bound(spin);
+		auto op = GOp(spin, c.epsilon);
+		auto block = GBlock(op, ds, ds, ds, ds, algebra::FunctionSymmetry::Odd);
 		RationalApproxData<R> ag(numax, spin, c, ds, ds, ds, ds);
 		auto sp = ag.sample_points();
 		auto q = ag.get_bilinear_basis(gap);
@@ -167,11 +172,9 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax, 
 		Vector<R> scales(sp.size());
 		for (uint32_t i = 0; i < sp.size(); i++)
 		{
-			const auto& p = sp[i];
-			R delta = gap + p;
-			auto op = Op(delta, spin, c.epsilon);
+			R delta = gap + sp[i];
 			scales[i] = ag.get_scale(delta);
-			bls[i] = c.F_block(op, ds, ds, ds, ds) / scales[i];
+			bls[i] = c.evaluate(block, delta) / scales[i];
 		}
 		std::cout << "F_{-} = " << algebra::polynomial_interpolate(bls, sp) << std::endl;
 		std::cout << "basis = " << q << std::endl;
@@ -194,6 +197,9 @@ int main()
 		for (uint32_t spin = 0; spin <= 2; spin++)
 		{
 			R gap = R(spin == 0 ? 3 : spin + 1);
+			auto op = GOp(spin, c.epsilon);
+			auto block = GBlock(op, d_s, d_e, d_s, d_e, algebra::FunctionSymmetry::Odd);
+			std::cout << "block = " << block.str() << std::endl;
 			RationalApproxData<R> ag(numax, spin, c, d_s, d_e, d_s, d_e);
 			auto sp = ag.sample_points();
 			auto q = ag.get_bilinear_basis(gap);
@@ -201,19 +207,12 @@ int main()
 			std::cout << "pol = " << pol << std::endl;
 			Vector<ComplexFunction<R>> bls(sp.size());
 			Vector<R> scales(sp.size());
-			std::cout << "spin = " << spin << ", epsilon = " << c.epsilon << std::endl;
 			std::cout << "ps = " << gap << " + " << sp << std::endl;
 			for (uint32_t i = 0; i < sp.size(); i++)
 			{
 				auto delta = gap + sp[i];
-				auto op = Op(delta, spin, c.epsilon);
-				// std::cout << "op = " << op.str() << std::endl;
-				auto g = gBlock(op, d_s, d_e, d_s, d_e, c);
-				// std::cout << "F_{-} = " << c.F_block(d_e, d_s, g) << std::endl;
-				// std::cout << "F_{+} = " << c.H_block(d_e, d_s, g) << std::endl;
 				scales[i] = ag.get_scale(delta);
-				bls[i] = c.F_block(d_e, d_s, g) / scales[i];
-				// std::cout << "scale = " << scales[i] << std::endl;
+				bls[i] = c.evaluate(block, delta) / scales[i];
 			}
 			const auto& ip = algebra::polynomial_interpolate(bls, sp);
 			std::cout << "F_{-} = " << ip << std::endl;
