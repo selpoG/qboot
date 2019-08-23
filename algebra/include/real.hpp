@@ -3023,7 +3023,7 @@ namespace mpfr
 		real norm() const { return *this * *this; }
 
 		template <class T>
-		real eval(const T&)
+		real eval(const T&) const
 		{
 			return *this;
 		}

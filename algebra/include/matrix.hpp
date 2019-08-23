@@ -34,6 +34,41 @@ namespace algebra
 		else
 			return v == 0;
 	}
+	template <class T>
+	struct evaluated;
+	template <class T>
+	using evaluated_t = typename evaluated<T>::type;
+	template <class R, template <class> class Vec>
+	struct evaluated<Vec<R>>
+	{
+		using type = Vec<evaluated_t<R>>;
+	};
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	struct evaluated<mpfr::real<prec, rnd>>
+	{
+		using type = mpfr::real<prec, rnd>;
+	};
+	template <class Ring, template <class> class F>
+	struct substitute;
+	// substitute the most inner template argument R by F<R>,
+	// i.e. substitute_t<A<B<...<C<R>>...>>> = A<B<...<C<F<R>>>...>>
+	template <class T, template <class> class F>
+	using substitute_t = typename substitute<T, F>::type;
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd, template <class> class F>
+	struct substitute<mpfr::real<prec, rnd>, F>
+	{
+		using type = F<mpfr::real<prec, rnd>>;
+	};
+	template <class R, template <class> class Vec, template <class> class F>
+	struct substitute<Vec<R>, F>
+	{
+		using type = Vec<substitute_t<R, F>>;
+	};
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd, class Real>
+	mpfr::real<prec, rnd> eval(const mpfr::real<prec, rnd>& v, [[maybe_unused]] const Real& x)
+	{
+		return v;
+	}
 	// interface Swappable<T> {
 	//	void swap(T&);
 	// };
@@ -185,11 +220,20 @@ namespace algebra
 			for (uint32_t i = 1; i < x.sz_; ++i) s += mul(x.arr_[i], y.arr_[i]);
 			return s;
 		}
+		template <class Real>
+		[[nodiscard]] Vector<evaluated_t<Ring>> eval(const Real& x) const
+		{
+			Vector<evaluated_t<Ring>> ans(sz_);
+			for (uint32_t i = 0; i < sz_; i++) ans[i] = at(i).eval(x);
+			return ans;
+		}
 	};
 
 	template <class Ring>
 	class Matrix
 	{
+		template <class Ring2>
+		friend class Matrix;
 		Vector<Ring> arr_;
 		uint32_t row_, col_;
 		Matrix(Vector<Ring>&& v, uint32_t r, uint32_t c) : arr_(std::move(v)), row_(r), col_(c) {}
@@ -414,6 +458,11 @@ namespace algebra
 					for (uint32_t j = 1; j < y.row_; ++j) z[i] += mul(x[j], y.at(j, i));
 				}
 			return z;
+		}
+		template <class Real>
+		Matrix<evaluated_t<Ring>> eval(const Real& x) const
+		{
+			return Matrix<evaluated_t<Ring>>(arr_.eval(x), row_, col_);
 		}
 	};
 

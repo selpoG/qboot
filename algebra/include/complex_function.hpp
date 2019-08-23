@@ -60,6 +60,8 @@ namespace algebra
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	class ComplexFunction
 	{
+		template <class Ring2>
+		friend class ComplexFunction;
 		FunctionSymmetry sym_ = FunctionSymmetry::Mixed;
 		uint32_t lambda_;
 		Vector<Ring> coeffs_;
@@ -232,6 +234,11 @@ namespace algebra
 			return x.lambda_ == y.lambda_ && x.sym_ == y.sym_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
+		template <class Real>
+		ComplexFunction<evaluated_t<Ring>> eval(const Real& x) const
+		{
+			return ComplexFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
+		}
 	};
 	template <class Ring>
 	ComplexFunction<polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>& coeffs)

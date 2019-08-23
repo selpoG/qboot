@@ -16,7 +16,7 @@ namespace algebra
 	// \sum_{i} coeff_[i] x ^ i
 	// the last value of coeff_ must be non-zero
 	// zero polynomial is represented by empty coeff_ (coeff_.size() = 0)
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring = mpfr::real<1000, MPFR_RNDN>, class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
 	class Polynomial
 	{
 		Vector<Ring> coeff_;
@@ -269,43 +269,15 @@ namespace algebra
 		}
 		return out;
 	}
-	template <class T>
-	struct evaluated;
-	template <class T>
-	using evaluated_t = typename evaluated<T>::type;
 	template <class Ring>
 	struct evaluated<Polynomial<Ring>>
 	{
 		using type = Ring;
 	};
-	template <class R, template <class> class Vec>
-	struct evaluated<Vec<R>>
-	{
-		using type = Vec<evaluated<R>>;
-	};
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	struct evaluated<mpfr::real<prec, rnd>>
-	{
-		using type = mpfr::real<prec, rnd>;
-	};
-	template <class Ring, template <class> class F>
-	struct substitute;
-	// substitute the most inner template argument R by F<R>,
-	// i.e. substitute_t<A<B<...<C<R>>...>>> = A<B<...<C<F<R>>>...>>
-	template <class T, template <class> class F>
-	using substitute_t = typename substitute<T, F>::type;
 	template <class T>
-	using polynomialize_t = substitute_t<T, Polynomial>;
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd, template <class> class F>
-	struct substitute<mpfr::real<prec, rnd>, F>
-	{
-		using type = F<mpfr::real<prec, rnd>>;
-	};
-	template <class R, template <class> class Vec, template <class> class F>
-	struct substitute<Vec<R>, F>
-	{
-		using type = Vec<substitute_t<R, F>>;
-	};
+	using Polynomial_ = Polynomial<T>;
+	template <class T>
+	using polynomialize_t = substitute_t<T, Polynomial_>;
 	// do not allow nested polynomial
 	template <class R, template <class> class F>
 	struct substitute<Polynomial<R>, F>
@@ -344,12 +316,13 @@ namespace algebra
 		}
 		return ans;
 	}
-	// calculate coefficients c of polynomial f(x) s.t. for each i, f(points[i]) = eval[i]
-	// eval[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
+	// calculate coefficients c of polynomial f(x) s.t. for each i, f(points[i]) = vals[i]
+	// vals[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
+	// evals(polynomial_interpolate(vals, points), points) == vals (up to rounding errors)
 	template <class Ring, class Real = mpfr::real<1000, MPFR_RNDN>>
-	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& eval, const Vector<Real>& points)
+	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<Real>& points)
 	{
-		assert(eval.size() == points.size() && points.size() > 0);
+		assert(vals.size() == points.size() && points.size() > 0);
 		auto deg = points.size() - 1;
 		Matrix<Real> mat(deg + 1, deg + 1);
 		for (uint32_t i = 0; i <= deg; ++i)
@@ -357,8 +330,15 @@ namespace algebra
 			mat.at(i, 0) = 1;
 			for (uint32_t j = 1; j <= deg; ++j) mat.at(i, j) = points[i] * mat.at(i, j - 1);
 		}
-		auto coeffs = dot(mat.inverse(), eval);
+		auto coeffs = dot(mat.inverse(), vals);
 		return to_pol(coeffs);
+	}
+	template <class Ring, class Real>
+	Vector<evaluated_t<Ring>> evals(const Ring& v, const Vector<Real>& xs)
+	{
+		Vector<evaluated_t<Ring>> ans(xs.size());
+		for (uint32_t i = 0; i < xs.size(); ++i) ans[i] = v.eval(xs[i]);
+		return ans;
 	}
 }  // namespace algebra
 

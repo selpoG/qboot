@@ -19,6 +19,8 @@ namespace algebra
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	class RealFunction
 	{
+		template <class Ring2>
+		friend class RealFunction;
 		uint32_t lambda_;
 		Vector<Ring> coeffs_;
 		explicit RealFunction(Vector<Ring>&& vec) : lambda_(vec.size() - 1), coeffs_(std::move(vec)) {}
@@ -107,6 +109,11 @@ namespace algebra
 			return x.lambda_ == y.lambda_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const RealFunction& x, const RealFunction& y) { return !(x == y); }
+		template <class Real>
+		RealFunction<evaluated_t<Ring>> eval(const Real& x) const
+		{
+			return RealFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_);
+		}
 	};
 	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
 	RealFunction<polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>& coeffs)

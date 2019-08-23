@@ -205,23 +205,21 @@ int main()
 			std::cout << "ps = " << gap << " + " << sp << std::endl;
 			for (uint32_t i = 0; i < sp.size(); i++)
 			{
-				const auto& p = sp[i];
-				R delta = gap + p;
+				auto delta = gap + sp[i];
 				auto op = Op(delta, spin, c.epsilon);
 				// std::cout << "op = " << op.str() << std::endl;
-				// auto g = gBlock(op, d_s, d_e, d_s, d_e);
-				// std::cout << "F_{-} = " << c.F_block(op, d_s, d_e, d_s, d_e) << std::endl;
-				// std::cout << "F_{+} = " << c.H_block(op, d_s, d_e, d_s, d_e) << std::endl;
-				// std::cout << "scale = " << ag.get_scale(delta) << std::endl;
+				auto g = gBlock(op, d_s, d_e, d_s, d_e, c);
+				// std::cout << "F_{-} = " << c.F_block(d_e, d_s, g) << std::endl;
+				// std::cout << "F_{+} = " << c.H_block(d_e, d_s, g) << std::endl;
 				scales[i] = ag.get_scale(delta);
-				bls[i] = c.F_block(op, d_s, d_e, d_s, d_e) / scales[i];
-				// Vector<R> q_eval(q.size());
-				// for (uint32_t j = 0; j < q.size(); j++) q_eval[j] = q[j].eval(p);
-				// std::cout << "q = " << q_eval << std::endl;
+				bls[i] = c.F_block(d_e, d_s, g) / scales[i];
+				// std::cout << "scale = " << scales[i] << std::endl;
 			}
-			std::cout << "F_{-} = " << algebra::polynomial_interpolate(bls, sp) << std::endl;
+			const auto& ip = algebra::polynomial_interpolate(bls, sp);
+			std::cout << "F_{-} = " << ip << std::endl;
 			std::cout << "basis = " << q << std::endl;
 			std::cout << "scales = " << scales << std::endl;
+			std::cout << "error = " << (evals(ip, sp) - bls).norm() << std::endl;
 		}
 	}
 	for (uint32_t dim = 3; dim <= maxdim; dim += 2)

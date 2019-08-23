@@ -99,6 +99,11 @@ namespace qboot
 		{
 			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4, *this), sym);
 		}
+		algebra::ComplexFunction<Real> F_block(const Real& d2, const Real& d3,
+		                                       const algebra::ComplexFunction<Real>& gBlock) const
+		{
+			return F_block((d2 + d3) / 2, gBlock);
+		}
 		algebra::ComplexFunction<Real> F_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock) const
 		{
 			return F_block(d, gBlock, algebra::FunctionSymmetry::Odd);
@@ -107,6 +112,11 @@ namespace qboot
 		                                       const Real& d3, const Real& d4) const
 		{
 			return F_block(op, d1, d2, d3, d4, algebra::FunctionSymmetry::Odd);
+		}
+		algebra::ComplexFunction<Real> H_block(const Real& d2, const Real& d3,
+		                                       const algebra::ComplexFunction<Real>& gBlock) const
+		{
+			return H_block((d2 + d3) / 2, gBlock);
 		}
 		algebra::ComplexFunction<Real> H_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock) const
 		{
