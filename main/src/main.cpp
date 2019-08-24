@@ -1,6 +1,8 @@
 #include <cassert>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 #include "block.hpp"
 #include "chol_and_inverse.hpp"
@@ -18,6 +20,7 @@
 #include "real.hpp"
 #include "real_function.hpp"
 #include "real_io.hpp"
+#include "sdpb_input.hpp"
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
 using qboot::h_asymptotic, qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunction,
@@ -41,6 +44,7 @@ static void test_op(const Context<R>& c, const qboot2::cb_context& cb, const Op&
 static void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, const R& d34);
 [[maybe_unused]] static void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax,
                                          uint32_t maxspin);
+[[maybe_unused]] static void test_sdpb();
 
 template <class T>
 void check(const T& p, const T& q)
@@ -165,7 +169,7 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 		R gap = spin == 0 ? de : c.unitary_bound(spin);
 		auto op = GOp(spin, c.epsilon);
 		auto block = GBlock(op, ds, ds, ds, ds, algebra::FunctionSymmetry::Odd);
-		RationalApproxData<R> ag(numax, spin, c, ds, ds, ds, ds);
+		RationalApproxData<R> ag(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
 		auto sp = ag.sample_points();
 		auto q = ag.get_bilinear_basis(gap);
 		Vector<ComplexFunction<R>> bls(sp.size());
@@ -180,6 +184,33 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 		std::cout << "basis = " << q << std::endl;
 		std::cout << "scales = " << scales << std::endl;
 	}
+}
+
+void test_sdpb()
+{
+	// https://github.com/davidsd/sdpb/blob/master/test/test.xml
+	Matrix<R> B(5, 1);
+	auto tmp = std::array{-0.000300837, -0.0212281, -0.330971, -0.74109, -0.69292};
+	for (uint32_t i = 0; i < 5; i++) B.at(i, 0) = tmp.at(i);
+	Vector<R> c(5);
+	tmp = {0.982655, 0.854826, 0.653523, 2.53878, 4.70595};
+	for (uint32_t i = 0; i < 5; i++) c.at(i) = tmp.at(i);
+	Matrix<R> qb0(3, 5);
+	tmp = {0.99129, 0.924284, 0.651373, 0.346955, 0.139681};
+	for (uint32_t i = 0; i < 5; i++) qb0.at(0, i) = tmp.at(i);
+	tmp = {-0.973945, -0.778736, -0.0929214, 0.38759, 0.410213};
+	for (uint32_t i = 0; i < 5; i++) qb0.at(1, i) = tmp.at(i);
+	tmp = {0.956753, 0.644647, -0.226137, -0.344576, 0.122301};
+	for (uint32_t i = 0; i < 5; i++) qb0.at(2, i) = tmp.at(i);
+	Matrix<R> qb1(2, 5);
+	tmp = {0.131123, 0.366781, 0.603126, 0.504831, 0.277146};
+	for (uint32_t i = 0; i < 5; i++) qb1.at(0, i) = tmp.at(i);
+	tmp = {-0.128829, -0.309023, -0.0860386, 0.563956, 0.813919};
+	for (uint32_t i = 0; i < 5; i++) qb1.at(1, i) = tmp.at(i);
+	constexpr uint32_t num_cons = 1;
+	qboot::SDPBInput<R> sdpb(R(0), Vector<R>{R(-1)}, num_cons);
+	sdpb.register_constraint(0, {1, 4, std::move(B), std::move(c), {std::move(qb0), std::move(qb1)}});
+	sdpb.write_all(std::cout);
 }
 
 int main()

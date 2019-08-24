@@ -65,7 +65,9 @@ namespace mpfr
 	// missing: handling of ios_base::fixed/ios_base::scientific and
 	// ios_base::showpoint
 
-	inline std::ostream& helper_ostream(std::ostream& s, const mpfr_t x, mpfr_rnd_t rnd)
+	template <class Char, class Traits>
+	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, const mpfr_t x,
+	                                                        mpfr_rnd_t rnd)
 	{
 		real_exp_t exp;
 		auto ch = MPFR_NS mpfr_get_str(nullptr, &exp, 10, static_cast<size_t>(s.precision() + 1), x, rnd);
