@@ -186,7 +186,7 @@ namespace algebra
 		friend Vector mul_scalar(const R& r, const Vector& x)
 		{
 			Vector z(x.sz_);
-			for (uint32_t i = 0; i < x.sz_; ++i) z[i] = mpfr::mul_scalar(r, x.arr_[i]);
+			for (uint32_t i = 0; i < x.sz_; ++i) z[i] = mul_scalar(r, x.arr_[i]);
 			return z;
 		}
 		template <class R>
