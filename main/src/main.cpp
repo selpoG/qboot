@@ -1,4 +1,5 @@
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -209,8 +210,9 @@ void test_sdpb()
 			qb1.at(i, j) = bilinear[i].eval(sample_points[j]) * mpfr::sqrt(sample_scale[j] * sample_points[j]);
 	constexpr uint32_t num_cons = 1;
 	qboot::SDPBInput<R> sdpb(R(0), Vector<R>{R(-1)}, num_cons);
-	sdpb.register_constraint(0, {1, 4, std::move(B), std::move(c), {std::move(qb0), std::move(qb1)}});
-	sdpb.write_all(std::cout);
+	sdpb.register_constraint(0, {1, deg, std::move(B), std::move(c), {std::move(qb0), std::move(qb1)}});
+	auto root = std::filesystem::current_path() / "test";
+	sdpb.write_all(root);
 }
 
 int main()

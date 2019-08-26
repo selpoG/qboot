@@ -1,11 +1,15 @@
 #ifndef SDPB_INPUT_HPP_
 #define SDPB_INPUT_HPP_
 
-#include <array>     // for array
-#include <cassert>   // for assert
-#include <cstdint>   // for uint32_t
-#include <memory>    // for unique_ptr
-#include <optional>  // for optional
+#include <array>       // for array
+#include <cassert>     // for assert
+#include <cstdint>     // for uint32_t
+#include <filesystem>  // for path
+#include <fstream>     // for ofstream
+#include <iomanip>     // for setprecision
+#include <ios>         // for fixed
+#include <memory>      // for unique_ptr
+#include <optional>    // for optional
 
 #include "matrix.hpp"  // for Matrix, Vector
 #include "real.hpp"    // for real
@@ -95,19 +99,43 @@ namespace qboot
 			constraints_[index] = std::move(c);
 		}
 		template <class OStr>
+		void set_manip(OStr& out) const
+		{
+			out << std::defaultfloat << std::setprecision(3 + int32_t(Real::prec * 0.302));
+		}
+		void write_objectives(const std::filesystem::path& root) const
+		{
+			std::ofstream file(root / "objectives");
+			set_manip(file);
+			write_objectives(file);
+		}
+		template <class OStr, class = std::enable_if_t<!std::is_same_v<OStr, std::filesystem::path>>>
 		void write_objectives(OStr& out) const
 		{
 			out << constant_term_ << "\n";
 			write_vec(out, objectives_);
 		}
-		template <class OStr>
+		void write_bilinear_bases(const std::filesystem::path& root) const
+		{
+			std::ofstream file(root / "bilinear_bases.0");
+			set_manip(file);
+			write_bilinear_bases(file);
+		}
+		template <class OStr, class = std::enable_if_t<!std::is_same_v<OStr, std::filesystem::path>>>
 		void write_bilinear_bases(OStr& out) const
 		{
 			out << num_constraints_ << "\n";
 			for (uint32_t i = 0; i < num_constraints_; ++i)
 				for (const auto& bas : constraints_[i]->bilinear()) write_mat(out, bas);
 		}
-		template <class OStr>
+		void write_free_var_matrix(const std::filesystem::path& root, uint32_t i) const
+		{
+			std::string filename = "free_var_matrix." + std::to_string(i);
+			std::ofstream file(root / filename);
+			set_manip(file);
+			write_free_var_matrix(file, i);
+		}
+		template <class OStr, class = std::enable_if_t<!std::is_same_v<OStr, std::filesystem::path>>>
 		void write_free_var_matrix(OStr& out, uint32_t i) const
 		{
 			write_free_var_matrix(out, *constraints_[i]);
@@ -117,7 +145,14 @@ namespace qboot
 		{
 			write_mat(out, cons.obj_B());
 		}
-		template <class OStr>
+		void write_primal_objective_c(const std::filesystem::path& root, uint32_t i) const
+		{
+			std::string filename = "primal_objective_c." + std::to_string(i);
+			std::ofstream file(root / filename);
+			set_manip(file);
+			write_primal_objective_c(file, i);
+		}
+		template <class OStr, class = std::enable_if_t<!std::is_same_v<OStr, std::filesystem::path>>>
 		void write_primal_objective_c(OStr& out, uint32_t i) const
 		{
 			write_primal_objective_c(out, *constraints_[i]);
@@ -127,7 +162,13 @@ namespace qboot
 		{
 			write_vec(out, cons.obj_c());
 		}
-		template <class OStr>
+		void write_blocks(const std::filesystem::path& root) const
+		{
+			std::ofstream file(root / "blocks.0");
+			set_manip(file);
+			write_blocks(file);
+		}
+		template <class OStr, class = std::enable_if_t<!std::is_same_v<OStr, std::filesystem::path>>>
 		void write_blocks(OStr& out) const
 		{
 			out << 1 << "\n";
@@ -146,21 +187,18 @@ namespace qboot
 			for (uint32_t i = 0; i < num_constraints_; ++i)
 				for (const auto& m : constraints_[i]->bilinear()) out << m.column() * constraints_[i]->dim() << "\n";
 		}
-		template <class OStr>
-		void write_all(OStr& out) const
+		void write_all(const std::filesystem::path& root_) const
 		{
-			out << "[blocks.0]" << std::endl;
-			write_blocks(out);
-			out << "[objectives]" << std::endl;
-			write_objectives(out);
-			out << "[bilinear_bases.0]" << std::endl;
-			write_bilinear_bases(out);
-			for (uint32_t i = 0; i < num_constraints_; i++)
+			// ensure root to be path to directory
+			auto root = root_ / "";
+			std::filesystem::create_directory(root);
+			write_blocks(root);
+			write_objectives(root);
+			write_bilinear_bases(root);
+			for (uint32_t i = 0; i < num_constraints_; ++i)
 			{
-				out << "[free_var_matrix." << i << "]" << std::endl;
-				write_free_var_matrix(out, i);
-				out << "[primal_objective_c." << i << "]" << std::endl;
-				write_primal_objective_c(out, i);
+				write_free_var_matrix(root, i);
+				write_primal_objective_c(root, i);
 			}
 		}
 	};
