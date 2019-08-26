@@ -108,7 +108,7 @@ namespace qboot
 		Real get_scale(const Real& delta) const
 		{
 			Real ans = mpfr::pow(4 * rho, delta);
-			for (uint32_t i = 0; i < poles.size(); i++) ans /= delta - poles[i];
+			for (uint32_t i = 0; i < poles.size(); ++i) ans /= delta - poles[i];
 			return ans;
 		}
 		algebra::Vector<algebra::Polynomial<Real>> get_bilinear_basis(const Real& gap) const
@@ -120,14 +120,14 @@ namespace qboot
 			auto deg = max_degree() / 2;
 			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
 			algebra::Vector<Real> inner_prods(2 * deg + 1);
-			for (uint32_t i = 0; i < poles.size(); i++)
+			for (uint32_t i = 0; i < poles.size(); ++i)
 				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho, shifted_poles[i]));
 			auto mat = anti_band_to_inverse(inner_prods);
 			algebra::Vector<algebra::Polynomial<Real>> q(deg + 1);
-			for (uint32_t i = 0; i <= deg; i++)
+			for (uint32_t i = 0; i <= deg; ++i)
 			{
 				algebra::Vector<Real> v(i + 1);
-				for (uint32_t j = 0; j <= i; j++) v[j] = mat.at(i, j);
+				for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
 				q[i] = algebra::Polynomial<Real>(std::move(v));
 			}
 			return q;

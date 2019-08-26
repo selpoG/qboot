@@ -224,7 +224,7 @@ namespace algebra
 		[[nodiscard]] Vector<evaluated_t<Ring>> eval(const Real& x) const
 		{
 			Vector<evaluated_t<Ring>> ans(sz_);
-			for (uint32_t i = 0; i < sz_; i++) ans[i] = at(i).eval(x);
+			for (uint32_t i = 0; i < sz_; ++i) ans[i] = at(i).eval(x);
 			return ans;
 		}
 	};

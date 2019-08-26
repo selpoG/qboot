@@ -174,7 +174,7 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 		auto q = ag.get_bilinear_basis(gap);
 		Vector<ComplexFunction<R>> bls(sp.size());
 		Vector<R> scales(sp.size());
-		for (uint32_t i = 0; i < sp.size(); i++)
+		for (uint32_t i = 0; i < sp.size(); ++i)
 		{
 			R delta = gap + sp[i];
 			scales[i] = ag.get_scale(delta);
@@ -225,7 +225,7 @@ int main()
 	{
 		const auto& c = cs[dim_].value();
 		R d_s = R(0.5181475), d_e = R(1.412617);
-		for (uint32_t spin = 0; spin <= 2; spin++)
+		for (uint32_t spin = 0; spin <= 2; ++spin)
 		{
 			R gap = R(spin == 0 ? 3 : spin + 1);
 			auto op = GOp(spin, c.epsilon);
@@ -239,7 +239,7 @@ int main()
 			Vector<ComplexFunction<R>> bls(sp.size());
 			Vector<R> scales(sp.size());
 			std::cout << "ps = " << gap << " + " << sp << std::endl;
-			for (uint32_t i = 0; i < sp.size(); i++)
+			for (uint32_t i = 0; i < sp.size(); ++i)
 			{
 				auto delta = gap + sp[i];
 				scales[i] = ag.get_scale(delta);

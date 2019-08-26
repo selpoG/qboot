@@ -51,7 +51,7 @@ namespace algebra
 		void shift(uint32_t p)
 		{
 			for (uint32_t i = lambda_; i >= p; i--) at(i) = at(i - p);
-			for (uint32_t i = 0; i < p; i++) at(i) = {};
+			for (uint32_t i = 0; i < p; ++i) at(i) = {};
 		}
 
 		RealFunction& operator+=(const RealFunction& v)

@@ -55,7 +55,7 @@ namespace algebra
 			while (deg >= 0 && coeffs[uint32_t(deg)].iszero()) deg--;
 			if (deg < 0) return;
 			coeff_ = Vector<Ring>{uint32_t(deg + 1)};
-			for (uint32_t i = 0; i <= uint32_t(deg); i++) coeff_[i].swap(coeffs[i]);
+			for (uint32_t i = 0; i <= uint32_t(deg); ++i) coeff_[i].swap(coeffs[i]);
 		}
 		Polynomial(std::initializer_list<Ring> coeffs) : coeff_(uint32_t(coeffs.size()))
 		{

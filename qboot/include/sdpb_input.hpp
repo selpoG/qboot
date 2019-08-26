@@ -16,8 +16,8 @@ namespace qboot
 	OStr& write_mat(OStr& out, const algebra::Matrix<Real>& v)
 	{
 		out << v.row() << " " << v.column() << "\n";
-		for (uint32_t r = 0; r < v.row(); r++)
-			for (uint32_t c = 0; c < v.column(); c++) out << v.at(r, c) << "\n";
+		for (uint32_t r = 0; r < v.row(); ++r)
+			for (uint32_t c = 0; c < v.column(); ++c) out << v.at(r, c) << "\n";
 		return out;
 	}
 
@@ -25,7 +25,7 @@ namespace qboot
 	OStr& write_vec(OStr& out, const algebra::Vector<Real>& v)
 	{
 		out << v.size() << "\n";
-		for (uint32_t i = 0; i < v.size(); i++) out << v.at(i) << "\n";
+		for (uint32_t i = 0; i < v.size(); ++i) out << v.at(i) << "\n";
 		return out;
 	}
 
@@ -104,7 +104,7 @@ namespace qboot
 		void write_bilinear_bases(OStr& out) const
 		{
 			out << num_constraints_ << "\n";
-			for (uint32_t i = 0; i < num_constraints_; i++)
+			for (uint32_t i = 0; i < num_constraints_; ++i)
 				for (const auto& bas : constraints_[i]->bilinear()) write_mat(out, bas);
 		}
 		template <class OStr>
@@ -132,18 +132,18 @@ namespace qboot
 		{
 			out << 1 << "\n";
 			out << num_constraints_ << "\n";
-			for (uint32_t i = 0; i < num_constraints_; i++) out << i << "\n";
+			for (uint32_t i = 0; i < num_constraints_; ++i) out << i << "\n";
 			out << num_constraints_ << "\n";
-			for (uint32_t i = 0; i < num_constraints_; i++) out << constraints_[i]->dim() << "\n";
+			for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i]->dim() << "\n";
 			out << num_constraints_ << "\n";
-			for (uint32_t i = 0; i < num_constraints_; i++) out << constraints_[i]->degree() << "\n";
+			for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i]->degree() << "\n";
 			out << num_constraints_ << "\n";
-			for (uint32_t i = 0; i < num_constraints_; i++) out << constraints_[i]->schur_size() << "\n";
+			for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i]->schur_size() << "\n";
 			out << 2 * num_constraints_ << "\n";
-			for (uint32_t i = 0; i < num_constraints_; i++)
+			for (uint32_t i = 0; i < num_constraints_; ++i)
 				for (const auto& m : constraints_[i]->bilinear()) out << m.row() * constraints_[i]->dim() << "\n";
 			out << 2 * num_constraints_ << "\n";
-			for (uint32_t i = 0; i < num_constraints_; i++)
+			for (uint32_t i = 0; i < num_constraints_; ++i)
 				for (const auto& m : constraints_[i]->bilinear()) out << m.column() * constraints_[i]->dim() << "\n";
 		}
 		template <class OStr>
