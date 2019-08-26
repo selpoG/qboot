@@ -6,6 +6,14 @@ file(GLOB HEADERS "include/*.hpp" "include/*.h")
 add_library(${MY_TARGET} STATIC ${SOURCES} ${HEADERS})
 
 target_link_libraries(${MY_TARGET} INTERFACE algebra)
+if(NOT MSVC)
+	if(CMAKE_COMPILER_IS_GNUCXX)
+		target_link_libraries(${MY_TARGET} INTERFACE stdc++fs)
+	else()
+		target_link_libraries(${MY_TARGET} INTERFACE c++fs)
+	endif()
+endif()
+
 target_include_directories(${MY_TARGET} PUBLIC
 	../algebra/include
 	"${GMP_INCLUDE_DIR}"
