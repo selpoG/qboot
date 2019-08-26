@@ -3,38 +3,18 @@
 
 #include "real.hpp"
 
-#include <exception>
-#include <iostream>
-#include <sstream>
-#include <string>
+#include <algorithm>  // for max
+#include <cstddef>    // for size_t
+#include <cstdint>    // for intmax_t
+#include <cstring>    // for strlen
+#include <ios>        // for ios_base, streamsize
+#include <iostream>   // for basic_ostram, basic_istream
+#include <stdexcept>  // for runtime_error
+#include <string>     // for string, to_string
+#include <utility>    // for move
 
 namespace mpfr
 {
-	// exception type
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wweak-vtables"
-#endif
-	class exception_real : public std::exception
-	{
-	public:
-		explicit exception_real(const std::string& msg = "exception_real") noexcept : _msg(msg) {}
-		~exception_real() noexcept override = default;
-		exception_real& operator=(const exception_real&) = default;
-		exception_real(const exception_real&) = default;
-		exception_real& operator=(exception_real&&) noexcept = default;
-		exception_real(exception_real&&) noexcept = default;
-		// returns cause of error
-		const char* what() const noexcept override { return _msg.c_str(); }
-
-	private:
-		std::string _msg;
-	};
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
 	// //////////////////////////////////////////////////////////////////
 	// helper functions
 	// //////////////////////////////////////////////////////////////////
@@ -43,10 +23,8 @@ namespace mpfr
 	{
 		const int err = MPFR_NS mpfr_set_str(rop, op.c_str(), 0, rnd);
 		if (err == -1)
-			throw exception_real(
-			    std::string(
-			        "in mpfr::helper_set_stdstr(mpfr_ptr, const std::string&, mpfr_rnd_t):\n  invalid input format ") +
-			    op);
+			throw std::runtime_error(
+			    "in mpfr::helper_set_stdstr(mpfr_ptr, const std::string&, mpfr_rnd_t):\n  invalid input format " + op);
 		return err;
 	}
 
@@ -54,99 +32,180 @@ namespace mpfr
 	{
 		const int err = MPFR_NS mpfr_set_str(rop, op, 0, rnd);
 		if (err == -1)
-			throw exception_real(
+			throw std::runtime_error(
 			    std::string(
 			        "in mpfr::helper_set_charptr(mpfr_ptr, const char*, mpfr_rnd_t):\n  invalid input format ") +
 			    op);
 		return err;
 	}
 
-	// there might be some room for improvements for the next
-	// missing: handling of ios_base::fixed/ios_base::scientific and
-	// ios_base::showpoint
+	enum class _pad_direction : int
+	{
+		RIGHT = 0,
+		INTERNAL = 1,
+		LEFT = 2
+	};
+	inline _pad_direction _get_direction(std::ios_base::fmtflags flags)
+	{
+		if ((flags & std::ios_base::left) != 0) return _pad_direction::LEFT;
+		if ((flags & std::ios_base::internal) != 0) return _pad_direction::INTERNAL;
+		return _pad_direction::RIGHT;
+	}
+	enum class _exp_style : int
+	{
+		DEFAULT_FLOAT = 0,
+		SCIENTIFIC = 1,
+		FIXED = 2
+	};
+	inline _exp_style _get_style(std::ios_base::fmtflags flags)
+	{
+		if ((flags & std::ios_base::scientific) != 0) return _exp_style::SCIENTIFIC;
+		if ((flags & std::ios_base::fixed) != 0) return _exp_style::FIXED;
+		return _exp_style::DEFAULT_FLOAT;
+	}
+	inline size_t _needed_precision(_exp_style st, std::streamsize prec)
+	{
+		if (st != _exp_style::SCIENTIFIC) return prec == 0 ? 1u : static_cast<size_t>(prec);
+		return static_cast<size_t>(prec) + 1;
+	}
+	inline size_t _strlen(const char* s) { return std::strlen(s); }
+	inline size_t _strlen(const std::string& s) { return s.length(); }
+
+	template <class Char, class Traits, class String>
+	inline std::basic_ostream<Char, Traits>& helper_ostream_const(std::basic_ostream<Char, Traits>& s,
+	                                                              const String& abs, bool is_negative)
+	{
+		auto flags = s.flags();
+		auto showpos = (flags & std::ios_base::showpos) != 0;
+		auto dir = _get_direction(flags);
+		auto len = int(_strlen(abs));
+		if (showpos || is_negative) ++len;
+		auto cnt = int(s.width());
+		s.width(0);
+		if (dir == _pad_direction::RIGHT)
+			for (int i = len; i < cnt; ++i) s << s.fill();
+		if (is_negative)
+			s << '-';
+		else if (showpos)
+			s << '+';
+		if (dir == _pad_direction::INTERNAL)
+			for (int i = len; i < cnt; ++i) s << s.fill();
+		s << abs;
+		if (dir == _pad_direction::LEFT)
+			for (int i = len; i < cnt; ++i) s << s.fill();
+		return s;
+	}
+
+	inline std::string _as_scientific(std::string&& s, intmax_t exp, std::ios_base::fmtflags flags)
+	{
+		if (s.length() > 1) s.insert(1, 1, '.');
+		--exp;
+
+		if ((flags & std::ios_base::uppercase) != 0)
+			s += 'E';
+		else
+			s += 'e';
+		if (exp >= 0)
+			s += '+';
+		else
+		{
+			s += '-';
+			exp = -exp;
+		}
+		if (-9 <= exp && exp <= 9) s += '0';
+		return s += std::to_string(exp);
+	}
+
+	inline std::string _as_default(std::string&& s, intmax_t exp, std::ios_base::fmtflags flags, size_t prec)
+	{
+		// as fixed
+		if (-3 <= exp && exp <= intmax_t(prec))
+		{
+			if (exp <= 0)
+			{
+				s.insert(0, size_t(2 - exp), '0');
+				s[1] = '.';
+			}
+			else
+				s.insert(size_t(exp), 1, '.');
+			while (s.back() == '0') s.pop_back();
+			if (s.back() == '.') s.pop_back();
+			return std::move(s);
+		}
+		while (s.back() == '0') s.pop_back();
+		return _as_scientific(std::move(s), exp, flags);
+	}
+
+	inline void _shrink_to_fit(std::string& s, size_t len)
+	{
+		if (s.length() > len) s.erase(len, s.length() - len);
+	}
+
+	inline std::string _as_fixed(std::string&& s, intmax_t exp, size_t prec)
+	{
+		if (prec == 0)
+		{
+			if (exp <= 0) return "0";
+			return std::move(s);
+		}
+		if (exp <= 0)
+		{
+			s.insert(0, size_t(2 - exp), '0');
+			s[1] = '.';
+			_shrink_to_fit(s, 2 + prec);
+		}
+		else
+		{
+			s.insert(size_t(exp), 1, '.');
+			_shrink_to_fit(s, size_t(exp) + 1 + prec);
+		}
+		return std::move(s);
+	}
+
+	// missing: handling ios_base::showpoint
 
 	template <class Char, class Traits>
-	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, const mpfr_t x,
+	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_t x,
 	                                                        mpfr_rnd_t rnd)
 	{
-		real_exp_t exp;
-		auto ch = MPFR_NS mpfr_get_str(nullptr, &exp, 10, static_cast<size_t>(s.precision() + 1), x, rnd);
+		if (MPFR_NS mpfr_nan_p(x)) return helper_ostream_const(s, "@NaN@", false);
+		if (MPFR_NS mpfr_inf_p(x)) return helper_ostream_const(s, "@Inf@", MPFR_NS mpfr_sgn(x) < 0);
+		if (MPFR_NS mpfr_zero_p(x)) return helper_ostream_const(s, "0", MPFR_NS mpfr_signbit(x) != 0);
+
+		auto style = _get_style(s.flags());
+		auto prec = _needed_precision(style, s.precision());
+
+		bool is_negative = MPFR_NS mpfr_sgn(x) < 0;
+		if (is_negative) MPFR_NS mpfr_neg(x, x, rnd);
+		real_exp_t exp, exp0 = 0;
+		if (style == _exp_style::FIXED)
+		{
+			auto ch = MPFR_NS mpfr_get_str(nullptr, &exp0, 10, 1, x, rnd);
+			if (ch == nullptr)
+				throw std::runtime_error(
+				    "in std::ostream& operator<<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
+			MPFR_NS mpfr_free_str(ch);
+			if (exp0 < 0) exp0 = 0;
+			exp0 += 3;
+		}
+		auto ch = MPFR_NS mpfr_get_str(nullptr, &exp, 10, prec + size_t(exp0), x, rnd);
+		if (is_negative) MPFR_NS mpfr_neg(x, x, rnd);
 		if (ch == nullptr)
-			throw exception_real(
-			    "in std::ostream& operator <<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
-		auto t = std::string(ch);
+			throw std::runtime_error(
+			    "in std::ostream& operator<<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
+		std::string t(ch);
 		MPFR_NS mpfr_free_str(ch);
 
-		const std::ios_base::fmtflags flags = s.flags();
-		auto t_iter = t.begin();
-
-		if (*t_iter == '-') ++t_iter;
-
-		// digit?
-		if (*t_iter == '0' || *t_iter == '1' || *t_iter == '2' || *t_iter == '3' || *t_iter == '4' || *t_iter == '5' ||
-		    *t_iter == '6' || *t_iter == '7' || *t_iter == '8' || *t_iter == '9')
-		{
-			// positive sign
-			if ((t_iter == t.begin()) && (flags & std::ios_base::showpos) != 0)
-			{
-				t_iter = t.insert(t_iter, '+');
-				++t_iter;
-			}
-
-			// decimal point
-			++t_iter;
-			t.insert(t_iter, '.');
-
-			// fixing exponent after insertion of decimal point
-			// why must life be so difficult? (any suggestions for improvements?)
-			if (!MPFR_NS mpfr_zero_p(x))
-			{
-				const real_exp_t exp_prev = exp;
-				volatile real_exp_t* exp_ptr = &exp;
-				--exp;
-				if (*exp_ptr > exp_prev)
-					throw exception_real(
-					    "in std::ostream& operator <<(std::ostream& s, const real<_prec, _rnd>& r):\n  exponent out of "
-					    "range");
-			}
-
-			// composing of the exponent
-			if ((flags & std::ios_base::uppercase) != 0)
-				t += 'E';
-			else
-				t += 'e';
-			if (exp >= 0)
-				t += '+';
-			else
-			{
-				t += '-';
-				exp = -exp;
-			}
-			if (exp >= -9 && exp <= 9) t += '0';
-			std::stringstream temp;
-			temp << exp;
-			t += temp.str();
-		}
-
-		// width and adjustment
-		if (s.width() > 0 && static_cast<unsigned int>(s.width()) > t.size())
-		{
-			if ((flags & std::ios_base::left) != 0)
-				t_iter = t.end();
-			else if ((flags & std::ios_base::internal) != 0)
-			{
-				t_iter = t.begin();
-				if (*t_iter == '+' || *t_iter == '-') ++t_iter;
-			}
-			else
-				t_iter = t.begin();
-			while (t.size() < static_cast<unsigned int>(s.width())) t_iter = t.insert(t_iter, s.fill());
-		}
-
-		s << t;
+		if (style == _exp_style::SCIENTIFIC)
+			helper_ostream_const(s, _as_scientific(std::move(t), exp, s.flags()), is_negative);
+		else if (style == _exp_style::DEFAULT_FLOAT)
+			helper_ostream_const(s, _as_default(std::move(t), exp, s.flags(), prec), is_negative);
+		else
+			helper_ostream_const(s, _as_fixed(std::move(t), exp, prec), is_negative);
 
 		return s;
 	}
+
 	enum
 	{
 		MANT_SIGN = 0x01u,    // leading sign
@@ -160,7 +219,8 @@ namespace mpfr
 		MASK_NINT = (MANT_POINT | MANT_FDIGIT | MASK_EXP)  // non-integral
 	};
 
-	inline bool helper_extract_float(std::istream& s, std::string* num)
+	template <class Char, class Traits>
+	inline bool helper_extract_float(std::basic_istream<Char, Traits>& s, std::string* num)
 	{
 		auto ok = true;
 		unsigned parts = 0x00;
@@ -422,9 +482,9 @@ namespace mpfr
 				{
 					s.setstate(std::ios_base::failbit);
 					MPFR_NS mpfr_set_zero(r._x, +1);
-					throw exception_real(std::string("in std::istream& operator >>(std::istream& s, real<_prec, "
-					                                 "_rnd>& r):\n  invalid input format ") +
-					                     num);
+					throw std::runtime_error(
+					    "in std::istream& operator>>(std::istream& s, real<_prec, _rnd>& r):\n  invalid input format " +
+					    num);
 				}
 			}
 		}
@@ -435,7 +495,7 @@ namespace mpfr
 	template <real_prec_t _prec, real_rnd_t _rnd, class Char, class Traits>
 	std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const real<_prec, _rnd>& r)
 	{
-		return helper_ostream(s, r._x, _rnd);
+		return helper_ostream(s, const_cast<mpfr_t&>(r._x), _rnd);
 	}
 }  // namespace mpfr
 
