@@ -2894,7 +2894,7 @@ namespace mpfr
 	template <real_prec_t _prec = MPFR_REAL_CLASS_PREC_DFLT, real_rnd_t _rnd = MPFR_REAL_CLASS_RND_DFLT>
 	inline typename enable_if<type_traits<real<_prec, _rnd>, real<_prec, _rnd>, true>::enable_math_funcs,
 	                          const real<_prec, _rnd>>::type
-	nan([[maybe_unused]] const char* tagp)
+	nan()
 	{
 		real<_prec, _rnd> temp;
 		MPFR_NS mpfr_set_nan(temp._x);
@@ -2964,7 +2964,16 @@ namespace mpfr
 		static constexpr real_prec_t prec = _prec;
 		static constexpr real_rnd_t rnd = _rnd;
 		using type = real;
+		static real log2() { return const_log2<_prec, _rnd>(); }
 		static real pi() { return const_pi<_prec, _rnd>(); }
+		static real euler() { return const_euler<_prec, _rnd>(); }
+		static real catalan() { return const_catalan<_prec, _rnd>(); }
+		static real nan() { return mpfr::nan<_prec, _rnd>(); }
+		// if sign is nonnegative, return plus inf
+		// if sign is negative, return minus inf
+		static real inf(int sign = 1) { return mpfr::inf<_prec, _rnd>(sign); }
+		static real zero(int sign = 1) { return mpfr::zero<_prec, _rnd>(sign); }
+		static real factorial(mpfr_old_ulong n) { return mpfr::factorial<_prec, _rnd>(n); }
 
 		// //////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
@@ -4075,7 +4084,7 @@ namespace mpfr
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
 		                          const real<_prec1, _rnd1>>::type
-		nan([[maybe_unused]] const char* tagp);
+		nan();
 
 		template <real_prec_t _prec1, real_rnd_t _rnd1>
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
