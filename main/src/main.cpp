@@ -108,7 +108,7 @@ RealFunction<R> to_func(const mpfr_t* a, uint32_t l)
 void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = qboot::hBlock_shifted(op, S, P, nMax);
+	auto p = qboot::hBlock_shifted<R>(op, S, P, nMax);
 	std::unique_ptr<mpfr_t[]> q_ptr =
 	    op.spin() == 0
 	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, delta._x, S._x, P._x, 1000, MPFR_RNDN)
@@ -123,7 +123,7 @@ void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34)
 void test_real(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = qboot::gBlock_real(op, S, P, c);
+	auto p = qboot::gBlock_real<R>(op, S, P, c);
 	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::real_axis_result(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb));
 	auto q = to_func(q_ptr.get(), p.lambda());
 	check(p, q, [&]() {
@@ -135,7 +135,7 @@ void test_real(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, 
 void test_g(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34)
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = gBlock(op, S, P, c);
+	auto p = gBlock<R>(op, S, P, c);
 	std::unique_ptr<mpfr_t[]> q_ptr(qboot2::gBlock_full(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb));
 	auto q = to_hol(q_ptr.get(), cb.lambda);
 	check(p, q, [&]() {

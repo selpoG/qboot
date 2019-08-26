@@ -20,6 +20,7 @@ namespace qboot
 		Real epsilon;
 
 	public:
+		using value_type = Real;
 		PoleSequence(uint32_t type, uint32_t spin, const Real& epsilon, bool include_odd = true)
 		    : include_odd(include_odd), type(type), k(1), spin(spin), epsilon(epsilon)
 		{
@@ -38,7 +39,7 @@ namespace qboot
 		}
 		void next() { k += type == 2 || include_odd ? 1 : 2; }
 	};
-	template <class L, class R, class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class L, class R, class Real = typename L::value_type>
 	class Merged
 	{
 		L seql;
@@ -47,6 +48,7 @@ namespace qboot
 		void update() { next_l = !seqr.valid() || (seql.valid() && seql.get() >= seqr.get()); }
 
 	public:
+		using value_type = Real;
 		Merged(L&& l, R&& r) : seql(std::move(l)), seqr(std::move(r)) { update(); }
 		void next()
 		{
