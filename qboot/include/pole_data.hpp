@@ -13,6 +13,14 @@
 namespace qboot
 {
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	algebra::Vector<Real> sample_points(uint32_t degree)
+	{
+		algebra::Vector<Real> v(degree + 1);
+		for (uint32_t i = 0; i <= degree; ++i) v[i] = mpfr::pow(Real::pi() * (-1 + 4 * int32_t(i)), 2);
+		v /= (-64 * int32_t(degree + 1)) * mpfr::log(3 - mpfr::sqrt(Real(8)));
+		return v;
+	}
+	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class PoleSequence
 	{
 		bool include_odd;
@@ -134,14 +142,7 @@ namespace qboot
 			}
 			return q;
 		}
-		algebra::Vector<Real> sample_points() const
-		{
-			uint32_t n = max_degree() + 1;
-			algebra::Vector<Real> v(n);
-			for (uint32_t i = 0; i < n; i++) v[i] = mpfr::pow(Real::pi() * (-1 + 4 * int32_t(i)), 2);
-			v /= (-64 * int32_t(n)) * mpfr::log(4 * rho);
-			return v;
-		}
+		algebra::Vector<Real> sample_points() const { return qboot::sample_points<Real>(max_degree()); }
 	};
 }  // namespace qboot
 

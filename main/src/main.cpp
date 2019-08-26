@@ -189,24 +189,24 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 void test_sdpb()
 {
 	// https://github.com/davidsd/sdpb/blob/master/test/test.xml
-	Matrix<R> B(5, 1);
-	auto tmp = std::array{-0.000300837, -0.0212281, -0.330971, -0.74109, -0.69292};
-	for (uint32_t i = 0; i < 5; i++) B.at(i, 0) = tmp.at(i);
-	Vector<R> c(5);
-	tmp = {0.982655, 0.854826, 0.653523, 2.53878, 4.70595};
-	for (uint32_t i = 0; i < 5; i++) c.at(i) = tmp.at(i);
-	Matrix<R> qb0(3, 5);
-	tmp = {0.99129, 0.924284, 0.651373, 0.346955, 0.139681};
-	for (uint32_t i = 0; i < 5; i++) qb0.at(0, i) = tmp.at(i);
-	tmp = {-0.973945, -0.778736, -0.0929214, 0.38759, 0.410213};
-	for (uint32_t i = 0; i < 5; i++) qb0.at(1, i) = tmp.at(i);
-	tmp = {0.956753, 0.644647, -0.226137, -0.344576, 0.122301};
-	for (uint32_t i = 0; i < 5; i++) qb0.at(2, i) = tmp.at(i);
-	Matrix<R> qb1(2, 5);
-	tmp = {0.131123, 0.366781, 0.603126, 0.504831, 0.277146};
-	for (uint32_t i = 0; i < 5; i++) qb1.at(0, i) = tmp.at(i);
-	tmp = {-0.128829, -0.309023, -0.0860386, 0.563956, 0.813919};
-	for (uint32_t i = 0; i < 5; i++) qb1.at(1, i) = tmp.at(i);
+	constexpr uint32_t deg = 4, d0 = deg / 2, d1 = deg == 0 ? 0 : (deg - 1) / 2;
+	Vector<Polynomial<R>> bilinear{{R(1)}, {R(-1), R(1)}, {R(1), R(-2), R(0.5)}};
+	Vector<Polynomial<R>> elm{{R(1), R(0), R(0), R(0), R(1)}, {R(0), R(0), R(1), R(0), R(1) / 12}};
+	auto sample_points = qboot::sample_points<R>(deg);
+	Vector<R> sample_scale(deg + 1);
+	for (uint32_t i = 0; i <= deg; ++i) sample_scale[i] = mpfr::exp(-sample_points[i]);
+	Vector<R> c(deg + 1);
+	for (uint32_t i = 0; i <= deg; ++i) c.at(i) = elm[0].eval(sample_points[i]) * sample_scale[i];
+	Matrix<R> B(deg + 1, elm.size() - 1);
+	for (uint32_t i = 0; i <= deg; ++i) B.at(i, 0) = -elm[1].eval(sample_points[i]) * sample_scale[i];
+	Matrix<R> qb0(d0 + 1, deg + 1);
+	for (uint32_t i = 0; i <= d0; ++i)
+		for (uint32_t j = 0; j <= deg; ++j)
+			qb0.at(i, j) = bilinear[i].eval(sample_points[j]) * mpfr::sqrt(sample_scale[j]);
+	Matrix<R> qb1(d1 + 1, deg + 1);
+	for (uint32_t i = 0; i <= d1; ++i)
+		for (uint32_t j = 0; j <= deg; ++j)
+			qb1.at(i, j) = bilinear[i].eval(sample_points[j]) * mpfr::sqrt(sample_scale[j] * sample_points[j]);
 	constexpr uint32_t num_cons = 1;
 	qboot::SDPBInput<R> sdpb(R(0), Vector<R>{R(-1)}, num_cons);
 	sdpb.register_constraint(0, {1, 4, std::move(B), std::move(c), {std::move(qb0), std::move(qb1)}});
