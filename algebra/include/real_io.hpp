@@ -1,5 +1,5 @@
-#ifndef REAL_IO_HPP_
-#define REAL_IO_HPP_
+#ifndef QBOOT_REAL_IO_HPP_
+#define QBOOT_REAL_IO_HPP_
 
 #include "real.hpp"
 
@@ -444,4 +444,4 @@ namespace mpfr
 	}
 }  // namespace mpfr
 
-#endif  // REAL_IO_HPP_
+#endif  // QBOOT_REAL_IO_HPP_

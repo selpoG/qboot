@@ -1,5 +1,5 @@
-#ifndef DAMPED_RATIONAL_
-#define DAMPED_RATIONAL_
+#ifndef QBOOT_DAMPED_RATIONAL_
+#define QBOOT_DAMPED_RATIONAL_
 
 #include <cassert>
 #include <cstddef>
@@ -82,4 +82,4 @@ namespace qboot
 	};
 }  // namespace qboot
 
-#endif  // DAMPED_RATIONAL_
+#endif  // QBOOT_DAMPED_RATIONAL_

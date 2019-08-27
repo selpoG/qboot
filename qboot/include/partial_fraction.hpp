@@ -1,5 +1,5 @@
-#ifndef PARTIAL_FRACTION_HPP_
-#define PARTIAL_FRACTION_HPP_
+#ifndef QBOOT_PARTIAL_FRACTION_HPP_
+#define QBOOT_PARTIAL_FRACTION_HPP_
 
 #include <cstdint>  // for uint32_t
 
@@ -23,4 +23,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // PARTIAL_FRACTION_HPP_
+#endif  // QBOOT_PARTIAL_FRACTION_HPP_

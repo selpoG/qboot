@@ -1,5 +1,5 @@
-#ifndef HOR_FORMULA_HPP_
-#define HOR_FORMULA_HPP_
+#ifndef QBOOT_HOR_FORMULA_HPP_
+#define QBOOT_HOR_FORMULA_HPP_
 
 #include <array>    // for array
 #include <cassert>  // for assert
@@ -2244,4 +2244,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // HOR_FORMULA_HPP_
+#endif  // QBOOT_HOR_FORMULA_HPP_

@@ -1,5 +1,5 @@
-#ifndef REAL_FUNCTION_HPP_
-#define REAL_FUNCTION_HPP_
+#ifndef QBOOT_REAL_FUNCTION_HPP_
+#define QBOOT_REAL_FUNCTION_HPP_
 
 #include <cassert>  // for assert
 #include <cstddef>  // for uint32_t
@@ -238,4 +238,4 @@ namespace algebra
 	};
 }  // namespace algebra
 
-#endif  // REAL_FUNCTION_HPP_
+#endif  // QBOOT_REAL_FUNCTION_HPP_

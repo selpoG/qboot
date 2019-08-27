@@ -30,8 +30,8 @@
 
 // http://chschneider.eu/programming/mpfr_real/
 
-#ifndef REAL_HPP_
-#define REAL_HPP_
+#ifndef QBOOT_REAL_HPP_
+#define QBOOT_REAL_HPP_
 
 // //////////////////////////////////////////////////////////////////
 // inclusion of headers
@@ -4122,4 +4122,4 @@ namespace mpfr
 	};
 }  // namespace mpfr
 
-#endif  // REAL_HPP_
+#endif  // QBOOT_REAL_HPP_

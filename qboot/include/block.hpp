@@ -1,5 +1,5 @@
-#ifndef BLOCK_HPP_
-#define BLOCK_HPP_
+#ifndef QBOOT_BLOCK_HPP_
+#define QBOOT_BLOCK_HPP_
 
 #include <type_traits>  // enable_if
 
@@ -66,4 +66,4 @@ namespace qboot
 	};
 }  // namespace qboot
 
-#endif  // BLOCK_HPP_
+#endif  // QBOOT_BLOCK_HPP_

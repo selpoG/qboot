@@ -1,5 +1,5 @@
-#ifndef PRIMARY_OP_HPP_
-#define PRIMARY_OP_HPP_
+#ifndef QBOOT_PRIMARY_OP_HPP_
+#define QBOOT_PRIMARY_OP_HPP_
 
 #include <cstdint>      // for uint32_t
 #include <sstream>      // for ostringstream
@@ -85,4 +85,4 @@ namespace qboot
 	};
 }  // namespace qboot
 
-#endif  // PRIMARY_OP_HPP_
+#endif  // QBOOT_PRIMARY_OP_HPP_

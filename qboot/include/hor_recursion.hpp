@@ -1,5 +1,5 @@
-#ifndef HOR_RECURSION_HPP_
-#define HOR_RECURSION_HPP_
+#ifndef QBOOT_HOR_RECURSION_HPP_
+#define QBOOT_HOR_RECURSION_HPP_
 
 #include <cstdint>  // for uint32_t, int32_t
 #include <memory>   // for unique_ptr
@@ -140,4 +140,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // HOR_RECURSION_HPP_
+#endif  // QBOOT_HOR_RECURSION_HPP_

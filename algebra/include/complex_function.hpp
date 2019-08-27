@@ -1,5 +1,5 @@
-#ifndef COMPLEX_FUNCTION_HPP_
-#define COMPLEX_FUNCTION_HPP_
+#ifndef QBOOT_COMPLEX_FUNCTION_HPP_
+#define QBOOT_COMPLEX_FUNCTION_HPP_
 
 #include <cassert>  // for assert
 #include <cstdint>  // for uint32_t
@@ -299,4 +299,4 @@ namespace algebra
 	}
 }  // namespace algebra
 
-#endif  // COMPLEX_FUNCTION_HPP_
+#endif  // QBOOT_COMPLEX_FUNCTION_HPP_

@@ -1,5 +1,5 @@
-#ifndef MATRIX_HPP_
-#define MATRIX_HPP_
+#ifndef QBOOT_MATRIX_HPP_
+#define QBOOT_MATRIX_HPP_
 
 #include <cassert>           // for assert
 #include <cstdint>           // for uint32_t
@@ -503,4 +503,4 @@ namespace algebra
 	}
 }  // namespace algebra
 
-#endif  // MATRIX_HPP_
+#endif  // QBOOT_MATRIX_HPP_

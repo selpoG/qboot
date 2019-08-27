@@ -1,5 +1,5 @@
-#ifndef POLE_DATA_HPP_
-#define POLE_DATA_HPP_
+#ifndef QBOOT_POLE_DATA_HPP_
+#define QBOOT_POLE_DATA_HPP_
 
 #include <cassert>  // for assert
 #include <cstdint>  // for uint32_t, int32_t
@@ -146,4 +146,4 @@ namespace qboot
 	};
 }  // namespace qboot
 
-#endif  // CONTEXT_VARIABLES_HPP_
+#endif  // QBOOT_CONTEXT_VARIABLES_HPP_

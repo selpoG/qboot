@@ -1,5 +1,5 @@
-#ifndef CHOL_AND_INVERSE_HPP_
-#define CHOL_AND_INVERSE_HPP_
+#ifndef QBOOT_CHOL_AND_INVERSE_HPP_
+#define QBOOT_CHOL_AND_INVERSE_HPP_
 
 #include <cstdint>  // for uint32_t
 
@@ -19,4 +19,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // CHOL_AND_INVERSE_HPP_
+#endif  // QBOOT_CHOL_AND_INVERSE_HPP_

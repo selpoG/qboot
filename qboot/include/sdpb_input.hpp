@@ -1,5 +1,5 @@
-#ifndef SDPB_INPUT_HPP_
-#define SDPB_INPUT_HPP_
+#ifndef QBOOT_SDPB_INPUT_HPP_
+#define QBOOT_SDPB_INPUT_HPP_
 
 #include <array>       // for array
 #include <cassert>     // for assert
@@ -204,4 +204,4 @@ namespace qboot
 	};
 }  // namespace qboot
 
-#endif  // SDPB_INPUT_HPP_
+#endif  // QBOOT_SDPB_INPUT_HPP_

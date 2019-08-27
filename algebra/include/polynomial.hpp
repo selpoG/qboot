@@ -1,5 +1,5 @@
-#ifndef POLYNOMIAL_HPP_
-#define POLYNOMIAL_HPP_
+#ifndef QBOOT_POLYNOMIAL_HPP_
+#define QBOOT_POLYNOMIAL_HPP_
 
 #include <cassert>           // for assert
 #include <cstdint>           // for uint32_t, int32_t
@@ -342,4 +342,4 @@ namespace algebra
 	}
 }  // namespace algebra
 
-#endif  // !POLYNOMIAL_HPP_
+#endif  // QBOOT_POLYNOMIAL_HPP_

@@ -1,5 +1,5 @@
-#ifndef INTEGRAL_DECOMP_HPP_
-#define INTEGRAL_DECOMP_HPP_
+#ifndef QBOOT_INTEGRAL_DECOMP_HPP_
+#define QBOOT_INTEGRAL_DECOMP_HPP_
 
 #include <cstdint>  // for uint32_t
 
@@ -50,4 +50,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // INTEGRAL_DECOMP_HPP_
+#endif  // QBOOT_INTEGRAL_DECOMP_HPP_
