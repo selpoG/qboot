@@ -4105,12 +4105,8 @@ namespace mpfr
 		friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
 		                          const real<_prec1, _rnd1>>::type
 		const_catalan();
-
-		// template <real_prec_t _prec1, real_rnd_t _rnd1>
-		// friend typename enable_if<type_traits<real<_prec1, _rnd1>, real<_prec1, _rnd1>, true>::enable_math_funcs,
-		//                          const real<_prec1, _rnd1>>::type
-		// factorial(const mpfr_old_long n);
 	};  // class real
+
 	// T is mpfr::real or not
 	template <class T>
 	struct is_mpfr_real;
