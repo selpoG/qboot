@@ -17,6 +17,7 @@
 #include "partial_fraction.hpp"
 #include "pole_data.hpp"
 #include "polynomial.hpp"
+#include "polynomial_program.hpp"
 #include "primary_op.hpp"
 #include "real.hpp"
 #include "real_function.hpp"
@@ -196,6 +197,12 @@ void test_sdpb()
 	auto sample_points = qboot::sample_points<R>(deg);
 	Vector<R> sample_scale(deg + 1);
 	for (uint32_t i = 0; i <= deg; ++i) sample_scale[i] = mpfr::exp(-sample_points[i]);
+	qboot::PolynomialProgramming<R> prg(1);
+	prg.objective_constant() = R(0);
+	prg.objectives({R(-1)});
+	auto ineq = std::make_unique<qboot::PolynomialInequalityWithCoeffs<R>>(
+	    1u, 4u, Vector{elm[1].clone()}, -elm[0], bilinear.clone(), sample_points.clone(), sample_scale.clone());
+	prg.add_inequality(std::move(ineq));
 	Vector<R> c(deg + 1);
 	for (uint32_t i = 0; i <= deg; ++i) c.at(i) = elm[0].eval(sample_points[i]) * sample_scale[i];
 	Matrix<R> B(deg + 1, elm.size() - 1);

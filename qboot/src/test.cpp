@@ -13,7 +13,6 @@
 #include "real.hpp"
 #include "real_function.hpp"
 #include "real_io.hpp"
-#include "sdpb_input.hpp"
 
 using R = mpfr::real<1000, MPFR_RNDN>;
 using algebra::Polynomial, algebra::Vector, algebra::Matrix;
