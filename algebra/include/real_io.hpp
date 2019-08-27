@@ -9,8 +9,9 @@
 #include <cstring>    // for strlen
 #include <ios>        // for ios_base, streamsize
 #include <iostream>   // for basic_ostram, basic_istream
+#include <locale>     // for use_facet, ctype
 #include <stdexcept>  // for runtime_error
-#include <string>     // for string, to_string
+#include <string>     // for string, to_string, basic_string
 #include <utility>    // for move
 
 namespace mpfr
@@ -19,16 +20,12 @@ namespace mpfr
 	// helper functions
 	// //////////////////////////////////////////////////////////////////
 
-	inline int helper_set_stdstr(mpfr_ptr rop, const std::string& op, mpfr_rnd_t rnd)
+	inline int helper_set_stdstr(mpfr_ptr rop, const std::string& op, mpfr_rnd_t rnd) noexcept
 	{
-		const int err = MPFR_NS mpfr_set_str(rop, op.c_str(), 0, rnd);
-		if (err == -1)
-			throw std::runtime_error(
-			    "in mpfr::helper_set_stdstr(mpfr_ptr, const std::string&, mpfr_rnd_t):\n  invalid input format " + op);
-		return err;
+		return MPFR_NS mpfr_set_str(rop, op.c_str(), 0, rnd);
 	}
 
-	inline int helper_set_charptr(mpfr_ptr rop, const char* op, mpfr_rnd_t rnd)
+	inline int helper_set_charptr(mpfr_ptr rop, const char* op, mpfr_rnd_t rnd) noexcept(false)
 	{
 		const int err = MPFR_NS mpfr_set_str(rop, op, 0, rnd);
 		if (err == -1)
@@ -182,8 +179,11 @@ namespace mpfr
 		{
 			auto ch = MPFR_NS mpfr_get_str(nullptr, &exp0, 10, 1, x, rnd);
 			if (ch == nullptr)
+			{
+				if (is_negative) MPFR_NS mpfr_neg(x, x, rnd);
 				throw std::runtime_error(
 				    "in std::ostream& operator<<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
+			}
 			MPFR_NS mpfr_free_str(ch);
 			if (exp0 < 0) exp0 = 0;
 			exp0 += 3;
@@ -206,123 +206,67 @@ namespace mpfr
 		return s;
 	}
 
-	enum
+	enum class _state : int
 	{
-		MANT_SIGN = 0x01u,    // leading sign
-		MANT_DIGIT = 0x02u,   // digits before decimal point
-		MANT_POINT = 0x04u,   // decimal point
-		MANT_FDIGIT = 0x08u,  // digits after decimal point
-		EXP_SYMBOL = 0x10u,   // symbol of exponent ('e' or 'E')
-		EXP_SIGN = 0x20u,     // sign of exponent
-		EXP_DIGIT = 0x40u,    // digits of exponent
-		MASK_EXP = (EXP_SYMBOL | EXP_SIGN | EXP_DIGIT),
-		MASK_NINT = (MANT_POINT | MANT_FDIGIT | MASK_EXP)  // non-integral
+		ERROR = -2,
+		CANCEL = -1,
+		BEGIN = 0,
+		SIGN,
+		POINT,
+		EXP,
+		END
 	};
 
 	template <class Char, class Traits>
 	inline bool helper_extract_float(std::basic_istream<Char, Traits>& s, std::string* num)
 	{
-		auto ok = true;
-		unsigned parts = 0x00;
+		const auto& fac = std::use_facet<std::ctype<Char>>(s.getloc());
+		const char pos = fac.widen('+'), neg = fac.widen('-'), point = fac.widen('.'), exp_e = fac.widen('e'),
+		           exp_E = fac.widen('E');
 
-		char c;
-		while (s.get(c) && ok)
+		bool has_digits = false, has_edigits = false;
+		auto state = _state::BEGIN;
+
+		auto next = [pos, neg, point, exp_e, exp_E](_state st, Char c) -> _state {
+			if (c == point) return int(st) < int(_state::POINT) ? _state::POINT : _state::CANCEL;
+			if (c == exp_e || c == exp_E) return int(st) < int(_state::EXP) ? _state::EXP : _state::ERROR;
+			if ((c == pos || c == neg) && st != _state::BEGIN && st != _state::EXP) return _state::CANCEL;
+			switch (st)
+			{
+			case _state::BEGIN:
+			case _state::SIGN: return _state::SIGN;
+			case _state::POINT: return _state::POINT;
+			case _state::EXP:
+			case _state::END: return _state::END;
+			case _state::ERROR:
+			case _state::CANCEL:
+			default: return _state::ERROR;
+			}
+		};
+
+		// [+-]? [0-9]* [.]? [0-9]* ( [eE] [+-]? [0-9]* )?
+		Char c;
+		while (s.get(c))
 		{
-			if (c == '+' || c == '-')
-			{
-				// very beginning
-				if (parts == 0x00)
-				{
-					*num += c;
-					parts |= MANT_SIGN;
-				}
-				// has symbol of exponent, but not yet a sign or digit
-				else if ((parts & MASK_EXP) == EXP_SYMBOL)
-				{
-					*num += c;
-					parts |= EXP_SIGN;
-				}
-				// end of number
-				else
-				{
-					s.putback(c);
-					break;
-				}
-			}
-			else if (c == '.')
-			{
-				// does not yet have a decimal point or anything after it
-				if ((parts & MASK_NINT) == 0x00)
-				{
-					*num += c;
-					parts |= MANT_POINT;
-				}
-				// end of number
-				else
-				{
-					s.putback(c);
-					break;
-				}
-			}
-			else if (c == 'e' || c == 'E')
-			{
-				// must have a digit && must not yet have an expontential
-				if ((parts & unsigned(MANT_DIGIT | MANT_FDIGIT)) != 0x00 && (parts & MASK_EXP) == 0x00)
-				{
-					*num += c;
-					parts |= EXP_SYMBOL;
-				}
-				// bad syntax
-				else
-				{
-					s.putback(c);
-					ok = false;
-				}
-			}
-			else if (c == '0' || c == '1' || c == '2' || c == '3' || c == '4' || c == '5' || c == '6' || c == '7' ||
-			         c == '8' || c == '9')
-			{
-				// before decimal point
-				if ((parts & MASK_NINT) == 0x00)
-				{
-					*num += c;
-					parts |= MANT_DIGIT;
-				}
-				// after decimal point
-				else if ((parts & MASK_EXP) == 0x00)
-				{
-					*num += c;
-					parts |= MANT_FDIGIT;
-				}
-				// in exponent
-				else if ((parts & EXP_SYMBOL) != 0x00)
-				{
-					*num += c;
-					parts |= EXP_DIGIT;
-				}
-				// some strange error?
-				else
-				{
-					s.putback(c);
-					ok = false;
-				}
-			}
-			// other character => end of parsing
+			auto isdigit = fac.is(fac.digit, c);
+			if (c != pos && c != neg && !isdigit && c != exp_e && c != exp_E && c != point)
+				state = _state::CANCEL;
 			else
+			{
+				if (int(state) < int(_state::EXP))
+					has_digits |= isdigit;
+				else
+					has_edigits |= isdigit;
+				state = next(state, c);
+			}
+			if (int(state) < 0)
 			{
 				s.putback(c);
 				break;
 			}
-		}  // while (s.good() && ok)
-
-		// further syntax checks
-		// must have a digit, if a character has been parsed
-		if (parts != 0x00 && (parts & unsigned(MANT_DIGIT | MANT_FDIGIT)) == 0x00) ok = false;
-		// must have a digit in exponent, if symbol of exponent is set
-		else if ((parts & EXP_SYMBOL) != 0x00 && (parts & EXP_DIGIT) == 0x00)
-			ok = false;
-
-		return ok;
+			num->push_back(fac.narrow(c, '\0'));
+		}
+		return state != _state::ERROR && has_digits && (int(state) < int(_state::EXP) || has_edigits);
 	}
 
 	template <real_prec_t _prec, real_rnd_t _rnd, bool _overwrite>
@@ -354,7 +298,12 @@ namespace mpfr
 		// (must be defined if corresponding "has_..." boolean is set to "true")
 		inline static int set(mpfr_ptr rop, const std::string& op, mpfr_rnd_t rnd)
 		{
-			return helper_set_stdstr(rop, op, rnd);
+			auto res = helper_set_stdstr(rop, op, rnd);
+			if (res == -1)
+				throw std::runtime_error(
+				    "in mpfr::helper_set_stdstr(mpfr_ptr, const std::string&, mpfr_rnd_t):\n  invalid input format " +
+				    op);
+			return res;
 		}
 	};
 
@@ -453,43 +402,39 @@ namespace mpfr
 	// //////////////////////////////////////////////////////////////
 
 	template <real_prec_t _prec, real_rnd_t _rnd, class Char, class Traits>
-	std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& s, real<_prec, _rnd>& r)
+	std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& in, real<_prec, _rnd>& r)
 	{
-		std::istream::sentry cerberos(s, false);
-
-		if (cerberos)
+		try
 		{
-			// extract number
-			std::string num;
-			bool ok = helper_extract_float(s, &num);
-
-			// bad syntax
-			if (!ok)
+			typename std::basic_istream<Char, Traits>::sentry s(in, false);
+			if (s && !in.eof())
 			{
-				s.setstate(std::ios_base::failbit);
-				MPFR_NS mpfr_set_zero(r._x, +1);
-			}
-			// not empty (which could be due to an EOF)
-			else if (!num.empty())
-			{
-				// conversion to mpfr::real
-				try
+				std::string num;
+				if (auto ok = helper_extract_float(in, &num); ok && !num.empty())
 				{
-					helper_set_stdstr(r._x, num, _rnd);
+					if (auto err = helper_set_stdstr(r._x, num, _rnd); err == -1)
+					{
+						in.setstate(std::ios_base::failbit);
+						MPFR_NS mpfr_set_zero(r._x, +1);
+						throw std::runtime_error(
+						    "in std::istream& operator>>(std::istream& s, real<_prec, _rnd>& r):\n  invalid input "
+						    "format " +
+						    num);
+					}
 				}
-				// should, in principle, never fail, but ...
-				catch (...)
+				else
 				{
-					s.setstate(std::ios_base::failbit);
+					in.setstate(std::ios_base::failbit);
 					MPFR_NS mpfr_set_zero(r._x, +1);
-					throw std::runtime_error(
-					    "in std::istream& operator>>(std::istream& s, real<_prec, _rnd>& r):\n  invalid input format " +
-					    num);
 				}
 			}
 		}
-
-		return s;
+		catch (std::ios_base::failure&)
+		{
+			MPFR_NS mpfr_set_zero(r._x, +1);
+			throw;
+		}
+		return in;
 	}
 
 	template <real_prec_t _prec, real_rnd_t _rnd, class Char, class Traits>
