@@ -191,33 +191,20 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 void test_sdpb()
 {
 	// https://github.com/davidsd/sdpb/blob/master/test/test.xml
-	constexpr uint32_t deg = 4, d0 = deg / 2, d1 = deg == 0 ? 0 : (deg - 1) / 2;
+	constexpr uint32_t deg = 4;
 	Vector<Polynomial<R>> bilinear{{R(1)}, {R(-1), R(1)}, {R(1), R(-2), R(0.5)}};
 	Vector<Polynomial<R>> elm{{R(1), R(0), R(0), R(0), R(1)}, {R(0), R(0), R(1), R(0), R(1) / 12}};
 	auto sample_points = qboot::sample_points<R>(deg);
 	Vector<R> sample_scale(deg + 1);
 	for (uint32_t i = 0; i <= deg; ++i) sample_scale[i] = mpfr::exp(-sample_points[i]);
+
 	qboot::PolynomialProgramming<R> prg(1);
 	prg.objective_constant() = R(0);
 	prg.objectives({R(-1)});
 	auto ineq = std::make_unique<qboot::PolynomialInequalityWithCoeffs<R>>(
 	    1u, 4u, Vector{elm[1].clone()}, -elm[0], bilinear.clone(), sample_points.clone(), sample_scale.clone());
 	prg.add_inequality(std::move(ineq));
-	Vector<R> c(deg + 1);
-	for (uint32_t i = 0; i <= deg; ++i) c.at(i) = elm[0].eval(sample_points[i]) * sample_scale[i];
-	Matrix<R> B(deg + 1, elm.size() - 1);
-	for (uint32_t i = 0; i <= deg; ++i) B.at(i, 0) = -elm[1].eval(sample_points[i]) * sample_scale[i];
-	Matrix<R> qb0(d0 + 1, deg + 1);
-	for (uint32_t i = 0; i <= d0; ++i)
-		for (uint32_t j = 0; j <= deg; ++j)
-			qb0.at(i, j) = bilinear[i].eval(sample_points[j]) * mpfr::sqrt(sample_scale[j]);
-	Matrix<R> qb1(d1 + 1, deg + 1);
-	for (uint32_t i = 0; i <= d1; ++i)
-		for (uint32_t j = 0; j <= deg; ++j)
-			qb1.at(i, j) = bilinear[i].eval(sample_points[j]) * mpfr::sqrt(sample_scale[j] * sample_points[j]);
-	constexpr uint32_t num_cons = 1;
-	qboot::SDPBInput<R> sdpb(R(0), Vector<R>{R(-1)}, num_cons);
-	sdpb.register_constraint(0, {1, deg, std::move(B), std::move(c), {std::move(qb0), std::move(qb1)}});
+	auto sdpb = std::move(prg).create_input();
 	auto root = std::filesystem::current_path() / "test";
 	sdpb.write_all(root);
 }

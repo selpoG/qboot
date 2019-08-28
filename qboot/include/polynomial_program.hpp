@@ -97,7 +97,7 @@ namespace qboot
 		    : PolynomialInequality<Real>(N, sz, max_deg, std::move(bilinear_bases), std::move(sample_points),
 		                                 std::move(sample_scalings)),
 		      mat_(std::move(mat)),
-		      target_(std::move(target_))
+		      target_(std::move(target))
 		{
 			assert(mat_.size() == N);
 			for (uint32_t i = 0; i < N; i++)
@@ -112,7 +112,7 @@ namespace qboot
 		PolynomialInequalityEvaluated& operator=(const PolynomialInequalityEvaluated&) = delete;
 		PolynomialInequalityEvaluated(PolynomialInequalityEvaluated&&) = default;
 		PolynomialInequalityEvaluated& operator=(PolynomialInequalityEvaluated&&) = default;
-		~PolynomialInequalityEvaluated() = default;
+		~PolynomialInequalityEvaluated() override = default;
 		algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& override
 		{
 			return algebra::polynomial_interpolate(mat_[n], PolynomialInequality<Real>::sample_points());
@@ -185,7 +185,7 @@ namespace qboot
 		PolynomialInequalityWithCoeffs& operator=(const PolynomialInequalityWithCoeffs&) = delete;
 		PolynomialInequalityWithCoeffs(PolynomialInequalityWithCoeffs&&) = default;
 		PolynomialInequalityWithCoeffs& operator=(PolynomialInequalityWithCoeffs&&) = default;
-		~PolynomialInequalityWithCoeffs() = default;
+		~PolynomialInequalityWithCoeffs() override = default;
 		algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& override
 		{
 			return mat_[n].clone();
@@ -256,8 +256,50 @@ namespace qboot
 			assert(ineq->num_of_variables() == N_);
 			inequality_.push_back(std::move(ineq));
 		}
-		// TODO: implement this function
-		SDPBInput<Real> create_input() const { throw 0; }
+		SDPBInput<Real> create_input() &&
+		{
+			// TODO: solve equalities and reduce free variales
+			SDPBInput<Real> sdpb(obj_const_, std::move(obj_), uint32_t(inequality_.size()));
+			for (uint32_t j = 0; j < inequality_.size(); j++)
+			{
+				auto&& ineq = inequality_[j];
+				uint32_t sz = ineq->size(), deg = ineq->max_degree(), schur_sz = (deg + 1) * sz * (sz + 1) / 2,
+				         d0 = deg / 2, d1 = deg == 0 ? 0 : (deg - 1) / 2;
+				algebra::Matrix<Real> d_B(schur_sz, N_);
+				algebra::Vector<Real> d_c(schur_sz);
+				algebra::Matrix<Real> q0(d0 + 1, deg + 1);
+				algebra::Matrix<Real> q1(d1 + 1, deg + 1);
+				const auto& xs = ineq->sample_points();
+				const auto& scs = ineq->sample_scalings();
+				uint32_t p = 0;
+				algebra::Vector<algebra::Vector<algebra::Matrix<Real>>> e_B(N_);
+				algebra::Vector<algebra::Matrix<Real>> e_c(deg + 1);
+				for (uint32_t k = 0; k <= deg; ++k) e_c[k] = mul_scalar(-scs[k], std::move(*ineq).target_eval(k));
+				for (uint32_t n = 0; n < N_; n++)
+				{
+					e_B[n] = algebra::Vector<algebra::Matrix<Real>>{deg + 1};
+					for (uint32_t k = 0; k <= deg; ++k)
+						e_B[n][k] = mul_scalar(-scs[k], std::move(*ineq).matrix_eval(n, k));
+				}
+				for (uint32_t r = 0; r < sz; ++r)
+					for (uint32_t c = 0; c <= r; ++c)
+						for (uint32_t k = 0; k <= deg; ++k)
+						{
+							d_c.at(p) = std::move(e_c[k].at(r, c));
+							for (uint32_t n = 0; n < N_; n++) d_B.at(p, n) = std::move(e_B[n][k].at(r, c));
+							++p;
+						}
+				for (uint32_t m = 0; m <= d0; ++m)
+					for (uint32_t k = 0; k <= deg; ++k)
+						q0.at(m, k) = ineq->bilinear_bases()[m].eval(xs[k]) * mpfr::sqrt(scs[k]);
+				for (uint32_t m = 0; m <= d1; ++m)
+					for (uint32_t k = 0; k <= deg; ++k)
+						q1.at(m, k) = ineq->bilinear_bases()[m].eval(xs[k]) * mpfr::sqrt(scs[k] * xs[k]);
+				sdpb.register_constraint(j, DualConstraint<Real>(ineq->size(), ineq->max_degree(), std::move(d_B),
+				                                                 std::move(d_c), {std::move(q0), std::move(q1)}));
+			}
+			return sdpb;
+		}
 	};
 }  // namespace qboot
 
