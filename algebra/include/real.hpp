@@ -45,6 +45,16 @@
 
 #include "mpfr.h"
 
+// TODO: implement rvalue reference parameters
+// example:
+//   real operator+(real&& x, const real& y) {
+//     return std::move(x += y);
+//   }
+//   real exp(real&& x) {
+//     MPFR_NS mpfr_exp(x._x, x._x, rnd);
+//     return std::move(x);
+//   }
+
 // //////////////////////////////////////////////////////////////////
 // default template arguments
 // //////////////////////////////////////////////////////////////////

@@ -159,7 +159,8 @@ namespace mpfr
 		return std::move(s);
 	}
 
-	// missing: handling ios_base::showpoint
+	// TODO: handle ios_base::showpoint
+	// TODO: handle ios_base::hexfloat
 
 	template <class Char, class Traits>
 	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_t x,
