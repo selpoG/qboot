@@ -1,15 +1,25 @@
 #ifndef QBOOT_SDPB_INPUT_HPP_
 #define QBOOT_SDPB_INPUT_HPP_
 
-#include <array>       // for array
-#include <cassert>     // for assert
-#include <cstdint>     // for uint32_t
-#include <filesystem>  // for path
-#include <fstream>     // for ofstream
-#include <iomanip>     // for setprecision
-#include <ios>         // for fixed
-#include <memory>      // for unique_ptr
-#include <optional>    // for optional
+#include <array>     // for array
+#include <cassert>   // for assert
+#include <cstdint>   // for uint32_t
+#include <fstream>   // for ofstream
+#include <iomanip>   // for setprecision
+#include <ios>       // for fixed
+#include <memory>    // for unique_ptr
+#include <optional>  // for optional
+
+#if __has_include(<filesystem>)
+#include <filesystem>  // for path, create_directory
+#else
+#include <experimental/filesystem>
+namespace std
+{
+	// contamination of namespace std might be an undefined behavior
+	namespace filesystem = experimental::filesystem;
+}  // namespace std
+#endif
 
 #include "matrix.hpp"  // for Matrix, Vector
 #include "real.hpp"    // for real
