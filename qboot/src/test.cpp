@@ -16,6 +16,7 @@
 
 using R = mpfr::real<1000, MPFR_RNDN>;
 using algebra::Polynomial, algebra::Vector, algebra::Matrix;
+
 template <class R>
 using P = Polynomial<R>;
 template <class R>
@@ -23,9 +24,9 @@ using V = Vector<R>;
 
 namespace qboot
 {
-	template class MobiusTransformation<mpfr::real<1000, MPFR_RNDN>>;
-	template class ExpLike<mpfr::real<1000, MPFR_RNDN>>;
-	template class DampedRational<mpfr::real<1000, MPFR_RNDN>>;
+	template class MobiusTransformation<R>;
+	template class ExpLike<R>;
+	template class DampedRational<R>;
 }  // namespace qboot
 
 [[maybe_unused]] static void test()

@@ -25,18 +25,21 @@
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
 using qboot::h_asymptotic, qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunction,
-    qboot::RationalApproxData;
-using std::array;
+    qboot::RationalApproxData, qboot::PolynomialProgramming;
+using FunctionSymmetry = algebra::FunctionSymmetry;
+using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move;
+namespace fs = std::filesystem;
 
 using R = mpfr::real<1000, MPFR_RNDN>;
 using Op = qboot::PrimaryOperator<R>;
 using GOp = qboot::GeneralPrimaryOperator<R>;
 using GBlock = qboot::ConformalBlock<R, GOp>;
+using PolIneq = qboot::PolynomialInequalityWithCoeffs<R>;
 
-[[maybe_unused]] static Vector<R> to_vec(const std::unique_ptr<mpfr_t[]>& a, uint32_t s);
-[[maybe_unused]] static Matrix<R> to_mat(const std::unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c);
-static ComplexFunction<R> to_hol(const std::unique_ptr<mpfr_t[]>& a, uint32_t l);
-static RealFunction<R> to_func(const std::unique_ptr<mpfr_t[]>& a, uint32_t l);
+[[maybe_unused]] static Vector<R> to_vec(const unique_ptr<mpfr_t[]>& a, uint32_t s);
+[[maybe_unused]] static Matrix<R> to_mat(const unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c);
+[[maybe_unused]] static ComplexFunction<R> to_hol(const unique_ptr<mpfr_t[]>& a, uint32_t l);
+static RealFunction<R> to_func(const unique_ptr<mpfr_t[]>& a, uint32_t l);
 static void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34, const R& very_small);
 static void test_real(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
                       const R& very_small);
@@ -50,19 +53,6 @@ static void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R
                                          uint32_t maxspin);
 [[maybe_unused]] static void test_sdpb();
 
-template <class T>
-void check(const T& p, const T& q, const R& very_small)
-{
-	auto err = (p - q).norm();
-	if (err > very_small)
-	{
-		std::cout << "p = " << p << std::endl;
-		std::cout << "q = " << q << std::endl;
-		std::cout << "p - q = " << (p - q) << std::endl;
-		std::cout << "err = " << err << std::endl;
-		assert(false);
-	}
-}
 template <class T, class CallBack_T>
 void check(const T& p, const T& q, const R& very_small, CallBack_T on_err)
 {
@@ -70,22 +60,22 @@ void check(const T& p, const T& q, const R& very_small, CallBack_T on_err)
 	if (err > very_small)
 	{
 		on_err();
-		std::cout << "p = " << p << std::endl;
-		std::cout << "q = " << q << std::endl;
-		std::cout << "p - q = " << (p - q) << std::endl;
-		std::cout << "err = " << err << std::endl;
+		cout << "p = " << p << endl;
+		cout << "q = " << q << endl;
+		cout << "p - q = " << (p - q) << endl;
+		cout << "err = " << err << endl;
 		assert(false);
 	}
 }
 
-Vector<R> to_vec(const std::unique_ptr<mpfr_t[]>& a, uint32_t s)
+Vector<R> to_vec(const unique_ptr<mpfr_t[]>& a, uint32_t s)
 {
 	Vector<R> v(s);
 	for (uint32_t i = 0; i < s; ++i) v[i] = R(a[i]);
 	return v;
 }
 
-Matrix<R> to_mat(const std::unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c)
+Matrix<R> to_mat(const unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c)
 {
 	Matrix<R> v(r, c);
 	for (uint32_t i = 0; i < r; ++i)
@@ -93,7 +83,7 @@ Matrix<R> to_mat(const std::unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c)
 	return v;
 }
 
-ComplexFunction<R> to_hol(const std::unique_ptr<mpfr_t[]>& a, uint32_t l)
+ComplexFunction<R> to_hol(const unique_ptr<mpfr_t[]>& a, uint32_t l)
 {
 	ComplexFunction<R> f(l);
 	uint32_t i = 0;
@@ -102,7 +92,7 @@ ComplexFunction<R> to_hol(const std::unique_ptr<mpfr_t[]>& a, uint32_t l)
 	return f;
 }
 
-RealFunction<R> to_func(const std::unique_ptr<mpfr_t[]>& a, uint32_t l)
+RealFunction<R> to_func(const unique_ptr<mpfr_t[]>& a, uint32_t l)
 {
 	RealFunction<R> f(l);
 	for (uint32_t k = 0; k <= l; ++k) f.at(k) = R(a[k]);
@@ -119,8 +109,7 @@ void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34, const R& 
 	        : qboot2::recursionNonZeroVector(nMax, op.epsilon()._x, ell._x, delta._x, S._x, P._x, 1000, MPFR_RNDN);
 	auto q = to_func(q_ptr, p.lambda());
 	check(p, q, very_small, [&]() {
-		std::cout << "test_rec(nMax=" << nMax << "op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")"
-		          << std::endl;
+		cout << "test_rec(nMax=" << nMax << "op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")" << endl;
 	});
 }
 
@@ -132,8 +121,8 @@ void test_real(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, 
 	auto q_ptr = qboot2::real_axis_result(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb);
 	auto q = to_func(q_ptr, p.lambda());
 	check(p, q, very_small, [&]() {
-		std::cout << "test_real(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")"
-		          << std::endl;
+		cout << "test_real(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")"
+		     << endl;
 	});
 }
 
@@ -145,8 +134,7 @@ void test_g(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, con
 	auto q_ptr = qboot2::gBlock_full(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb);
 	auto q = to_hol(q_ptr, cb.lambda);
 	check(p, q, very_small, [&]() {
-		std::cout << "test_g(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")"
-		          << std::endl;
+		cout << "test_g(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")" << endl;
 	});
 }
 
@@ -164,9 +152,8 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, 
 	auto p = h_asymptotic(S, cb1);
 	auto q_ptr = qboot2::h_asymptotic(cb1.epsilon._x, S._x, cb2);
 	auto q = to_func(q_ptr, p.lambda());
-	check(p, q, very_small, [&]() {
-		std::cout << "test_h(cb1=" << cb1.str() << ", cb2, d12=" << d12 << ", d34=" << d34 << ")" << std::endl;
-	});
+	check(p, q, very_small,
+	      [&]() { cout << "test_h(cb1=" << cb1.str() << ", cb2, d12=" << d12 << ", d34=" << d34 << ")" << endl; });
 }
 
 void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax = 20, uint32_t maxspin = 24)
@@ -175,7 +162,7 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 	{
 		R gap = spin == 0 ? de : c.unitary_bound(spin);
 		auto op = GOp(spin, c.epsilon);
-		auto block = GBlock(op, ds, ds, ds, ds, algebra::FunctionSymmetry::Odd);
+		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
 		RationalApproxData<R> ag(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
 		auto sp = ag.sample_points();
 		auto q = ag.get_bilinear_basis(gap);
@@ -187,9 +174,9 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 			scales[i] = ag.get_scale(delta);
 			bls[i] = c.evaluate(block, delta) / scales[i];
 		}
-		std::cout << "F_{-} = " << algebra::polynomial_interpolate(bls, sp) << std::endl;
-		std::cout << "basis = " << q << std::endl;
-		std::cout << "scales = " << scales << std::endl;
+		cout << "F_{-} = " << algebra::polynomial_interpolate(bls, sp) << endl;
+		cout << "basis = " << q << endl;
+		cout << "scales = " << scales << endl;
 	}
 }
 
@@ -203,14 +190,14 @@ void test_sdpb()
 	Vector<R> sample_scale(deg + 1);
 	for (uint32_t i = 0; i <= deg; ++i) sample_scale[i] = mpfr::exp(-sample_points[i]);
 
-	qboot::PolynomialProgramming<R> prg(1);
+	PolynomialProgramming<R> prg(1);
 	prg.objective_constant() = R(0);
 	prg.objectives({R(-1)});
-	auto ineq = std::make_unique<qboot::PolynomialInequalityWithCoeffs<R>>(
-	    1u, 4u, Vector{elm[1].clone()}, -elm[0], bilinear.clone(), sample_points.clone(), sample_scale.clone());
-	prg.add_inequality(std::move(ineq));
-	auto sdpb = std::move(prg).create_input();
-	auto root = std::filesystem::current_path() / "test";
+	auto ineq = make_unique<PolIneq>(1u, 4u, Vector{elm[1].clone()}, -elm[0], bilinear.clone(), sample_points.clone(),
+	                                 sample_scale.clone());
+	prg.add_inequality(move(ineq));
+	auto sdpb = move(prg).create_input();
+	auto root = fs::current_path() / "test";
 	sdpb.write_all(root);
 }
 
@@ -219,7 +206,7 @@ int main()
 	constexpr uint32_t n_Max = 100, lambda = 5, dim_ = 3, maxdim = 10, maxspin = 10;
 	[[maybe_unused]] constexpr uint32_t numax = 5;
 	R very_small = R("2e-591");
-	std::map<uint32_t, std::optional<Context<R>>> cs;
+	map<uint32_t, optional<Context<R>>> cs;
 	for (uint32_t dim = 3; dim <= maxdim; dim += 2) cs.emplace(dim, Context<R>(n_Max, lambda, dim));
 	R d12 = mpfr::sqrt(R(3)), d34 = mpfr::sqrt(R(5)) - 1;
 	R S = (d34 - d12) / 2, P = -d12 * d34 / 2, d23h = R(0.7);
@@ -231,16 +218,16 @@ int main()
 		{
 			R gap = R(spin == 0 ? 3 : spin + 1);
 			auto op = GOp(spin, c.epsilon);
-			auto block = GBlock(op, d_s, d_e, d_s, d_e, algebra::FunctionSymmetry::Odd);
-			std::cout << "block = " << block.str() << std::endl;
+			auto block = GBlock(op, d_s, d_e, d_s, d_e, FunctionSymmetry::Odd);
+			cout << "block = " << block.str() << endl;
 			RationalApproxData<R> ag(numax, spin, c, d_s, d_e, d_s, d_e);
 			auto sp = ag.sample_points();
 			auto q = ag.get_bilinear_basis(gap);
 			const auto& pol = ag.get_poles();
-			std::cout << "pol = " << pol << std::endl;
+			cout << "pol = " << pol << endl;
 			Vector<ComplexFunction<R>> bls(sp.size());
 			Vector<R> scales(sp.size());
-			std::cout << "ps = " << gap << " + " << sp << std::endl;
+			cout << "ps = " << gap << " + " << sp << endl;
 			for (uint32_t i = 0; i < sp.size(); ++i)
 			{
 				auto delta = gap + sp[i];
@@ -248,10 +235,10 @@ int main()
 				bls[i] = c.evaluate(block, delta) / scales[i];
 			}
 			const auto& ip = algebra::polynomial_interpolate(bls, sp);
-			std::cout << "F_{-} = " << ip << std::endl;
-			std::cout << "basis = " << q << std::endl;
-			std::cout << "scales = " << scales << std::endl;
-			std::cout << "error = " << (evals(ip, sp) - bls).norm() << std::endl;
+			cout << "F_{-} = " << ip << endl;
+			cout << "basis = " << q << endl;
+			cout << "scales = " << scales << endl;
+			cout << "error = " << (evals(ip, sp) - bls).norm() << endl;
 		}
 	}
 	for (uint32_t dim = 3; dim <= maxdim; dim += 2)
