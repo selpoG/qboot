@@ -37,9 +37,12 @@
 // inclusion of headers
 // //////////////////////////////////////////////////////////////////
 
-#include <limits>
-#include <sstream>
-#include <type_traits>
+#include <limits>       // for numeric_limits
+#include <sstream>      // for ostringstream
+#include <string>       // for string
+#include <type_traits>  // for void_t, enable_if, is_same_v, true_type, false_type
+#include <utility>      // for move
+
 #include "mpfr.h"
 
 // //////////////////////////////////////////////////////////////////
@@ -3531,11 +3534,16 @@ namespace mpfr
 		// in the code above.  This way we make sure that binary - operations
 		// do not match the unary member operator- (in any case).
 
-		inline const real operator-() const
+		inline const real operator-() const&
 		{
 			real<_prec, _rnd> temp;
 			MPFR_NS mpfr_neg(temp._x, _x, _rnd);
 			return temp;
+		}
+		inline const real operator-() &&
+		{
+			MPFR_NS mpfr_neg(_x, _x, _rnd);
+			return std::move(*this);
 		}
 
 		// //////////////////////////////////////////////////////////////

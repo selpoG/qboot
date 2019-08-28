@@ -122,12 +122,12 @@ namespace qboot2
 		mpfr_init2(temp, prec);
 		mpfr_init2(temp2, prec);
 
-		array<array<mpfr_t, 5>, 8> recCoeffs;
+		array<array<mpfr_t, 5>, 8> recCoeffs{};
 
 		initialize_spin_nonzero_coeffs_folder(recCoeffs, prec);
 		set_nonzero_spin_rec_coeffs(recCoeffs, epsilon, ell, Delta, S, P, prec, rnd);
 
-		array<mpfr_t, 8> as;
+		array<mpfr_t, 8> as{};
 
 		for (uint32_t i = 0; i <= 7; ++i) { mpfr_init2(as.at(i), prec); }
 		for (uint32_t i = 1; i <= 7; ++i)
@@ -271,12 +271,12 @@ namespace qboot2
 		mpfr_init2(temp, prec);
 		mpfr_init2(temp2, prec);
 
-		array<array<mpfr_t, 4>, 6> recCoeffs;
+		array<array<mpfr_t, 4>, 6> recCoeffs{};
 
 		initialize_spin_zero_coeffs_folder(recCoeffs, prec);
 
 		set_zero_spin_rec_coeffs(recCoeffs, epsilon, Delta, S, P, prec, rnd);
-		array<mpfr_t, 6> as;
+		array<mpfr_t, 6> as{};
 		for (uint32_t i = 0; i <= 5; ++i) { mpfr_init2(as.at(i), prec); }
 		for (uint32_t i = 1; i <= 5; ++i)
 		{
@@ -478,8 +478,8 @@ namespace qboot2
 		}
 	}
 
-	unique_ptr<mpfr_t[]> casimirExpander(mpfr_t* realAxisResult, const mpfr_t& epsilon, const mpfr_t& ell,
-	                                     const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
+	unique_ptr<mpfr_t[]> casimirExpander(const unique_ptr<mpfr_t[]>& realAxisResult, const mpfr_t& epsilon,
+	                                     const mpfr_t& ell, const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
 	                                     const cb_context& context)
 	{
 		unique_ptr<mpfr_t[]> result;
@@ -615,7 +615,7 @@ namespace qboot2
 	                                 const mpfr_t& P, const cb_context& context)
 	{
 		auto realAxisResult = real_axis_result(epsilon, ell, Delta, S, P, context);
-		auto result = casimirExpander(realAxisResult.get(), epsilon, ell, Delta, S, P, context);
+		auto result = casimirExpander(realAxisResult, epsilon, ell, Delta, S, P, context);
 		for (uint32_t j = 0; j <= context.lambda; ++j) { mpfr_clear(realAxisResult[j]); }
 		return result;
 	}

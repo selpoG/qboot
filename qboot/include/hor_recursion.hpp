@@ -24,8 +24,8 @@ namespace qboot2
 	uint32_t indexOfConformalBlock(const cb_context& context, int32_t n, int32_t m);
 	void element_helper(const cb_context& context, const std::unique_ptr<mpfr_t[]>& array, mpfr_t& r, int32_t m,
 	                    int32_t n);
-	std::unique_ptr<mpfr_t[]> casimirExpander(mpfr_t* realAxisResult, const mpfr_t& epsilon, const mpfr_t& ell,
-	                                          const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
+	std::unique_ptr<mpfr_t[]> casimirExpander(const std::unique_ptr<mpfr_t[]>& realAxisResult, const mpfr_t& epsilon,
+	                                          const mpfr_t& ell, const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
 	                                          const cb_context& context);
 	std::unique_ptr<mpfr_t[]> gBlock_full(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t& Delta, const mpfr_t& S,
 	                                      const mpfr_t& P, const cb_context& context);

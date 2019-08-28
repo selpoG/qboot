@@ -25,7 +25,7 @@ namespace algebra
 	template <class T>
 	using has_iszero_checker = decltype(std::declval<const T&>().iszero());
 	template <class T>
-	constexpr bool has_iszero = detect<T, has_iszero_checker>::value;
+	inline constexpr bool has_iszero = detect<T, has_iszero_checker>::value;
 	template <class R>
 	bool iszero(const R& v)
 	{
@@ -460,7 +460,7 @@ namespace algebra
 			return z;
 		}
 		template <class Real>
-		Matrix<evaluated_t<Ring>> eval(const Real& x) const
+		[[nodiscard]] Matrix<evaluated_t<Ring>> eval(const Real& x) const
 		{
 			return Matrix<evaluated_t<Ring>>(arr_.eval(x), row_, col_);
 		}

@@ -23,8 +23,8 @@ namespace algebra
 
 	public:
 		Polynomial() : coeff_(0) {}
-		Polynomial(Polynomial&&) = default;
-		Polynomial& operator=(Polynomial&&) = default;
+		Polynomial(Polynomial&&) noexcept = default;
+		Polynomial& operator=(Polynomial&&) noexcept = default;
 		Polynomial(const Polynomial&) = delete;
 		Polynomial& operator=(const Polynomial&) = delete;
 		~Polynomial() = default;
