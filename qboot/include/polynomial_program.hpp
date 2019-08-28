@@ -211,9 +211,9 @@ namespace qboot
 	// represents a polynomial matrix programming (maximize some linear quantity subject to semidefinite positivity)
 	// maximize \sum_{n=0}^{N-1} b[n] y[n] + b[N]
 	// over free (real) variables y[0], ..., y[N - 1]
-	// j-th equalities:
-	//   \sum_{n = 0}^{N - 1} y[n] M_{j}^{n} = C_{j}
-	//   (each of M_{j}^{n} or C_{j} must be a real constant, which is independent from x)
+	// e-th equations:
+	//   \sum_{n = 0}^{N - 1} y[n] M_{e}^{n} = C_{e}
+	//   (each of M_{e}^{n} or C_{e} must be a real constant, which is independent from x)
 	// j-th inequalities:
 	//   \sum_{n = 0}^{N - 1} y[n] M_{j}^{n}(x) >= C_{j}(x) for all x >= 0
 	//   (each of M_{j}^{n} or C_{j} can be a polynomial matrix of x)
@@ -226,15 +226,24 @@ namespace qboot
 		Real obj_const_{};
 		// b[n]
 		algebra::Vector<Real> obj_;
-		// M_{j}^{n}
-		std::vector<algebra::Vector<Real>> equality_{};
-		// C_{j}
-		std::vector<Real> equality_targets_{};
+		// M_{e}^{n}
+		std::vector<algebra::Vector<Real>> equation_{};
+		// C_{e}
+		std::vector<Real> equation_targets_{};
+		// pivots for gaussian elimination
+		// y[leading_indices[j]] are not free
+		std::vector<uint32_t> leading_indices_{};
+		// indices which are not eliminated
+		// union of leading_indices_ and free_indices_ is always {0, ..., N - 1}
+		std::vector<uint32_t> free_indices_{};
 		// TODO: unique_ptr is the best choice?
 		std::vector<std::unique_ptr<PolynomialInequality<Real>>> inequality_{};
 
 	public:
-		PolynomialProgramming(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars) {}
+		PolynomialProgramming(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
+		{
+			for (uint32_t i = 0; i < N_; i++) free_indices_.push_back(i);
+		}
 		uint32_t num_of_variables() const { return N_; }
 		Real& objective_constant() { return obj_const_; }
 		const Real& objective_constant() const { return obj_const_; }
@@ -245,11 +254,46 @@ namespace qboot
 			obj_ = std::move(obj);
 		}
 		// add a constraint \sum_{n = 0}^{N - 1} y[n] mat[n] = target
-		void add_equality(algebra::Vector<Real>&& vec, const Real& target)
+		// we assume that all equations are linear independent
+		// the order of call of this function may affects the resulting SDPB input
+		// to guarantee the reproducibility, call this function in some fixed order
+		void add_equation(algebra::Vector<Real>&& vec, Real&& target)
 		{
 			assert(vec.size() == N_);
-			equality_.push_back(vec);
-			equality_targets_.push_back(target);
+			// apply previous equations to new equation
+			for (uint32_t e = 0; e < equation_.size(); ++e)
+			{
+				const auto& t = vec[leading_indices_[e]];
+				target -= t * equation_targets_[e];
+				vec -= mul_scalar(t, equation_[e]);
+			}
+			uint32_t argmax = 0;
+			Real max = mpfr::abs(vec[0]);
+			for (uint32_t n = 1; n < N_; ++n)
+			{
+				const Real& val = mpfr::abs(vec[n]);
+				if (max < val)
+				{
+					argmax = n;
+					max = val;
+				}
+			}
+			// apply new equation to previous equations
+			for (uint32_t e = 0; e < equation_.size(); ++e)
+			{
+				const auto& t = equation_[e][argmax];
+				equation_targets_[e] -= t * target;
+				equation_[e] -= mul_scalar(t, vec);
+			}
+			equation_.push_back(std::move(vec));
+			equation_targets_.push_back(std::move(target));
+			leading_indices_.push_back(argmax);
+			for (uint32_t n = 0;; ++n)
+				if (free_indices_[n] == argmax)
+				{
+					free_indices_.erase(free_indices_.begin() + n);
+					break;
+				}
 		}
 		void add_inequality(std::unique_ptr<PolynomialInequality<Real>>&& ineq)
 		{
@@ -258,35 +302,50 @@ namespace qboot
 		}
 		SDPBInput<Real> create_input() &&
 		{
-			// TODO: solve equalities and reduce free variales
+			uint32_t eq_sz = uint32_t(equation_.size()), M = N_ - eq_sz;
+			// y[leading_indices_[0]], ..., y[leading_indices_[eq_sz - 1]] are eliminated
+			// we rearrange y[0], ..., y[N - 1] as
+			//   w[0] = y[leading_indices_[0]], ..., w[eq_sz - 1] = y[leading_indices_[eq_sz - 1]], z[0], ..., z[M - 1]
+			//   where M = N_ - eq_sz and z[n] = y[free_indices_[n]]
+			// for e = 0, ..., eq_sz - 1,
+			//   w[e] + \sum_{m = 0}^{M - 1} equation_[e][free_indices_[m]] y[free_indices_[m]] = equation_targets_[e]
 			SDPBInput<Real> sdpb(obj_const_, std::move(obj_), uint32_t(inequality_.size()));
 			for (uint32_t j = 0; j < inequality_.size(); j++)
 			{
 				auto&& ineq = inequality_[j];
+				// convert ineq to DualConstraint
 				uint32_t sz = ineq->size(), deg = ineq->max_degree(), schur_sz = (deg + 1) * sz * (sz + 1) / 2,
 				         d0 = deg / 2, d1 = deg == 0 ? 0 : (deg - 1) / 2;
-				algebra::Matrix<Real> d_B(schur_sz, N_);
+				algebra::Matrix<Real> d_B(schur_sz, M);
 				algebra::Vector<Real> d_c(schur_sz);
 				algebra::Matrix<Real> q0(d0 + 1, deg + 1);
 				algebra::Matrix<Real> q1(d1 + 1, deg + 1);
 				const auto& xs = ineq->sample_points();
 				const auto& scs = ineq->sample_scalings();
-				uint32_t p = 0;
 				algebra::Vector<algebra::Vector<algebra::Matrix<Real>>> e_B(N_);
 				algebra::Vector<algebra::Matrix<Real>> e_c(deg + 1);
 				for (uint32_t k = 0; k <= deg; ++k) e_c[k] = mul_scalar(-scs[k], std::move(*ineq).target_eval(k));
-				for (uint32_t n = 0; n < N_; n++)
+				for (uint32_t n = 0; n < N_; ++n)
 				{
 					e_B[n] = algebra::Vector<algebra::Matrix<Real>>{deg + 1};
 					for (uint32_t k = 0; k <= deg; ++k)
 						e_B[n][k] = mul_scalar(-scs[k], std::move(*ineq).matrix_eval(n, k));
 				}
+				uint32_t p = 0;
 				for (uint32_t r = 0; r < sz; ++r)
 					for (uint32_t c = 0; c <= r; ++c)
 						for (uint32_t k = 0; k <= deg; ++k)
 						{
 							d_c.at(p) = std::move(e_c[k].at(r, c));
-							for (uint32_t n = 0; n < N_; n++) d_B.at(p, n) = std::move(e_B[n][k].at(r, c));
+							for (uint32_t m = 0; m < M; ++m)
+								d_B.at(p, m) = std::move(e_B[free_indices_[m]][k].at(r, c));
+							for (uint32_t e = 0; e < eq_sz; ++e)
+							{
+								for (uint32_t m = 0; m < M; m++)
+									d_B.at(p, free_indices_[m]) -=
+									    equation_[e][free_indices_[m]] * d_B.at(p, leading_indices_[e]);
+								d_c.at(p) -= equation_targets_[e] * d_B.at(p, leading_indices_[e]);
+							}
 							++p;
 						}
 				for (uint32_t m = 0; m <= d0; ++m)
