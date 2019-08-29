@@ -14,7 +14,7 @@
 #include <filesystem>  // for path, create_directory
 #else
 #include <experimental/filesystem>
-namespace std
+namespace std  // NOLINT
 {
 	// contamination of namespace std might be an undefined behavior
 	namespace filesystem = experimental::filesystem;
@@ -58,7 +58,7 @@ namespace qboot
 		std::array<algebra::Matrix<Real>, 2> bilinear_{};
 
 	public:
-		DualConstraint() {}
+		DualConstraint() = default;
 		DualConstraint(uint32_t dim, uint32_t deg, algebra::Matrix<Real>&& B, algebra::Vector<Real>&& c,
 		               std::array<algebra::Matrix<Real>, 2>&& bilinear)
 		    : dim_(dim),
@@ -75,12 +75,12 @@ namespace qboot
 			assert(bilinear_[1].row() == (deg_ == 0 ? 0 : ((deg_ - 1) / 2) + 1));
 			assert(bilinear_[1].column() == deg_ + 1);
 		}
-		uint32_t dim() const { return dim_; }
-		uint32_t degree() const { return deg_; }
-		uint32_t schur_size() const { return (deg_ + 1) * dim_ * (dim_ + 1) / 2; }
-		const std::array<algebra::Matrix<Real>, 2>& bilinear() const { return bilinear_; }
-		const algebra::Matrix<Real>& obj_B() const { return constraint_B_; }
-		const algebra::Vector<Real>& obj_c() const { return constraint_c_; }
+		[[nodiscard]] uint32_t dim() const { return dim_; }
+		[[nodiscard]] uint32_t degree() const { return deg_; }
+		[[nodiscard]] uint32_t schur_size() const { return (deg_ + 1) * dim_ * (dim_ + 1) / 2; }
+		[[nodiscard]] const std::array<algebra::Matrix<Real>, 2>& bilinear() const { return bilinear_; }
+		[[nodiscard]] const algebra::Matrix<Real>& obj_B() const { return constraint_B_; }
+		[[nodiscard]] const algebra::Vector<Real>& obj_c() const { return constraint_c_; }
 	};
 
 	// maximize b_0 + \sum_{n=1}^{N} b_n y_n over y_n such that all constraints are satisfied.
@@ -101,7 +101,7 @@ namespace qboot
 		      num_constraints_(num_constraints)
 		{
 		}
-		uint32_t num_constraints() const { return num_constraints_; }
+		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
 		void register_constraint(uint32_t index, DualConstraint<Real>&& c)
 		{
 			assert(!constraints_[index].has_value());

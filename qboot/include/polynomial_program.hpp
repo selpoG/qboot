@@ -51,33 +51,33 @@ namespace qboot
 		}
 		PolynomialInequality(const PolynomialInequality&) = delete;
 		PolynomialInequality& operator=(const PolynomialInequality&) = delete;
-		PolynomialInequality(PolynomialInequality&&) = default;
-		PolynomialInequality& operator=(PolynomialInequality&&) = default;
+		PolynomialInequality(PolynomialInequality&&) noexcept = default;
+		PolynomialInequality& operator=(PolynomialInequality&&) noexcept = default;
 		virtual ~PolynomialInequality() = default;
 		// size of matrix
-		uint32_t num_of_variables() const { return N_; }
+		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
 		// size of matrix
-		uint32_t size() const { return sz_; }
+		[[nodiscard]] uint32_t size() const { return sz_; }
 		// size of matrix
-		uint32_t max_degree() const { return max_deg_; }
+		[[nodiscard]] uint32_t max_degree() const { return max_deg_; }
 		// q[m](x)
-		const algebra::Vector<algebra::Polynomial<Real>>& bilinear_bases() const { return bilinear_; }
+		[[nodiscard]] const algebra::Vector<algebra::Polynomial<Real>>& bilinear_bases() const { return bilinear_; }
 		// x[k]
-		const algebra::Vector<Real>& sample_points() const { return sample_x; }
+		[[nodiscard]] const algebra::Vector<Real>& sample_points() const { return sample_x; }
 		// s[k]
-		const algebra::Vector<Real>& sample_scalings() const { return sample_sc; }
+		[[nodiscard]] const algebra::Vector<Real>& sample_scalings() const { return sample_sc; }
 		// M[n]
-		virtual algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& = 0;
-		virtual algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) && = 0;
+		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& = 0;
+		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) && = 0;
 		// C
-		virtual algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() const& = 0;
-		virtual algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() && = 0;
+		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() const& = 0;
+		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() && = 0;
 		// evaluate M[n] at x = sample_points[k]
-		virtual algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) const& = 0;
-		virtual algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) && = 0;
+		[[nodiscard]] virtual algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) const& = 0;
+		[[nodiscard]] virtual algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) && = 0;
 		// evaluate C at x = sample_points[k]
-		virtual algebra::Matrix<Real> target_eval(uint32_t k) const& = 0;
-		virtual algebra::Matrix<Real> target_eval(uint32_t k) && = 0;
+		[[nodiscard]] virtual algebra::Matrix<Real> target_eval(uint32_t k) const& = 0;
+		[[nodiscard]] virtual algebra::Matrix<Real> target_eval(uint32_t k) && = 0;
 	};
 
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
@@ -110,26 +110,35 @@ namespace qboot
 		}
 		PolynomialInequalityEvaluated(const PolynomialInequalityEvaluated&) = delete;
 		PolynomialInequalityEvaluated& operator=(const PolynomialInequalityEvaluated&) = delete;
-		PolynomialInequalityEvaluated(PolynomialInequalityEvaluated&&) = default;
-		PolynomialInequalityEvaluated& operator=(PolynomialInequalityEvaluated&&) = default;
+		PolynomialInequalityEvaluated(PolynomialInequalityEvaluated&&) noexcept = default;
+		PolynomialInequalityEvaluated& operator=(PolynomialInequalityEvaluated&&) noexcept = default;
 		~PolynomialInequalityEvaluated() override = default;
-		algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& override
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& override
 		{
 			return algebra::polynomial_interpolate(mat_[n], PolynomialInequality<Real>::sample_points());
 		}
-		algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) && override
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) && override
 		{
 			return matrix_polynomial(n);
 		}
-		algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() const& override
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() const& override
 		{
 			return algebra::polynomial_interpolate(target_, PolynomialInequality<Real>::sample_points());
 		}
-		algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() && override { return target_polynomial(); }
-		algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) const& override { return mat_[n][k].clone(); }
-		algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) && override { return std::move(mat_[n][k]); }
-		algebra::Matrix<Real> target_eval(uint32_t k) const& override { return target_[k].clone(); }
-		algebra::Matrix<Real> target_eval(uint32_t k) && override { return std::move(target_[k]); }
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() && override
+		{
+			return target_polynomial();
+		}
+		[[nodiscard]] algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) const& override
+		{
+			return mat_[n][k].clone();
+		}
+		[[nodiscard]] algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) && override
+		{
+			return std::move(mat_[n][k]);
+		}
+		[[nodiscard]] algebra::Matrix<Real> target_eval(uint32_t k) const& override { return target_[k].clone(); }
+		[[nodiscard]] algebra::Matrix<Real> target_eval(uint32_t k) && override { return std::move(target_[k]); }
 	};
 
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
@@ -183,25 +192,34 @@ namespace qboot
 		}
 		PolynomialInequalityWithCoeffs(const PolynomialInequalityWithCoeffs&) = delete;
 		PolynomialInequalityWithCoeffs& operator=(const PolynomialInequalityWithCoeffs&) = delete;
-		PolynomialInequalityWithCoeffs(PolynomialInequalityWithCoeffs&&) = default;
-		PolynomialInequalityWithCoeffs& operator=(PolynomialInequalityWithCoeffs&&) = default;
+		PolynomialInequalityWithCoeffs(PolynomialInequalityWithCoeffs&&) noexcept = default;
+		PolynomialInequalityWithCoeffs& operator=(PolynomialInequalityWithCoeffs&&) noexcept = default;
 		~PolynomialInequalityWithCoeffs() override = default;
-		algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& override
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& override
 		{
 			return mat_[n].clone();
 		}
-		algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) && override
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) && override
 		{
 			return std::move(mat_[n]);
 		}
-		algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() const& override { return target_.clone(); }
-		algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() && override { return std::move(target_); }
-		algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) const& override
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() const& override
+		{
+			return target_.clone();
+		}
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial<Real>> target_polynomial() && override
+		{
+			return std::move(target_);
+		}
+		[[nodiscard]] algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) const& override
 		{
 			return mat_[n].eval(PolynomialInequality<Real>::sample_points()[k]);
 		}
-		algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) && override { return matrix_eval(n, k); }
-		algebra::Matrix<Real> target_eval(uint32_t k) const& override
+		[[nodiscard]] algebra::Matrix<Real> matrix_eval(uint32_t n, uint32_t k) && override
+		{
+			return matrix_eval(n, k);
+		}
+		[[nodiscard]] algebra::Matrix<Real> target_eval(uint32_t k) const& override
 		{
 			return target_.eval(PolynomialInequality<Real>::sample_points()[k]);
 		}
@@ -236,18 +254,18 @@ namespace qboot
 		// indices which are not eliminated
 		// union of leading_indices_ and free_indices_ is always {0, ..., N - 1}
 		std::vector<uint32_t> free_indices_{};
-		// TODO: unique_ptr is the best choice?
+		// TODO(selpo): unique_ptr is the best choice?
 		std::vector<std::unique_ptr<PolynomialInequality<Real>>> inequality_{};
 
 	public:
-		PolynomialProgramming(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
+		explicit PolynomialProgramming(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
 		{
 			for (uint32_t i = 0; i < N_; i++) free_indices_.push_back(i);
 		}
-		uint32_t num_of_variables() const { return N_; }
-		Real& objective_constant() { return obj_const_; }
-		const Real& objective_constant() const { return obj_const_; }
-		const algebra::Vector<Real>& objectives() const { return obj_; }
+		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
+		[[nodiscard]] Real& objective_constant() { return obj_const_; }
+		[[nodiscard]] const Real& objective_constant() const { return obj_const_; }
+		[[nodiscard]] const algebra::Vector<Real>& objectives() const { return obj_; }
 		void objectives(algebra::Vector<Real>&& obj)
 		{
 			assert(obj.size() == N_);

@@ -35,8 +35,8 @@ namespace qboot
 			assert(1 <= type && type <= 3);
 			if (type != 2 && !include_odd) k = 2;
 		}
-		bool valid() const { return type != 3 || k <= spin; }
-		Real get() const
+		[[nodiscard]] bool valid() const { return type != 3 || k <= spin; }
+		[[nodiscard]] Real get() const
 		{
 			switch (type)
 			{
@@ -66,8 +66,8 @@ namespace qboot
 				seqr.next();
 			update();
 		}
-		bool valid() const { return seql.valid() || seqr.valid(); }
-		Real get() const { return next_l ? seql.get() : seqr.get(); }
+		[[nodiscard]] bool valid() const { return seql.valid() || seqr.valid(); }
+		[[nodiscard]] Real get() const { return next_l ? seql.get() : seqr.get(); }
 	};
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	bool include_odd(const Real& d1, const Real& d2, const Real& d3, const Real& d4)
@@ -99,7 +99,7 @@ namespace qboot
 		{
 		}
 		RationalApproxData(uint32_t cutoff, uint32_t spin, const Context<Real>& context, bool include_odd)
-		    : spin(spin), lambda(context.lambda), epsilon(context.epsilon), rho(context.rho), poles(cutoff)
+		    : spin(spin), lambda(context.lambda()), epsilon(context.epsilon()), rho(context.rho()), poles(cutoff)
 		{
 			// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
 			auto get_pols = [this, include_odd](uint32_t type) {
@@ -113,15 +113,15 @@ namespace qboot
 				pole_seq.next();
 			}
 		}
-		uint32_t max_degree() const { return poles.size() + lambda; }
-		const algebra::Vector<Real>& get_poles() const { return poles; }
-		Real get_scale(const Real& delta) const
+		[[nodiscard]] uint32_t max_degree() const { return poles.size() + lambda; }
+		[[nodiscard]] const algebra::Vector<Real>& get_poles() const { return poles; }
+		[[nodiscard]] Real get_scale(const Real& delta) const
 		{
 			Real ans = mpfr::pow(4 * rho, delta);
 			for (uint32_t i = 0; i < poles.size(); ++i) ans /= delta - poles[i];
 			return ans;
 		}
-		algebra::Vector<algebra::Polynomial<Real>> get_bilinear_basis(const Real& gap) const
+		[[nodiscard]] algebra::Vector<algebra::Polynomial<Real>> get_bilinear_basis(const Real& gap) const
 		{
 			// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
 			algebra::Vector<Real> shifted_poles(poles.size());
@@ -142,7 +142,7 @@ namespace qboot
 			}
 			return q;
 		}
-		algebra::Vector<Real> sample_points() const { return qboot::sample_points<Real>(max_degree()); }
+		[[nodiscard]] algebra::Vector<Real> sample_points() const { return qboot::sample_points<Real>(max_degree()); }
 	};
 }  // namespace qboot
 

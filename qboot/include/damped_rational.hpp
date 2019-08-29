@@ -22,8 +22,8 @@ namespace qboot
 		}
 
 	public:
-		Real eval(const Real& x) const { return (p_ * x + q_) / (r_ * x + s_); }
-		std::optional<Real> safe_eval(const std::optional<Real>& x) const
+		[[nodiscard]] Real eval(const Real& x) const { return (p_ * x + q_) / (r_ * x + s_); }
+		[[nodiscard]] std::optional<Real> safe_eval(const std::optional<Real>& x) const
 		{
 			if (r_ == 0) return x.has_value() ? (p_ * x.value() + q_) / s_ : x;
 			if (!x.has_value()) return p_ / r_;
@@ -31,15 +31,15 @@ namespace qboot
 			if (den == 0) return std::nullopt;
 			return (p_ * x.value() + q_) / den;
 		}
-		std::optional<Real> get_shift() const noexcept
+		[[nodiscard]] std::optional<Real> get_shift() const noexcept
 		{
 			return p_ == s_ && p_ == 1 && r_ == 0 ? std::optional(q_) : std::nullopt;
 		}
-		std::optional<Real> get_scale() const noexcept
+		[[nodiscard]] std::optional<Real> get_scale() const noexcept
 		{
 			return q_ == r_ && q_ == 0 && s_ == 1 ? std::optional(p_) : std::nullopt;
 		}
-		bool is_flip() const noexcept { return p_ == s_ && p_ == 0 && q_ == r_ && q_ == 1; }
+		[[nodiscard]] bool is_flip() const noexcept { return p_ == s_ && p_ == 0 && q_ == r_ && q_ == 1; }
 		// x -> x + a, [0, infty) -> [a, infty)
 		static MobiusTransformation Shift(const Real& a) { return MobiusTransformation(Real(1), a, Real(0), Real(1)); }
 		// x -> a * x, [0, infty) -> [0, infty)

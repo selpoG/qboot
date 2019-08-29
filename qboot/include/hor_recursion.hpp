@@ -16,20 +16,20 @@ namespace qboot2
 	std::unique_ptr<mpfr_t[]> recursionNonZeroVector(uint32_t nMax, const mpfr_t& epsilon, const mpfr_t& ell,
 	                                                 const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
 	                                                 mpfr_prec_t prec, mpfr_rnd_t rnd);
-	std::unique_ptr<mpfr_t[]> recursionSpinZeroVector(uint32_t nMax, const mpfr_t& epsilon, mpfr_t& Delta,
+	std::unique_ptr<mpfr_t[]> recursionSpinZeroVector(uint32_t nMax, const mpfr_t& epsilon, mpfr_t* Delta,
 	                                                  const mpfr_t& S, const mpfr_t& P, mpfr_prec_t prec,
 	                                                  mpfr_rnd_t rnd);
-	std::unique_ptr<mpfr_t[]> real_axis_result(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t& Delta, const mpfr_t& S,
+	std::unique_ptr<mpfr_t[]> real_axis_result(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta, const mpfr_t& S,
 	                                           const mpfr_t& P, const cb_context& context);
 	uint32_t indexOfConformalBlock(const cb_context& context, int32_t n, int32_t m);
-	void element_helper(const cb_context& context, const std::unique_ptr<mpfr_t[]>& array, mpfr_t& r, int32_t m,
+	void element_helper(const cb_context& context, const std::unique_ptr<mpfr_t[]>& array, mpfr_t* r, int32_t m,
 	                    int32_t n);
 	std::unique_ptr<mpfr_t[]> casimirExpander(const std::unique_ptr<mpfr_t[]>& realAxisResult, const mpfr_t& epsilon,
 	                                          const mpfr_t& ell, const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
 	                                          const cb_context& context);
-	std::unique_ptr<mpfr_t[]> gBlock_full(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t& Delta, const mpfr_t& S,
+	std::unique_ptr<mpfr_t[]> gBlock_full(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta, const mpfr_t& S,
 	                                      const mpfr_t& P, const cb_context& context);
-	std::unique_ptr<mpfr_t[]> hBlock_times_rho_n(uint32_t n, const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t& Delta,
+	std::unique_ptr<mpfr_t[]> hBlock_times_rho_n(uint32_t n, const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta,
 	                                             const mpfr_t& S, const mpfr_t& P, const cb_context& context);
 	std::unique_ptr<mpfr_t[]> h_asymptotic(const mpfr_t& epsilon, const mpfr_t& S, const cb_context& context);
 }  // namespace qboot2
@@ -93,11 +93,11 @@ namespace qboot
 	algebra::RealFunction<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S,
 	                                           const Real& P, const Context<Real>& context)
 	{
-		auto h_at_0 = hBlock_shifted(op, S, P, context.n_Max);
+		auto h_at_0 = hBlock_shifted(op, S, P, context.n_Max());
 		h_at_0 *= mpfr::pow(4, exp);
-		const auto& rho = context.rho;
+		const auto& rho = context.rho();
 		algebra::RealFunctionWithPower<Real> f_at_0(h_at_0, exp);
-		algebra::RealFunction<Real> f_of_rho(context.lambda);
+		algebra::RealFunction<Real> f_of_rho(context.lambda());
 		f_of_rho.at(0) = f_at_0.approximate(rho);
 		Real tmp(1);
 		for (uint32_t k = 1; k <= f_of_rho.lambda(); ++k)
@@ -106,7 +106,7 @@ namespace qboot
 			f_at_0.derivate();
 			f_of_rho.at(k) = f_at_0.approximate(rho) / tmp;
 		}
-		return context.rho_to_z.convert(f_of_rho);
+		return context.rho_to_z().convert(f_of_rho);
 	}
 
 	template <class Real>
@@ -133,10 +133,10 @@ namespace qboot
 	{
 		// calculate (1 + sgn r) ^ {-epsilon - 1 + 2 sgn S} as a function of r - rho
 		auto getFactor = [&context, &S](int sign) {
-			return algebra::power_function(Real(1) + sign * context.rho, Real(sign),
-			                               (2 * sign) * S - 1 - context.epsilon, context.lambda);
+			return algebra::power_function(Real(1) + sign * context.rho(), Real(sign),
+			                               (2 * sign) * S - 1 - context.epsilon(), context.lambda());
 		};
-		return context.rho_to_z.convert(mul(getFactor(1), getFactor(-1)));
+		return context.rho_to_z().convert(mul(getFactor(1), getFactor(-1)));
 	}
 }  // namespace qboot
 

@@ -68,7 +68,7 @@ namespace algebra
 		// indices are aligned by lexicographical order of (dy, dx)
 		// i.e., (dx, dy) is the index(dx, dy)-th element in
 		//   [(dx, dy) for dy in range(lambda // 2) for dx in range(lambda - 2 * dy) if sym is Mixed or dx % 2 == sym]
-		uint32_t index(uint32_t dx, uint32_t dy) const noexcept
+		[[nodiscard]] uint32_t index(uint32_t dx, uint32_t dy) const noexcept
 		{
 			switch (sym_)
 			{
@@ -235,7 +235,7 @@ namespace algebra
 		}
 		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
 		template <class Real>
-		ComplexFunction<evaluated_t<Ring>> eval(const Real& x) const
+		[[nodiscard]] ComplexFunction<evaluated_t<Ring>> eval(const Real& x) const
 		{
 			return ComplexFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
 		}

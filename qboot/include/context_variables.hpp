@@ -15,7 +15,7 @@
 
 namespace qboot2
 {
-	typedef struct _context
+	using cb_context = struct _context
 	{
 		uint32_t n_Max{};
 		mpfr_prec_t prec{};
@@ -23,11 +23,11 @@ namespace qboot2
 		uint32_t lambda{};
 		std::unique_ptr<mpfr_t[]> rho_to_z_matrix{};
 		mpfr_t rho;
-	} cb_context;
+	};
 
 	// basic constructor for cb_context
 	cb_context context_construct(uint32_t n_Max, mpfr_prec_t prec, uint32_t lambda);
-	void clear_cb_context(cb_context& context);
+	void clear_cb_context(cb_context* context);
 }  // namespace qboot2
 
 namespace qboot
@@ -54,31 +54,38 @@ namespace qboot
 	template <class Real = mpfr::real<1000, MPFR_RNDN>>
 	class Context
 	{
+		const uint32_t n_Max_, lambda_, dim_;
+		const Real epsilon_, rho_;
+		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
+		algebra::RealConverter<Real> rho_to_z_;
+
 	public:
+		[[nodiscard]] uint32_t n_Max() const { return n_Max_; }
+		[[nodiscard]] uint32_t lambda() const { return lambda_; }
+		[[nodiscard]] uint32_t dimension() const { return dim_; }
+		[[nodiscard]] const Real& epsilon() const { return epsilon_; }
+		[[nodiscard]] const Real& rho() const { return rho_; }
+		[[nodiscard]] const algebra::RealConverter<Real>& rho_to_z() const { return rho_to_z_; }
 		static constexpr mpfr_prec_t prec = Real::prec;
 		static constexpr mpfr_rnd_t rnd = Real::rnd;
-		const uint32_t n_Max, lambda, dimension;
-		const Real epsilon, rho;
-		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
-		algebra::RealConverter<Real> rho_to_z;
-		std::string str() const
+		[[nodiscard]] std::string str() const
 		{
 			std::ostringstream os;
-			os << "Context(nMax=" << n_Max << ", lambda=" << lambda << ", dim=" << dimension << ")";
+			os << "Context(nMax=" << n_Max_ << ", lambda=" << lambda_ << ", dim=" << dim_ << ")";
 			return os.str();
 		}
 		Context(uint32_t n_Max, uint32_t lambda, uint32_t dim)
-		    : n_Max(n_Max),
-		      lambda(lambda),
-		      dimension(dim),
-		      epsilon(Real(dim) / 2 - 1),
-		      rho(3 - mpfr::sqrt(Real(8))),
-		      rho_to_z(algebra::RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse())
+		    : n_Max_(n_Max),
+		      lambda_(lambda),
+		      dim_(dim),
+		      epsilon_(Real(dim) / 2 - 1),
+		      rho_(3 - mpfr::sqrt(Real(8))),
+		      rho_to_z_(algebra::RealConverter<Real>(z_as_func_rho<Real>(lambda)).inverse())
 		{
 			assert(dim >= 3 && dim % 2 == 1);
 		}
-		Context(Context&&) = default;
-		Context& operator=(Context&&) = default;
+		Context(Context&&) noexcept = default;
+		Context& operator=(Context&&) noexcept = default;
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 		~Context() = default;
@@ -87,63 +94,70 @@ namespace qboot
 		{
 			return Real(val);
 		}
-		Real unitary_bound(uint32_t spin) const { return spin == 0 ? epsilon : spin + 2 * epsilon; }
+		[[nodiscard]] Real unitary_bound(uint32_t spin) const { return spin == 0 ? epsilon_ : spin + 2 * epsilon_; }
 		// calculate v ^ d gBlock and project to sym-symmetric part
 		// F-type corresponds to sym = Odd, H-type to Even
-		algebra::ComplexFunction<Real> F_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock,
-		                                       algebra::FunctionSymmetry sym) const
+		[[nodiscard]] algebra::ComplexFunction<Real> F_block(const Real& d,
+		                                                     const algebra::ComplexFunction<Real>& gBlock,
+		                                                     algebra::FunctionSymmetry sym) const
 		{
-			return mul(algebra::v_to_d(d, lambda), gBlock).proj(sym);
+			return mul(algebra::v_to_d(d, lambda_), gBlock).proj(sym);
 		}
-		algebra::ComplexFunction<Real> evaluate(const ConformalBlock<Real>& block) const
+		[[nodiscard]] algebra::ComplexFunction<Real> evaluate(const ConformalBlock<Real>& block) const
 		{
 			return F_block(block.delta_half(), gBlock(block.get_op(), block.S(), block.P(), *this), block.symmetry());
 		}
-		algebra::ComplexFunction<Real> evaluate(const ConformalBlock<Real, GeneralPrimaryOperator<Real>>& block,
-		                                        const Real& delta) const
+		[[nodiscard]] algebra::ComplexFunction<Real> evaluate(
+		    const ConformalBlock<Real, GeneralPrimaryOperator<Real>>& block, const Real& delta) const
 		{
 			return F_block(block.delta_half(), gBlock(block.get_op(delta), block.S(), block.P(), *this),
 			               block.symmetry());
 		}
-		algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
-		                                       const Real& d3, const Real& d4, algebra::FunctionSymmetry sym) const
+		[[nodiscard]] algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1,
+		                                                     const Real& d2, const Real& d3, const Real& d4,
+		                                                     algebra::FunctionSymmetry sym) const
 		{
 			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4, *this), sym);
 		}
-		algebra::ComplexFunction<Real> F_block(const Real& d2, const Real& d3,
-		                                       const algebra::ComplexFunction<Real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<Real> F_block(const Real& d2, const Real& d3,
+		                                                     const algebra::ComplexFunction<Real>& gBlock) const
 		{
 			return F_block((d2 + d3) / 2, gBlock);
 		}
-		algebra::ComplexFunction<Real> F_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<Real> F_block(const Real& d,
+		                                                     const algebra::ComplexFunction<Real>& gBlock) const
 		{
 			return F_block(d, gBlock, algebra::FunctionSymmetry::Odd);
 		}
-		algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
-		                                       const Real& d3, const Real& d4) const
+		[[nodiscard]] algebra::ComplexFunction<Real> F_block(const PrimaryOperator<Real>& op, const Real& d1,
+		                                                     const Real& d2, const Real& d3, const Real& d4) const
 		{
 			return F_block(op, d1, d2, d3, d4, algebra::FunctionSymmetry::Odd);
 		}
-		algebra::ComplexFunction<Real> H_block(const Real& d2, const Real& d3,
-		                                       const algebra::ComplexFunction<Real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<Real> H_block(const Real& d2, const Real& d3,
+		                                                     const algebra::ComplexFunction<Real>& gBlock) const
 		{
 			return H_block((d2 + d3) / 2, gBlock);
 		}
-		algebra::ComplexFunction<Real> H_block(const Real& d, const algebra::ComplexFunction<Real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<Real> H_block(const Real& d,
+		                                                     const algebra::ComplexFunction<Real>& gBlock) const
 		{
 			return F_block(d, gBlock, algebra::FunctionSymmetry::Even);
 		}
-		algebra::ComplexFunction<Real> H_block(const PrimaryOperator<Real>& op, const Real& d1, const Real& d2,
-		                                       const Real& d3, const Real& d4) const
+		[[nodiscard]] algebra::ComplexFunction<Real> H_block(const PrimaryOperator<Real>& op, const Real& d1,
+		                                                     const Real& d2, const Real& d3, const Real& d4) const
 		{
 			return F_block(op, d1, d2, d3, d4, algebra::FunctionSymmetry::Even);
 		}
-		algebra::RealFunction<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op, const Real& S,
-		                                          const Real& P) const
+		[[nodiscard]] algebra::RealFunction<Real> h_times_rho_k(uint32_t k, const PrimaryOperator<Real>& op,
+		                                                        const Real& S, const Real& P) const
 		{
 			return hBlock_powered(Real(k), op, S, P, *this);
 		}
-		algebra::RealFunction<Real> h_asymptotic_form(const Real& S) const { return h_asymptotic(S, *this); }
+		[[nodiscard]] algebra::RealFunction<Real> h_asymptotic_form(const Real& S) const
+		{
+			return h_asymptotic(S, *this);
+		}
 		// recover off-diagonal derivatives of conformal block from the diagonal derivatives.
 		// use recursion relation of eq (2.17) in arXiv:1602.02810 (generalized ver. of eq (C.1) in arXiv:1203.6064).
 		// note:
@@ -157,29 +171,29 @@ namespace qboot
 		                                                   const PrimaryOperator<Real>& op, const Real& S,
 		                                                   const Real& P) const
 		{
-			assert(realAxisResult.lambda() == lambda);
-			algebra::ComplexFunction<Real> f(lambda);
-			for (uint32_t m = 0; m <= lambda; ++m) f.at(m, 0u).swap(realAxisResult.at(m));
+			assert(realAxisResult.lambda() == lambda_);
+			algebra::ComplexFunction<Real> f(lambda_);
+			for (uint32_t m = 0; m <= lambda_; ++m) f.at(m, 0u).swap(realAxisResult.at(m));
 
 			Real val{}, term{}, quad_casimir = op.quadratic_casimir();
 
-			for (int32_t n = 1; uint32_t(n) <= lambda / 2; ++n)
+			for (int32_t n = 1; uint32_t(n) <= lambda_ / 2; ++n)
 			{
 				// multiply n (4 epsilon + 4 n - 2) and divide
-				Real common_factor = (4 * n) * epsilon + (4 * n - 2) * n;
-				for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda; ++m)
+				Real common_factor = (4 * n) * epsilon_ + (4 * n - 2) * n;
+				for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda_; ++m)
 				{
 					// h[m + 2, n - 1]
 					val = (-(m + 1) * (m + 2)) * f.at(uint32_t(m + 2), uint32_t(n - 1));
 
 					// h[m + 1, n - 1]
-					term = 2 * (epsilon + S) - (m + 4 * n - 6);
+					term = 2 * (epsilon_ + S) - (m + 4 * n - 6);
 					term *= 2 * (m + 1);
 					term *= f.at(uint32_t(m + 1), uint32_t(n - 1));
 					val += term;
 
 					// h[m, n - 1]
-					term = epsilon * (4 * (m + n - 1));
+					term = epsilon_ * (4 * (m + n - 1));
 					term += m * (m + 8 * n - 5) + n * (4 * n - 2) - 2;
 					term += 2 * P;
 					term += S * (8 * n + 4 * m - 8);
@@ -191,7 +205,7 @@ namespace qboot
 					// h[m - 1, n - 1]
 					if (m >= 1)
 					{
-						term = epsilon * (2 * (m + 1 - 2 * n));
+						term = epsilon_ * (2 * (m + 1 - 2 * n));
 						term += m * (m + 12 * n - 13) + n * (12 * n - 34) + 22;
 						term += 2 * P;
 						term += S * (8 * n + 2 * m - 10);
@@ -203,7 +217,7 @@ namespace qboot
 					// h[m + 1, n - 2] and h[m + 2, n - 2]
 					if (n >= 2)
 					{
-						term = -2 * epsilon;
+						term = -2 * epsilon_;
 						term += 3 * m + 4 * n - 6;
 						term += 2 * S;
 						term *= 8 * (m + 1);

@@ -28,14 +28,14 @@ namespace qboot2
 		return result;
 	}
 
-	void clear_cb_context(cb_context& context)
+	void clear_cb_context(cb_context* context)
 	{
-		for (uint32_t i = 0; i <= context.lambda; ++i)
+		for (uint32_t i = 0; i <= context->lambda; ++i)
 		{
-			for (uint32_t j = 0; j <= context.lambda; ++j)
-			{ mpfr_clear(context.rho_to_z_matrix[i * (context.lambda + 1) + j]); }
+			for (uint32_t j = 0; j <= context->lambda; ++j)
+			{ mpfr_clear(context->rho_to_z_matrix[i * (context->lambda + 1) + j]); }
 		}
-		mpfr_clear(context.rho);
+		mpfr_clear(context->rho);
 	}
 
 	unique_ptr<mpfr_t[]> compute_rho_to_z_matrix(uint32_t Lambda_arg, mpfr_prec_t prec)
@@ -124,8 +124,8 @@ namespace qboot2
 
 		array<array<mpfr_t, 5>, 8> recCoeffs{};
 
-		initialize_spin_nonzero_coeffs_folder(recCoeffs, prec);
-		set_nonzero_spin_rec_coeffs(recCoeffs, epsilon, ell, Delta, S, P, prec, rnd);
+		initialize_spin_nonzero_coeffs_folder(&recCoeffs, prec);
+		set_nonzero_spin_rec_coeffs(&recCoeffs, epsilon, ell, Delta, S, P, prec, rnd);
 
 		array<mpfr_t, 8> as{};
 
@@ -133,12 +133,12 @@ namespace qboot2
 		for (uint32_t i = 1; i <= 7; ++i)
 		{
 			mpfr_set_si(temp, 0, rnd);
-			spin_nonzero_evaluate_at_n(as, recCoeffs, int32_t(i), rnd);
+			spin_nonzero_evaluate_at_n(&as, &recCoeffs, int32_t(i), rnd);
 			if (mpfr_cmp_ui(as[0], 0) == 0)
 			{
 				for (uint32_t k = 0; k < i; ++k) { mpfr_clear(result[k]); }
 				mpfr_clear(temp);
-				deallocate_spin_nonzero_coeffs_folder(recCoeffs);
+				deallocate_spin_nonzero_coeffs_folder(&recCoeffs);
 
 				mpfr_t shiftedDelta;
 				mpfr_init2(shiftedDelta, prec);
@@ -188,12 +188,12 @@ namespace qboot2
 		for (uint32_t i = 8; i <= nMax; ++i)
 		{
 			mpfr_set_si(temp, 0, rnd);
-			spin_nonzero_evaluate_at_n(as, recCoeffs, int32_t(i), rnd);
+			spin_nonzero_evaluate_at_n(&as, &recCoeffs, int32_t(i), rnd);
 			if (mpfr_cmp_ui(as[0], 0) == 0)
 			{
 				for (uint32_t k = 0; k < i; ++k) { mpfr_clear(result[k]); }
 				mpfr_clear(temp);
-				deallocate_spin_nonzero_coeffs_folder(recCoeffs);
+				deallocate_spin_nonzero_coeffs_folder(&recCoeffs);
 
 				mpfr_t shiftedDelta;
 				mpfr_init2(shiftedDelta, prec);
@@ -248,7 +248,7 @@ namespace qboot2
 		return result;
 	}
 
-	unique_ptr<mpfr_t[]> recursionSpinZeroVector(uint32_t nMax, const mpfr_t& epsilon, mpfr_t& Delta, const mpfr_t& S,
+	unique_ptr<mpfr_t[]> recursionSpinZeroVector(uint32_t nMax, const mpfr_t& epsilon, mpfr_t* Delta, const mpfr_t& S,
 	                                             const mpfr_t& P, mpfr_prec_t prec, mpfr_rnd_t rnd)
 	{
 		if (nMax <= 5)
@@ -273,39 +273,39 @@ namespace qboot2
 
 		array<array<mpfr_t, 4>, 6> recCoeffs{};
 
-		initialize_spin_zero_coeffs_folder(recCoeffs, prec);
+		initialize_spin_zero_coeffs_folder(&recCoeffs, prec);
 
-		set_zero_spin_rec_coeffs(recCoeffs, epsilon, Delta, S, P, prec, rnd);
+		set_zero_spin_rec_coeffs(&recCoeffs, epsilon, *Delta, S, P, prec, rnd);
 		array<mpfr_t, 6> as{};
 		for (uint32_t i = 0; i <= 5; ++i) { mpfr_init2(as.at(i), prec); }
 		for (uint32_t i = 1; i <= 5; ++i)
 		{
 			mpfr_set_si(temp, 0, rnd);
-			spin_zero_evaluate_at_n(as, recCoeffs, int32_t(i), rnd);
+			spin_zero_evaluate_at_n(&as, &recCoeffs, int32_t(i), rnd);
 			if (mpfr_cmp_ui(as[0], 0) == 0)
 			{
 				for (uint32_t k = 0; k < i; ++k) { mpfr_clear(result[k]); }
 
 				mpfr_clear(temp);
-				deallocate_spin_zero_coeffs_folder(recCoeffs);
+				deallocate_spin_zero_coeffs_folder(&recCoeffs);
 
 				mpfr_t shiftedDelta;
 				mpfr_init2(shiftedDelta, prec);
-				if (mpfr_cmp_ui(Delta, 0) == 0) { mpfr_set(Delta, smallNumber, rnd); }
+				if (mpfr_cmp_ui(*Delta, 0) == 0) { mpfr_set(*Delta, smallNumber, rnd); }
 				else
 				{
 					mpfr_add_ui(temp2, smallNumber, 1, rnd);
-					mpfr_mul(shiftedDelta, Delta, temp2, rnd);
+					mpfr_mul(shiftedDelta, *Delta, temp2, rnd);
 				}
-				result = recursionSpinZeroVector(nMax, epsilon, shiftedDelta, S, P, prec, rnd);
-				if (mpfr_cmp_ui(Delta, 0) == 0) { mpfr_ui_sub(Delta, 0, smallNumber, rnd); }
+				result = recursionSpinZeroVector(nMax, epsilon, &shiftedDelta, S, P, prec, rnd);
+				if (mpfr_cmp_ui(*Delta, 0) == 0) { mpfr_ui_sub(*Delta, 0, smallNumber, rnd); }
 				else
 				{
 					mpfr_ui_sub(temp2, 1, smallNumber, rnd);
-					mpfr_mul(shiftedDelta, Delta, temp2, rnd);
+					mpfr_mul(shiftedDelta, *Delta, temp2, rnd);
 				}
 
-				auto result2 = recursionSpinZeroVector(nMax, epsilon, shiftedDelta, S, P, prec, rnd);
+				auto result2 = recursionSpinZeroVector(nMax, epsilon, &shiftedDelta, S, P, prec, rnd);
 
 				for (uint32_t k = 0; k <= nMax; ++k)
 				{
@@ -333,31 +333,31 @@ namespace qboot2
 		for (uint32_t i = 6; i <= nMax; ++i)
 		{
 			mpfr_set_si(temp, 0, rnd);
-			spin_zero_evaluate_at_n(as, recCoeffs, int32_t(i), rnd);
+			spin_zero_evaluate_at_n(&as, &recCoeffs, int32_t(i), rnd);
 			if (mpfr_cmp_ui(as[0], 0) == 0)
 			{
 				for (uint32_t k = 0; k < i; ++k) { mpfr_clear(result[k]); }
 
 				mpfr_clear(temp);
-				deallocate_spin_zero_coeffs_folder(recCoeffs);
+				deallocate_spin_zero_coeffs_folder(&recCoeffs);
 
 				mpfr_t shiftedDelta;
 				mpfr_init2(shiftedDelta, prec);
-				if (mpfr_cmp_ui(Delta, 0) == 0) { mpfr_set(Delta, smallNumber, rnd); }
+				if (mpfr_cmp_ui(*Delta, 0) == 0) { mpfr_set(*Delta, smallNumber, rnd); }
 				else
 				{
 					mpfr_add_ui(temp2, smallNumber, 1, rnd);
-					mpfr_mul(shiftedDelta, Delta, temp2, rnd);
+					mpfr_mul(shiftedDelta, *Delta, temp2, rnd);
 				}
-				result = recursionSpinZeroVector(nMax, epsilon, shiftedDelta, S, P, prec, rnd);
-				if (mpfr_cmp_ui(Delta, 0) == 0) { mpfr_ui_sub(Delta, 0, smallNumber, rnd); }
+				result = recursionSpinZeroVector(nMax, epsilon, &shiftedDelta, S, P, prec, rnd);
+				if (mpfr_cmp_ui(*Delta, 0) == 0) { mpfr_ui_sub(*Delta, 0, smallNumber, rnd); }
 				else
 				{
 					mpfr_ui_sub(temp2, 1, smallNumber, rnd);
-					mpfr_mul(shiftedDelta, Delta, temp2, rnd);
+					mpfr_mul(shiftedDelta, *Delta, temp2, rnd);
 				}
 
-				auto result2 = recursionSpinZeroVector(nMax, epsilon, shiftedDelta, S, P, prec, rnd);
+				auto result2 = recursionSpinZeroVector(nMax, epsilon, &shiftedDelta, S, P, prec, rnd);
 
 				for (uint32_t k = 0; k <= nMax; ++k)
 				{
@@ -393,7 +393,7 @@ namespace qboot2
 		return result;
 	}
 
-	unique_ptr<mpfr_t[]> real_axis_result(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t& Delta, const mpfr_t& S,
+	unique_ptr<mpfr_t[]> real_axis_result(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta, const mpfr_t& S,
 	                                      const mpfr_t& P, const cb_context& context)
 	{
 		unique_ptr<mpfr_t[]> hBlock;
@@ -401,7 +401,7 @@ namespace qboot2
 		{ hBlock = recursionSpinZeroVector(context.n_Max, epsilon, Delta, S, P, context.prec, context.rnd); }
 		else
 		{
-			hBlock = recursionNonZeroVector(context.n_Max, epsilon, ell, Delta, S, P, context.prec, context.rnd);
+			hBlock = recursionNonZeroVector(context.n_Max, epsilon, ell, *Delta, S, P, context.prec, context.rnd);
 		}
 		auto result_in_rho = make_unique<mpfr_t[]>(context.lambda + 1);
 		mpfr_t temp1;
@@ -414,7 +414,7 @@ namespace qboot2
 		mpfr_init2(result_in_rho[0], context.prec);
 		mpfr_set_si(result_in_rho[0], 0, context.rnd);
 		mpfr_mul_ui(temp1, context.rho, 4, context.rnd);
-		mpfr_pow(temp1, temp1, Delta, context.rnd);
+		mpfr_pow(temp1, temp1, *Delta, context.rnd);
 
 		for (uint32_t j = 0; j <= context.n_Max; ++j)
 		{
@@ -428,7 +428,7 @@ namespace qboot2
 			mpfr_set_si(result_in_rho[i], 0, context.rnd);
 			for (uint32_t j = 0; j <= context.n_Max; ++j)
 			{
-				mpfr_add_si(temp1, Delta, int32_t(j) - int32_t(i) + 1, context.rnd);
+				mpfr_add_si(temp1, *Delta, int32_t(j) - int32_t(i) + 1, context.rnd);
 				mpfr_mul(hBlock[j], hBlock[j], temp1, context.rnd);
 				mpfr_add(result_in_rho[i], result_in_rho[i], hBlock[j], context.rnd);
 			}
@@ -465,16 +465,16 @@ namespace qboot2
 		return uint32_t((int32_t(context.lambda) + 2 - n) * n + m);
 	}
 
-	void element_helper(const cb_context& context, const unique_ptr<mpfr_t[]>& array, mpfr_t& r, int32_t m, int32_t n)
+	void element_helper(const cb_context& context, const unique_ptr<mpfr_t[]>& array, mpfr_t* r, int32_t m, int32_t n)
 	{
 		if (m >= 0 && n >= 0)
 		{
 			auto j = indexOfConformalBlock(context, m, n);
-			mpfr_set(r, *(array.get() + j), MPFR_RNDN);
+			mpfr_set(*r, *(array.get() + j), MPFR_RNDN);
 		}
 		else
 		{
-			mpfr_set_zero(r, 1);
+			mpfr_set_zero(*r, 1);
 		}
 	}
 
@@ -520,13 +520,13 @@ namespace qboot2
 				mpfr_init2(result[indexOfConformalBlock(context, i, j)], context.prec);
 				mpfr_set_zero(temp1, 1);
 
-				element_helper(context, result, r, i, j - 2);
+				element_helper(context, result, &r, i, j - 2);
 				mpfr_mul_ui(temp2, r, 4, MPFR_RNDN);
-				element_helper(context, result, r, i, j - 3);
+				element_helper(context, result, &r, i, j - 3);
 				mpfr_mul_ui(temp3, r, 8, MPFR_RNDN);
 				mpfr_add(temp2, temp2, temp3, MPFR_RNDN);
 
-				element_helper(context, result, r, i, j - 1);
+				element_helper(context, result, &r, i, j - 1);
 				mpfr_mul_ui(temp3, r, 2, MPFR_RNDN);
 				mpfr_sub(temp2, temp2, temp3, MPFR_RNDN);
 
@@ -536,7 +536,7 @@ namespace qboot2
 				mpfr_mul(temp2, temp2, temp3, MPFR_RNDN);
 				mpfr_add(temp1, temp1, temp2, MPFR_RNDN);
 
-				element_helper(context, result, r, i - 1, j + 2);
+				element_helper(context, result, &r, i - 1, j + 2);
 				mpfr_mul_si(temp2, r, -(j + 2) * (j + 1), MPFR_RNDN);
 				mpfr_div_ui(temp2, temp2, uint32_t(i), MPFR_RNDN);
 				mpfr_add(temp1, temp1, temp2, MPFR_RNDN);
@@ -547,7 +547,7 @@ namespace qboot2
 				mpfr_mul_ui(temp3, S, 2, MPFR_RNDN);
 				mpfr_add(temp2, temp2, temp3, MPFR_RNDN);
 
-				element_helper(context, result, r, i - 1, j + 1);
+				element_helper(context, result, &r, i - 1, j + 1);
 				mpfr_mul(temp2, temp2, r, MPFR_RNDN);
 				mpfr_mul_si(temp2, temp2, 2 * (j + 1), MPFR_RNDN);
 				mpfr_div_ui(temp2, temp2, uint32_t(i), MPFR_RNDN);
@@ -563,7 +563,7 @@ namespace qboot2
 
 				mpfr_mul_ui(temp3, Casimir, 2, MPFR_RNDN);
 				mpfr_add(temp2, temp2, temp3, MPFR_RNDN);
-				element_helper(context, result, r, i - 1, j);
+				element_helper(context, result, &r, i - 1, j);
 				mpfr_mul(temp2, temp2, r, MPFR_RNDN);
 				mpfr_mul_ui(temp2, temp2, 4, MPFR_RNDN);
 				mpfr_div_ui(temp2, temp2, uint32_t(i), MPFR_RNDN);
@@ -577,7 +577,7 @@ namespace qboot2
 				mpfr_mul_si(temp3, S, 8 * i + 2 * j - 10, MPFR_RNDN);
 				mpfr_add(temp2, temp2, temp3, MPFR_RNDN);
 
-				element_helper(context, result, r, i - 1, j - 1);
+				element_helper(context, result, &r, i - 1, j - 1);
 				mpfr_mul(temp2, temp2, r, MPFR_RNDN);
 				mpfr_mul_ui(temp2, temp2, 8, MPFR_RNDN);
 				mpfr_div_ui(temp2, temp2, uint32_t(i), MPFR_RNDN);
@@ -589,11 +589,11 @@ namespace qboot2
 				mpfr_mul_si(temp3, S, -2, MPFR_RNDN);
 				mpfr_add(temp2, temp2, temp3, MPFR_RNDN);
 
-				element_helper(context, result, r, i - 2, j + 1);
+				element_helper(context, result, &r, i - 2, j + 1);
 				mpfr_mul(temp2, temp2, r, MPFR_RNDN);
 				mpfr_mul_ui(temp2, temp2, uint32_t(8 * (j + 1)), MPFR_RNDN);
 
-				element_helper(context, result, r, i - 2, j + 2);
+				element_helper(context, result, &r, i - 2, j + 2);
 				mpfr_mul_ui(temp3, r, uint32_t(4 * (j + 1) * (j + 2)), MPFR_RNDN);
 				mpfr_sub(temp2, temp3, temp2, MPFR_RNDN);
 				mpfr_div_ui(temp2, temp2, uint32_t(i), MPFR_RNDN);
@@ -611,16 +611,16 @@ namespace qboot2
 		return result;
 	}
 
-	unique_ptr<mpfr_t[]> gBlock_full(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t& Delta, const mpfr_t& S,
+	unique_ptr<mpfr_t[]> gBlock_full(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta, const mpfr_t& S,
 	                                 const mpfr_t& P, const cb_context& context)
 	{
 		auto realAxisResult = real_axis_result(epsilon, ell, Delta, S, P, context);
-		auto result = casimirExpander(realAxisResult, epsilon, ell, Delta, S, P, context);
+		auto result = casimirExpander(realAxisResult, epsilon, ell, *Delta, S, P, context);
 		for (uint32_t j = 0; j <= context.lambda; ++j) { mpfr_clear(realAxisResult[j]); }
 		return result;
 	}
 
-	unique_ptr<mpfr_t[]> hBlock_times_rho_n(uint32_t n, const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t& Delta,
+	unique_ptr<mpfr_t[]> hBlock_times_rho_n(uint32_t n, const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta,
 	                                        const mpfr_t& S, const mpfr_t& P, const cb_context& context)
 	{
 		unique_ptr<mpfr_t[]> hBlock;
@@ -628,7 +628,7 @@ namespace qboot2
 		{ hBlock = recursionSpinZeroVector(context.n_Max, epsilon, Delta, S, P, context.prec, context.rnd); }
 		else
 		{
-			hBlock = recursionNonZeroVector(context.n_Max, epsilon, ell, Delta, S, P, context.prec, context.rnd);
+			hBlock = recursionNonZeroVector(context.n_Max, epsilon, ell, *Delta, S, P, context.prec, context.rnd);
 		}
 		auto result_in_rho = make_unique<mpfr_t[]>(context.lambda + 1);
 		mpfr_t temp1;

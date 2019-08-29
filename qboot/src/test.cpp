@@ -12,7 +12,6 @@
 #include "primary_op.hpp"
 #include "real.hpp"
 #include "real_function.hpp"
-#include "real_io.hpp"
 
 using R = mpfr::real<1000, MPFR_RNDN>;
 using algebra::Polynomial, algebra::Vector, algebra::Matrix;

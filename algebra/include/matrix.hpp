@@ -9,8 +9,7 @@
 #include <type_traits>       // for true_type, false_type, is_same_v, enable_if, void_t
 #include <utility>           // for move, swap
 
-#include "real.hpp"     // for real, abs, mpfr_prec_t, mpfr_rnd_t
-#include "real_io.hpp"  // for operator<<
+#include "real.hpp"  // for real, abs, mpfr_prec_t, mpfr_rnd_t
 
 namespace algebra
 {

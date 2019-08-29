@@ -20,7 +20,6 @@
 #include "primary_op.hpp"
 #include "real.hpp"
 #include "real_function.hpp"
-#include "real_io.hpp"
 #include "sdpb_input.hpp"
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
@@ -105,7 +104,7 @@ void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34, const R& 
 	auto p = qboot::hBlock_shifted<R>(op, S, P, nMax);
 	auto q_ptr =
 	    op.spin() == 0
-	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, delta._x, S._x, P._x, 1000, MPFR_RNDN)
+	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, &delta._x, S._x, P._x, 1000, MPFR_RNDN)
 	        : qboot2::recursionNonZeroVector(nMax, op.epsilon()._x, ell._x, delta._x, S._x, P._x, 1000, MPFR_RNDN);
 	auto q = to_func(q_ptr, p.lambda());
 	check(p, q, very_small, [&]() {
@@ -118,7 +117,7 @@ void test_real(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, 
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
 	auto p = qboot::gBlock_real<R>(op, S, P, c);
-	auto q_ptr = qboot2::real_axis_result(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb);
+	auto q_ptr = qboot2::real_axis_result(op.epsilon()._x, ell._x, &delta._x, S._x, P._x, cb);
 	auto q = to_func(q_ptr, p.lambda());
 	check(p, q, very_small, [&]() {
 		cout << "test_real(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")"
@@ -131,7 +130,7 @@ void test_g(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, con
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
 	auto p = gBlock<R>(op, S, P, c);
-	auto q_ptr = qboot2::gBlock_full(op.epsilon()._x, ell._x, delta._x, S._x, P._x, cb);
+	auto q_ptr = qboot2::gBlock_full(op.epsilon()._x, ell._x, &delta._x, S._x, P._x, cb);
 	auto q = to_hol(q_ptr, cb.lambda);
 	check(p, q, very_small, [&]() {
 		cout << "test_g(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")" << endl;
@@ -141,7 +140,7 @@ void test_g(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, con
 void test_op(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
              const R& very_small)
 {
-	test_rec(c.n_Max, op, d12, d34, very_small);
+	test_rec(c.n_Max(), op, d12, d34, very_small);
 	test_real(c, cb, op, d12, d34, very_small);
 	test_g(c, cb, op, d12, d34, very_small);
 }
@@ -150,7 +149,7 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, 
 {
 	R a = -d12 / 2, b = d34 / 2, S = a + b;
 	auto p = h_asymptotic(S, cb1);
-	auto q_ptr = qboot2::h_asymptotic(cb1.epsilon._x, S._x, cb2);
+	auto q_ptr = qboot2::h_asymptotic(cb1.epsilon()._x, S._x, cb2);
 	auto q = to_func(q_ptr, p.lambda());
 	check(p, q, very_small,
 	      [&]() { cout << "test_h(cb1=" << cb1.str() << ", cb2, d12=" << d12 << ", d34=" << d34 << ")" << endl; });
@@ -161,7 +160,7 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 	for (uint32_t spin = 0; spin <= maxspin; spin += 2)
 	{
 		R gap = spin == 0 ? de : c.unitary_bound(spin);
-		auto op = GOp(spin, c.epsilon);
+		auto op = GOp(spin, c.epsilon());
 		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
 		RationalApproxData<R> ag(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
 		auto sp = ag.sample_points();
@@ -206,18 +205,16 @@ int main()
 	constexpr uint32_t n_Max = 100, lambda = 5, dim_ = 3, maxdim = 10, maxspin = 10;
 	[[maybe_unused]] constexpr uint32_t numax = 5;
 	R very_small = R("2e-591");
-	map<uint32_t, optional<Context<R>>> cs;
-	for (uint32_t dim = 3; dim <= maxdim; dim += 2) cs.emplace(dim, Context<R>(n_Max, lambda, dim));
 	R d12 = mpfr::sqrt(R(3)), d34 = mpfr::sqrt(R(5)) - 1;
 	R S = (d34 - d12) / 2, P = -d12 * d34 / 2, d23h = R(0.7);
 	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);
 	{
-		const auto& c = cs[dim_].value();
+		Context<R> c(n_Max, lambda, dim_);
 		R d_s = R(0.5181475), d_e = R(1.412617);
 		for (uint32_t spin = 0; spin <= 2; ++spin)
 		{
 			R gap = R(spin == 0 ? 3 : spin + 1);
-			auto op = GOp(spin, c.epsilon);
+			auto op = GOp(spin, c.epsilon());
 			auto block = GBlock(op, d_s, d_e, d_s, d_e, FunctionSymmetry::Odd);
 			cout << "block = " << block.str() << endl;
 			RationalApproxData<R> ag(numax, spin, c, d_s, d_e, d_s, d_e);
@@ -243,15 +240,15 @@ int main()
 	}
 	for (uint32_t dim = 3; dim <= maxdim; dim += 2)
 	{
-		const auto& c = cs[dim].value();
+		Context<R> c(n_Max, lambda, dim);
 		for (uint32_t spin = 0; spin <= maxspin; ++spin)
 		{
-			test_op(c, c2, Op(c.unitary_bound(spin) + mpfr::sqrt(R(2)), spin, c.epsilon), d12, d34, very_small);
-			test_op(c, c2, Op(c.unitary_bound(spin), spin, c.epsilon), d12, d34, very_small);
+			test_op(c, c2, Op(c.unitary_bound(spin) + mpfr::sqrt(R(2)), spin, c.epsilon()), d12, d34, very_small);
+			test_op(c, c2, Op(c.unitary_bound(spin), spin, c.epsilon()), d12, d34, very_small);
 		}
-		test_op(c, c2, Op(c.unitary_bound(0) + R("0.5"), 0, c.epsilon), d12, d34, very_small);
+		test_op(c, c2, Op(c.unitary_bound(0) + R("0.5"), 0, c.epsilon()), d12, d34, very_small);
 		test_h(c, c2, d12, d34, very_small);
 	}
-	qboot2::clear_cb_context(c2);
+	qboot2::clear_cb_context(&c2);
 	return 0;
 }

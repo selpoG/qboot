@@ -58,8 +58,8 @@ namespace qboot
 
 	public:
 		GeneralPrimaryOperator(uint32_t spin, const Real& epsilon) : epsilon_(epsilon), spin_(spin) {}
-		uint32_t spin() const { return spin_; }
-		const Real& epsilon() const { return epsilon_; }
+		[[nodiscard]] uint32_t spin() const { return spin_; }
+		[[nodiscard]] const Real& epsilon() const { return epsilon_; }
 		[[nodiscard]] PrimaryOperator<Real> fix_delta(const Real& delta) const
 		{
 			return PrimaryOperator<Real>(delta, spin_, epsilon_);
@@ -74,7 +74,7 @@ namespace qboot
 	template <class T>
 	struct is_primary_operator;
 	template <class T>
-	constexpr bool is_primary_operator_v = is_primary_operator<T>::value;
+	inline constexpr bool is_primary_operator_v = is_primary_operator<T>::value;
 	template <class Real>
 	struct is_primary_operator<PrimaryOperator<Real>> : std::true_type
 	{

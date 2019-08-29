@@ -110,7 +110,7 @@ namespace algebra
 		}
 		friend bool operator!=(const RealFunction& x, const RealFunction& y) { return !(x == y); }
 		template <class Real>
-		RealFunction<evaluated_t<Ring>> eval(const Real& x) const
+		[[nodiscard]] RealFunction<evaluated_t<Ring>> eval(const Real& x) const
 		{
 			return RealFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_);
 		}
@@ -166,7 +166,7 @@ namespace algebra
 	public:
 		// x = func(y)
 		// this converts a functino of x to a function of y
-		RealConverter(const RealFunction<Ring>& func)
+		explicit RealConverter(const RealFunction<Ring>& func)
 		    : lambda_(func.lambda()), mat_(func.lambda() + 1, func.lambda() + 1)
 		{
 			// assert(func.at(0).iszero());
@@ -178,7 +178,7 @@ namespace algebra
 				pf = mul(pf, func);
 			}
 		}
-		RealConverter inverse() const
+		[[nodiscard]] RealConverter inverse() const
 		{
 			auto invmat = mat_.clone();
 			invmat.transpose();
@@ -189,12 +189,12 @@ namespace algebra
 		}
 		// convert a function f of x to a function of y where x = func(y)
 		template <class R>
-		RealFunction<R> convert(const RealFunction<R>& f) const
+		[[nodiscard]] RealFunction<R> convert(const RealFunction<R>& f) const
 		{
 			assert(lambda_ == f.lambda());
 			return RealFunction<R>(dot(f.coeffs_, mat_));
 		}
-		const Matrix<Ring>& matrix() const { return mat_; }
+		[[nodiscard]] const Matrix<Ring>& matrix() const { return mat_; }
 	};
 	// real function multiplied by x ^ {pow} of x at x = 0
 	// take derivatives (der x) ^ k upto k <= lambda
@@ -208,8 +208,8 @@ namespace algebra
 
 	public:
 		RealFunctionWithPower(const RealFunction<Ring>& f, const Ring& p) : f_(f.clone()), pow_(p) {}
-		const RealFunction<Ring>& func() const { return f_; }
-		const Ring& power() const { return pow_; }
+		[[nodiscard]] const RealFunction<Ring>& func() const { return f_; }
+		[[nodiscard]] const Ring& power() const { return pow_; }
 		// take derivative
 		void derivate()
 		{
@@ -221,7 +221,7 @@ namespace algebra
 			f_.swap(f.f_);
 			pow_.swap(f.pow_);
 		}
-		RealFunctionWithPower clone() const { return RealFunctionWithPower(f_, pow_); }
+		[[nodiscard]] RealFunctionWithPower clone() const { return RealFunctionWithPower(f_, pow_); }
 		// evaluate at x = x
 		template <class R>
 		[[nodiscard]] Ring approximate(const R& x) const

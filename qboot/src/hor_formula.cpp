@@ -3,36 +3,36 @@ using std::array;
 
 namespace qboot2
 {
-	void initialize_spin_nonzero_coeffs_folder(array<array<mpfr_t, 5>, 8>& a, mpfr_prec_t prec)
+	void initialize_spin_nonzero_coeffs_folder(array<array<mpfr_t, 5>, 8>* a, mpfr_prec_t prec)
 	{
 		for (uint32_t i = 0; i <= 7; ++i)
 		{
-			for (uint32_t j = 0; j <= 4; ++j) { mpfr_init2(a.at(i).at(j), prec); }
+			for (uint32_t j = 0; j <= 4; ++j) { mpfr_init2(a->at(i).at(j), prec); }
 		}
 	}
 
-	void deallocate_spin_nonzero_coeffs_folder(array<array<mpfr_t, 5>, 8>& a)
+	void deallocate_spin_nonzero_coeffs_folder(array<array<mpfr_t, 5>, 8>* a)
 	{
 		for (uint32_t i = 0; i <= 7; ++i)
 		{
-			for (uint32_t j = 0; j <= 4; ++j) { mpfr_clear(a.at(i).at(j)); }
+			for (uint32_t j = 0; j <= 4; ++j) { mpfr_clear(a->at(i).at(j)); }
 		}
 	}
 
-	void spin_nonzero_evaluate_at_n(array<mpfr_t, 8>& a, array<array<mpfr_t, 5>, 8>& rho, int32_t n, mpfr_rnd_t rnd)
+	void spin_nonzero_evaluate_at_n(array<mpfr_t, 8>* a, array<array<mpfr_t, 5>, 8>* rho, int32_t n, mpfr_rnd_t rnd)
 	{
 		for (uint32_t i = 0; i <= 7; ++i)
 		{
-			mpfr_set(a.at(i), rho.at(i).at(4), rnd);
+			mpfr_set(a->at(i), rho->at(i).at(4), rnd);
 			for (uint32_t j = 0; j <= 3; ++j)
 			{
-				mpfr_mul_si(a.at(i), a.at(i), n, rnd);
-				mpfr_add(a.at(i), a.at(i), rho.at(i).at(3 - j), rnd);
+				mpfr_mul_si(a->at(i), a->at(i), n, rnd);
+				mpfr_add(a->at(i), a->at(i), rho->at(i).at(3 - j), rnd);
 			}
 		}
 	}
 
-	void set_nonzero_spin_rec_coeffs(array<array<mpfr_t, 5>, 8>& a, const mpfr_t& epsilon, const mpfr_t& ell,
+	void set_nonzero_spin_rec_coeffs(array<array<mpfr_t, 5>, 8>* a, const mpfr_t& epsilon, const mpfr_t& ell,  // NOLINT
 	                                 const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P, mpfr_prec_t prec,
 	                                 mpfr_rnd_t rnd)
 	{
@@ -46,7 +46,7 @@ namespace qboot2
 		mpfr_init2(_t_3, prec);
 		mpfr_t _t_4;
 		mpfr_init2(_t_4, prec);
-		mpfr_set_si(a[0][0], 0, MPFR_RNDN);
+		mpfr_set_si(a->at(0).at(0), 0, MPFR_RNDN);
 		mpfr_neg(_t_0, Delta, rnd);
 		mpfr_add(_t_0, _t_0, epsilon, rnd);
 		mpfr_neg(_t_1, Delta, rnd);
@@ -59,7 +59,7 @@ namespace qboot2
 		mpfr_add(_t_1, _t_1, _t_4, rnd);
 		mpfr_mul(_t_0, _t_0, _t_3, rnd);
 		mpfr_add_si(_t_1, _t_1, 1, rnd);
-		mpfr_mul(a[0][1], _t_0, _t_1, rnd);
+		mpfr_mul(a->at(0).at(1), _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_0, Delta, -5, rnd);
 		mpfr_mul_si(_t_1, Delta, 10, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -77,12 +77,12 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 10, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[0][2], _t_0, 5, rnd);
+		mpfr_sub_si(a->at(0).at(2), _t_0, 5, rnd);
 		mpfr_mul_si(_t_0, Delta, -4, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[0][3], _t_0, 4, rnd);
-		mpfr_set_si(a[0][4], -1, MPFR_RNDN);
+		mpfr_add_si(a->at(0).at(3), _t_0, 4, rnd);
+		mpfr_set_si(a->at(0).at(4), -1, MPFR_RNDN);
 		mpfr_mul_si(_t_0, Delta, -4, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
 		mpfr_mul_si(_t_1, Delta, 8, rnd);
@@ -133,7 +133,7 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_add_si(_t_1, _t_1, 3, rnd);
 		mpfr_sub_si(_t_0, _t_0, 4, rnd);
-		mpfr_mul(a[1][0], _t_1, _t_0, rnd);
+		mpfr_mul(a->at(1).at(0), _t_1, _t_0, rnd);
 		mpfr_mul_si(_t_0, Delta, -2, rnd);
 		mpfr_mul_si(_t_1, Delta, 40, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -216,7 +216,7 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 38, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[1][1], _t_0, 28, rnd);
+		mpfr_add_si(a->at(1).at(1), _t_0, 28, rnd);
 		mpfr_mul_si(_t_0, Delta, -5, rnd);
 		mpfr_mul_si(_t_1, Delta, 48, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -244,14 +244,14 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 22, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[1][2], _t_0, 23, rnd);
+		mpfr_sub_si(a->at(1).at(2), _t_0, 23, rnd);
 		mpfr_mul_si(_t_0, Delta, -4, rnd);
 		mpfr_mul_si(_t_1, S, 16, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[1][3], _t_0, 8, rnd);
-		mpfr_set_si(a[1][4], -1, MPFR_RNDN);
+		mpfr_add_si(a->at(1).at(3), _t_0, 8, rnd);
+		mpfr_set_si(a->at(1).at(4), -1, MPFR_RNDN);
 		mpfr_mul_si(_t_0, Delta, 8, rnd);
 		mpfr_mul_si(_t_1, Delta, 4, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -443,7 +443,7 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 36, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[2][0], _t_0, 136, rnd);
+		mpfr_add_si(a->at(2).at(0), _t_0, 136, rnd);
 		mpfr_mul_si(_t_0, Delta, 6, rnd);
 		mpfr_mul_si(_t_1, Delta, 40, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -540,7 +540,7 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 46, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[2][1], _t_0, 194, rnd);
+		mpfr_sub_si(a->at(2).at(1), _t_0, 194, rnd);
 		mpfr_mul_si(_t_0, Delta, 15, rnd);
 		mpfr_mul_si(_t_1, Delta, 48, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -572,14 +572,14 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 22, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[2][2], _t_0, 107, rnd);
+		mpfr_add_si(a->at(2).at(2), _t_0, 107, rnd);
 		mpfr_mul_si(_t_0, Delta, 12, rnd);
 		mpfr_mul_si(_t_1, S, 16, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[2][3], _t_0, 28, rnd);
-		mpfr_set_si(a[2][4], 3, MPFR_RNDN);
+		mpfr_sub_si(a->at(2).at(3), _t_0, 28, rnd);
+		mpfr_set_si(a->at(2).at(4), 3, MPFR_RNDN);
 		mpfr_mul_si(_t_0, Delta, -16, rnd);
 		mpfr_mul_si(_t_1, Delta, 4, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -771,7 +771,7 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 108, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[3][0], _t_0, 468, rnd);
+		mpfr_add_si(a->at(3).at(0), _t_0, 468, rnd);
 		mpfr_mul_si(_t_0, Delta, 6, rnd);
 		mpfr_mul_si(_t_1, Delta, 80, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -869,7 +869,7 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 102, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[3][1], _t_0, 504, rnd);
+		mpfr_sub_si(a->at(3).at(1), _t_0, 504, rnd);
 		mpfr_mul_si(_t_0, Delta, 15, rnd);
 		mpfr_mul_si(_t_1, Delta, 96, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -898,14 +898,14 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 34, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[3][2], _t_0, 209, rnd);
+		mpfr_add_si(a->at(3).at(2), _t_0, 209, rnd);
 		mpfr_mul_si(_t_0, Delta, 12, rnd);
 		mpfr_mul_si(_t_1, S, 32, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[3][3], _t_0, 40, rnd);
-		mpfr_set_si(a[3][4], 3, MPFR_RNDN);
+		mpfr_sub_si(a->at(3).at(3), _t_0, 40, rnd);
+		mpfr_set_si(a->at(3).at(4), 3, MPFR_RNDN);
 		mpfr_mul_si(_t_0, Delta, -16, rnd);
 		mpfr_mul_si(_t_1, Delta, 8, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1088,7 +1088,7 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 312, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[4][0], _t_0, 664, rnd);
+		mpfr_sub_si(a->at(4).at(0), _t_0, 664, rnd);
 		mpfr_mul_si(_t_0, Delta, -6, rnd);
 		mpfr_mul_si(_t_1, Delta, 80, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1186,7 +1186,7 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 214, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[4][1], _t_0, 658, rnd);
+		mpfr_add_si(a->at(4).at(1), _t_0, 658, rnd);
 		mpfr_mul_si(_t_0, Delta, -15, rnd);
 		mpfr_mul_si(_t_1, Delta, 96, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1215,14 +1215,14 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 50, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[4][2], _t_0, 251, rnd);
+		mpfr_sub_si(a->at(4).at(2), _t_0, 251, rnd);
 		mpfr_mul_si(_t_0, Delta, -12, rnd);
 		mpfr_mul_si(_t_1, S, 32, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[4][3], _t_0, 44, rnd);
-		mpfr_set_si(a[4][4], -3, MPFR_RNDN);
+		mpfr_add_si(a->at(4).at(3), _t_0, 44, rnd);
+		mpfr_set_si(a->at(4).at(4), -3, MPFR_RNDN);
 		mpfr_mul_si(_t_0, Delta, 8, rnd);
 		mpfr_mul_si(_t_1, Delta, 8, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1409,7 +1409,7 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 580, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[5][0], _t_0, 1620, rnd);
+		mpfr_sub_si(a->at(5).at(0), _t_0, 1620, rnd);
 		mpfr_mul_si(_t_0, Delta, -6, rnd);
 		mpfr_mul_si(_t_1, Delta, 40, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1506,7 +1506,7 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 326, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[5][1], _t_0, 1304, rnd);
+		mpfr_add_si(a->at(5).at(1), _t_0, 1304, rnd);
 		mpfr_mul_si(_t_0, Delta, -15, rnd);
 		mpfr_mul_si(_t_1, Delta, 48, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1538,14 +1538,14 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 62, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[5][2], _t_0, 401, rnd);
+		mpfr_sub_si(a->at(5).at(2), _t_0, 401, rnd);
 		mpfr_mul_si(_t_0, Delta, -12, rnd);
 		mpfr_mul_si(_t_1, S, 16, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[5][3], _t_0, 56, rnd);
-		mpfr_set_si(a[5][4], -3, MPFR_RNDN);
+		mpfr_add_si(a->at(5).at(3), _t_0, 56, rnd);
+		mpfr_set_si(a->at(5).at(4), -3, MPFR_RNDN);
 		mpfr_mul_si(_t_0, Delta, 8, rnd);
 		mpfr_mul_si(_t_1, Delta, 4, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1695,7 +1695,7 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 540, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[6][0], _t_0, 600, rnd);
+		mpfr_add_si(a->at(6).at(0), _t_0, 600, rnd);
 		mpfr_mul_si(_t_0, Delta, 2, rnd);
 		mpfr_mul_si(_t_1, Delta, 40, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1778,7 +1778,7 @@ namespace qboot2
 		mpfr_sub(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, epsilon, 318, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[6][1], _t_0, 490, rnd);
+		mpfr_sub_si(a->at(6).at(1), _t_0, 490, rnd);
 		mpfr_mul_si(_t_0, Delta, 5, rnd);
 		mpfr_mul_si(_t_1, Delta, 48, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1806,14 +1806,14 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 62, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[6][2], _t_0, 149, rnd);
+		mpfr_add_si(a->at(6).at(2), _t_0, 149, rnd);
 		mpfr_mul_si(_t_0, Delta, 4, rnd);
 		mpfr_mul_si(_t_1, S, 16, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[6][3], _t_0, 20, rnd);
-		mpfr_set_si(a[6][4], 1, MPFR_RNDN);
+		mpfr_sub_si(a->at(6).at(3), _t_0, 20, rnd);
+		mpfr_set_si(a->at(6).at(4), 1, MPFR_RNDN);
 		mpfr_mul_si(_t_0, Delta, 2, rnd);
 		mpfr_sub_si(_t_0, _t_0, 7, rnd);
 		mpfr_mul_si(_t_1, epsilon, 2, rnd);
@@ -1828,7 +1828,7 @@ namespace qboot2
 		mpfr_add(_t_3, _t_3, _t_4, rnd);
 		mpfr_mul(_t_0, _t_0, _t_2, rnd);
 		mpfr_sub_si(_t_3, _t_3, 6, rnd);
-		mpfr_mul(a[7][0], _t_0, _t_3, rnd);
+		mpfr_mul(a->at(7).at(0), _t_0, _t_3, rnd);
 		mpfr_neg(_t_0, Delta, rnd);
 		mpfr_mul_si(_t_1, Delta, 6, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1847,7 +1847,7 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_2, rnd);
 		mpfr_mul_si(_t_1, _t_1, -2, rnd);
 		mpfr_sub_si(_t_0, _t_0, 71, rnd);
-		mpfr_mul(a[7][1], _t_1, _t_0, rnd);
+		mpfr_mul(a->at(7).at(1), _t_1, _t_0, rnd);
 		mpfr_mul_si(_t_0, Delta, 5, rnd);
 		mpfr_mul_si(_t_1, Delta, 14, rnd);
 		mpfr_mul(_t_0, _t_0, Delta, rnd);
@@ -1865,12 +1865,12 @@ namespace qboot2
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
 		mpfr_mul_si(_t_1, epsilon, 74, rnd);
 		mpfr_sub(_t_0, _t_0, _t_1, rnd);
-		mpfr_add_si(a[7][2], _t_0, 215, rnd);
+		mpfr_add_si(a->at(7).at(2), _t_0, 215, rnd);
 		mpfr_mul_si(_t_0, Delta, 4, rnd);
 		mpfr_mul_si(_t_1, epsilon, 4, rnd);
 		mpfr_add(_t_0, _t_0, _t_1, rnd);
-		mpfr_sub_si(a[7][3], _t_0, 24, rnd);
-		mpfr_set_si(a[7][4], 1, MPFR_RNDN);
+		mpfr_sub_si(a->at(7).at(3), _t_0, 24, rnd);
+		mpfr_set_si(a->at(7).at(4), 1, MPFR_RNDN);
 		mpfr_clear(_t_0);
 		mpfr_clear(_t_1);
 		mpfr_clear(_t_2);

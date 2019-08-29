@@ -7,9 +7,8 @@
 #include <ostream>           // for ostream
 #include <utility>           // for move
 
-#include "matrix.hpp"   // for Vector, Matrix
-#include "real.hpp"     // for real, pow, sgn
-#include "real_io.hpp"  // for operator<<
+#include "matrix.hpp"  // for Vector, Matrix
+#include "real.hpp"    // for real, pow, sgn
 
 namespace algebra
 {

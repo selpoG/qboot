@@ -12,21 +12,21 @@
 
 namespace qboot2
 {
-	void set_nonzero_spin_rec_coeffs(std::array<std::array<mpfr_t, 5>, 8>& a, const mpfr_t& epsilon, const mpfr_t& ell,
+	void set_nonzero_spin_rec_coeffs(std::array<std::array<mpfr_t, 5>, 8>* a, const mpfr_t& epsilon, const mpfr_t& ell,
 	                                 const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P, mpfr_prec_t prec,
 	                                 mpfr_rnd_t rnd);
-	void set_zero_spin_rec_coeffs(std::array<std::array<mpfr_t, 4>, 6>& a, const mpfr_t& epsilon, const mpfr_t& Delta,
+	void set_zero_spin_rec_coeffs(std::array<std::array<mpfr_t, 4>, 6>* a, const mpfr_t& epsilon, const mpfr_t& Delta,
 	                              const mpfr_t& S, const mpfr_t& P, mpfr_prec_t prec, mpfr_rnd_t rnd);
 
-	void initialize_spin_nonzero_coeffs_folder(std::array<std::array<mpfr_t, 5>, 8>& a, mpfr_prec_t prec);
-	void initialize_spin_zero_coeffs_folder(std::array<std::array<mpfr_t, 4>, 6>& a, mpfr_prec_t prec);
+	void initialize_spin_nonzero_coeffs_folder(std::array<std::array<mpfr_t, 5>, 8>* a, mpfr_prec_t prec);
+	void initialize_spin_zero_coeffs_folder(std::array<std::array<mpfr_t, 4>, 6>* a, mpfr_prec_t prec);
 
-	void deallocate_spin_nonzero_coeffs_folder(std::array<std::array<mpfr_t, 5>, 8>& a);
-	void deallocate_spin_zero_coeffs_folder(std::array<std::array<mpfr_t, 4>, 6>& a);
+	void deallocate_spin_nonzero_coeffs_folder(std::array<std::array<mpfr_t, 5>, 8>* a);
+	void deallocate_spin_zero_coeffs_folder(std::array<std::array<mpfr_t, 4>, 6>* a);
 
-	void spin_nonzero_evaluate_at_n(std::array<mpfr_t, 8>& a, std::array<std::array<mpfr_t, 5>, 8>& rho, int32_t n,
+	void spin_nonzero_evaluate_at_n(std::array<mpfr_t, 8>* a, std::array<std::array<mpfr_t, 5>, 8>* rho, int32_t n,
 	                                mpfr_rnd_t rnd);
-	void spin_zero_evaluate_at_n(std::array<mpfr_t, 6>& a, std::array<std::array<mpfr_t, 4>, 6>& rho, int32_t n,
+	void spin_zero_evaluate_at_n(std::array<mpfr_t, 6>* a, std::array<std::array<mpfr_t, 4>, 6>* rho, int32_t n,
 	                             mpfr_rnd_t rnd);
 }  // namespace qboot2
 
@@ -393,7 +393,7 @@ namespace qboot
 	}
 
 	template <class Real>
-	algebra::Vector<algebra::Polynomial<Real>> _get_nonzero_spin_rec_coeffs(const PrimaryOperator<Real>& op,
+	algebra::Vector<algebra::Polynomial<Real>> _get_nonzero_spin_rec_coeffs(const PrimaryOperator<Real>& op,  // NOLINT
 	                                                                        const Real& S, const Real& P)
 	{
 		const auto& epsilon = op.epsilon();
