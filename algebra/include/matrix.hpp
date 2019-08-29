@@ -137,7 +137,7 @@ namespace algebra
 				if (!arr_[i].iszero()) return false;
 			return true;
 		}
-		[[nodiscard]] auto abs() const { return norm().sqrt(); }
+		[[nodiscard]] auto abs() const { return mpfr::sqrt(norm()); }
 		[[nodiscard]] auto norm() const
 		{
 			auto s = arr_[0].norm();
@@ -251,7 +251,7 @@ namespace algebra
 		[[nodiscard]] const uint32_t& row() const noexcept { return row_; }
 		[[nodiscard]] const uint32_t& column() const noexcept { return col_; }
 		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
-		[[nodiscard]] auto abs() const { return norm().sqrt(); }
+		[[nodiscard]] auto abs() const { return mpfr::sqrt(norm()); }
 		[[nodiscard]] auto norm() const { return arr_.norm(); }
 		[[nodiscard]] Matrix clone() const { return Matrix(arr_.clone(), row_, col_); }
 		void swap(Matrix& other)
@@ -306,16 +306,8 @@ namespace algebra
 			for (uint32_t j = 0; j < row_; ++j)
 			{
 				uint32_t p = j;
-				auto max = Ring{};
-				for (uint32_t i = p; i < row_; ++i)
-				{
-					auto abs = mpfr::abs(at(i, j));
-					if (abs > max)
-					{
-						max = abs;
-						p = i;
-					}
-				}
+				for (uint32_t i = j + 1; i < row_; ++i)
+					if (mpfr::cmpabs(at(p, j), at(i, j)) < 0) p = i;
 				inv.swap_row(p, j);
 				swap_row(p, j, j);
 				auto t = 1 / at(j, j);
@@ -367,7 +359,7 @@ namespace algebra
 					s = {};
 					for (uint32_t k = 0; k < j; ++k) s += L.at(i, k) * L.at(j, k);
 					s = at(i, j) - s;
-					L.at(i, j) = i == j ? s.sqrt() : s / L.at(j, j);
+					L.at(i, j) = i == j ? mpfr::sqrt(s) : s / L.at(j, j);
 				}
 			}
 			return L;

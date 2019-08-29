@@ -16,7 +16,7 @@ namespace qboot
 	algebra::Vector<Real> sample_points(uint32_t degree)
 	{
 		algebra::Vector<Real> v(degree + 1);
-		for (uint32_t i = 0; i <= degree; ++i) v[i] = mpfr::pow(Real::pi() * (-1 + 4 * int32_t(i)), 2);
+		for (uint32_t i = 0; i <= degree; ++i) v[i] = mpfr::pow(Real::pi() * (-1 + 4 * int32_t(i)), 2uL);
 		v /= (-64 * int32_t(degree + 1)) * mpfr::log(3 - mpfr::sqrt(Real(8)));
 		return v;
 	}

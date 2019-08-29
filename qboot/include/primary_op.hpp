@@ -6,7 +6,7 @@
 #include <string>       // for string
 #include <type_traits>  // for true_type
 
-#include "real.hpp"  // for real, is_integer
+#include "real.hpp"  // for real, isinteger
 
 namespace qboot
 {
@@ -40,7 +40,7 @@ namespace qboot
 		}
 		[[nodiscard]] bool is_divergent_hor() const
 		{
-			if (spin_ > 0) return delta_ == spin_ + 2 * epsilon_ || (mpfr::is_integer(delta_) && delta_ <= 1);
+			if (spin_ > 0) return delta_ == spin_ + 2 * epsilon_ || (mpfr::isinteger(delta_) && delta_ <= 1);
 			return delta_ == epsilon_ || delta_ == epsilon_ + Real(0.5);
 		}
 		[[nodiscard]] std::string str() const

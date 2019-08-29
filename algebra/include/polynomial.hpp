@@ -63,7 +63,7 @@ namespace algebra
 			for (auto& v : coeffs) coeff_[i++] = v.clone();
 			assert(coeff_.size() == 0 || !coeff_[coeff_.size() - 1].iszero());
 		}
-		[[nodiscard]] auto abs() const { return norm().sqrt(); }
+		[[nodiscard]] auto abs() const { return mpfr::sqrt(norm()); }
 		[[nodiscard]] auto norm() const { return coeff_.norm(); }
 		[[nodiscard]] bool iszero() const noexcept { return coeff_.size() == 0; }
 		[[nodiscard]] int32_t degree() const noexcept { return int32_t(coeff_.size()) - 1; }

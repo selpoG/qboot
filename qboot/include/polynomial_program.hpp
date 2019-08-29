@@ -268,16 +268,11 @@ namespace qboot
 				vec -= mul_scalar(t, equation_[e]);
 			}
 			uint32_t argmax = 0;
-			Real max = mpfr::abs(vec[0]);
 			for (uint32_t n = 1; n < N_; ++n)
-			{
-				const Real& val = mpfr::abs(vec[n]);
-				if (max < val)
-				{
-					argmax = n;
-					max = val;
-				}
-			}
+				if (mpfr::cmpabs(vec[argmax], vec[n]) < 0) argmax = n;
+			target /= vec[argmax];
+			vec /= vec[argmax];
+			vec[argmax] = 1;
 			// apply new equation to previous equations
 			for (uint32_t e = 0; e < equation_.size(); ++e)
 			{

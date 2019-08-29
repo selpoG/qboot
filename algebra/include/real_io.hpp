@@ -3,7 +3,6 @@
 
 #include "real.hpp"
 
-#include <algorithm>  // for max
 #include <cstddef>    // for size_t
 #include <cstdint>    // for intmax_t
 #include <cstring>    // for strlen
@@ -19,22 +18,6 @@ namespace mpfr
 	// //////////////////////////////////////////////////////////////////
 	// helper functions
 	// //////////////////////////////////////////////////////////////////
-
-	inline int helper_set_stdstr(mpfr_ptr rop, const std::string& op, mpfr_rnd_t rnd) noexcept
-	{
-		return MPFR_NS mpfr_set_str(rop, op.c_str(), 0, rnd);
-	}
-
-	inline int helper_set_charptr(mpfr_ptr rop, const char* op, mpfr_rnd_t rnd) noexcept(false)
-	{
-		const int err = MPFR_NS mpfr_set_str(rop, op, 0, rnd);
-		if (err == -1)
-			throw std::runtime_error(
-			    std::string(
-			        "in mpfr::helper_set_charptr(mpfr_ptr, const char*, mpfr_rnd_t):\n  invalid input format ") +
-			    op);
-		return err;
-	}
 
 	enum class _pad_direction : int
 	{
@@ -166,36 +149,36 @@ namespace mpfr
 	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_t x,
 	                                                        mpfr_rnd_t rnd)
 	{
-		if (MPFR_NS mpfr_nan_p(x)) return helper_ostream_const(s, "@NaN@", false);
-		if (MPFR_NS mpfr_inf_p(x)) return helper_ostream_const(s, "@Inf@", MPFR_NS mpfr_sgn(x) < 0);
-		if (MPFR_NS mpfr_zero_p(x)) return helper_ostream_const(s, "0", MPFR_NS mpfr_signbit(x) != 0);
+		if (mpfr_nan_p(x)) return helper_ostream_const(s, "@NaN@", false);
+		if (mpfr_inf_p(x)) return helper_ostream_const(s, "@Inf@", mpfr_sgn(x) < 0);
+		if (mpfr_zero_p(x)) return helper_ostream_const(s, "0", mpfr_signbit(x) != 0);
 
 		auto style = _get_style(s.flags());
 		auto prec = _needed_precision(style, s.precision());
 
-		bool is_negative = MPFR_NS mpfr_sgn(x) < 0;
-		if (is_negative) MPFR_NS mpfr_neg(x, x, rnd);
+		bool is_negative = mpfr_sgn(x) < 0;
+		if (is_negative) mpfr_neg(x, x, rnd);
 		real_exp_t exp, exp0 = 0;
 		if (style == _exp_style::FIXED)
 		{
-			auto ch = MPFR_NS mpfr_get_str(nullptr, &exp0, 10, 1, x, rnd);
+			auto ch = mpfr_get_str(nullptr, &exp0, 10, 1, x, rnd);
 			if (ch == nullptr)
 			{
-				if (is_negative) MPFR_NS mpfr_neg(x, x, rnd);
+				if (is_negative) mpfr_neg(x, x, rnd);
 				throw std::runtime_error(
 				    "in std::ostream& operator<<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
 			}
-			MPFR_NS mpfr_free_str(ch);
+			mpfr_free_str(ch);
 			if (exp0 < 0) exp0 = 0;
 			exp0 += 3;
 		}
-		auto ch = MPFR_NS mpfr_get_str(nullptr, &exp, 10, prec + size_t(exp0), x, rnd);
-		if (is_negative) MPFR_NS mpfr_neg(x, x, rnd);
+		auto ch = mpfr_get_str(nullptr, &exp, 10, prec + size_t(exp0), x, rnd);
+		if (is_negative) mpfr_neg(x, x, rnd);
 		if (ch == nullptr)
 			throw std::runtime_error(
 			    "in std::ostream& operator<<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
 		std::string t(ch);
-		MPFR_NS mpfr_free_str(ch);
+		mpfr_free_str(ch);
 
 		if (style == _exp_style::SCIENTIFIC)
 			helper_ostream_const(s, _as_scientific(std::move(t), exp, s.flags()), is_negative);
@@ -270,134 +253,6 @@ namespace mpfr
 		return state != _state::ERROR && has_digits && (int(state) < int(_state::EXP) || has_edigits);
 	}
 
-	template <real_prec_t _prec, real_rnd_t _rnd, bool _overwrite>
-	struct type_traits<real<_prec, _rnd>, std::string, _overwrite>
-	{
-		using real_type = real<_prec, _rnd>;
-		using other_type = std::string;
-
-		// support level in class real
-		static const bool enable_impl_ctor = true;
-		static const bool enable_assign_op = true;
-		static const bool enable_conv_func = true;
-		static const bool enable_arithm_ops = true;
-		static const bool enable_compar_ops = true;
-		static const bool enable_math_funcs = true;
-
-		// support in MPFR library
-		static const bool has_set = true;
-		static const bool has_get_a = false;
-		static const bool has_get_b = false;
-		static const bool has_add = false;
-		static const bool has_sub_a = false;
-		static const bool has_sub_b = false;
-		static const bool has_mul = false;
-		static const bool has_div_a = false;
-		static const bool has_div_b = false;
-
-		// functions in MPFR library
-		// (must be defined if corresponding "has_..." boolean is set to "true")
-		inline static int set(mpfr_ptr rop, const std::string& op, mpfr_rnd_t rnd)
-		{
-			auto res = helper_set_stdstr(rop, op, rnd);
-			if (res == -1)
-				throw std::runtime_error(
-				    "in mpfr::helper_set_stdstr(mpfr_ptr, const std::string&, mpfr_rnd_t):\n  invalid input format " +
-				    op);
-			return res;
-		}
-	};
-
-	template <real_prec_t _prec, real_rnd_t _rnd, bool _overwrite>
-	struct type_traits<real<_prec, _rnd>, char*, _overwrite>
-	{
-		using real_type = real<_prec, _rnd>;
-		using other_type = char*;
-
-		// support level in class real
-		static const bool enable_impl_ctor = true;
-		static const bool enable_assign_op = true;
-		static const bool enable_conv_func = true;
-		static const bool enable_arithm_ops = true;
-		static const bool enable_compar_ops = true;
-		static const bool enable_math_funcs = true;
-
-		// support in MPFR library
-		static const bool has_set = true;
-		static const bool has_get_a = false;
-		static const bool has_get_b = false;
-		static const bool has_add = false;
-		static const bool has_sub_a = false;
-		static const bool has_sub_b = false;
-		static const bool has_mul = false;
-		static const bool has_div_a = false;
-		static const bool has_div_b = false;
-
-		// functions in MPFR library
-		// (must be defined if corresponding "has_..." boolean is set to "true")
-		inline static int set(mpfr_ptr rop, const char* op, mpfr_rnd_t rnd) { return helper_set_charptr(rop, op, rnd); }
-	};
-
-	template <real_prec_t _prec, real_rnd_t _rnd, bool _overwrite>
-	struct type_traits<real<_prec, _rnd>, const char*, _overwrite>
-	{
-		using real_type = real<_prec, _rnd>;
-		using other_type = const char*;
-
-		// support level in class real
-		static const bool enable_impl_ctor = true;
-		static const bool enable_assign_op = true;
-		static const bool enable_conv_func = true;
-		static const bool enable_arithm_ops = true;
-		static const bool enable_compar_ops = true;
-		static const bool enable_math_funcs = true;
-
-		// support in MPFR library
-		static const bool has_set = true;
-		static const bool has_get_a = false;
-		static const bool has_get_b = false;
-		static const bool has_add = false;
-		static const bool has_sub_a = false;
-		static const bool has_sub_b = false;
-		static const bool has_mul = false;
-		static const bool has_div_a = false;
-		static const bool has_div_b = false;
-
-		// functions in MPFR library
-		// (must be defined if corresponding "has_..." boolean is set to "true")
-		inline static int set(mpfr_ptr rop, const char* op, mpfr_rnd_t rnd) { return helper_set_charptr(rop, op, rnd); }
-	};
-
-	template <real_prec_t _prec, real_rnd_t _rnd, size_t _i, bool _overwrite>
-	struct type_traits<real<_prec, _rnd>, char[_i], _overwrite>
-	{
-		using real_type = real<_prec, _rnd>;
-		using other_type = char[_i];
-
-		// support level in class real
-		static const bool enable_impl_ctor = true;
-		static const bool enable_assign_op = true;
-		static const bool enable_conv_func = true;
-		static const bool enable_arithm_ops = true;
-		static const bool enable_compar_ops = true;
-		static const bool enable_math_funcs = true;
-
-		// support in MPFR library
-		static const bool has_set = true;
-		static const bool has_get_a = false;
-		static const bool has_get_b = false;
-		static const bool has_add = false;
-		static const bool has_sub_a = false;
-		static const bool has_sub_b = false;
-		static const bool has_mul = false;
-		static const bool has_div_a = false;
-		static const bool has_div_b = false;
-
-		// functions in MPFR library
-		// (must be defined if corresponding "has_..." boolean is set to "true")
-		inline static int set(mpfr_ptr rop, const char* op, mpfr_rnd_t rnd) { return helper_set_charptr(rop, op, rnd); }
-	};
-
 	// //////////////////////////////////////////////////////////////
 	// std::istream and std::ostream operators
 	// //////////////////////////////////////////////////////////////
@@ -413,10 +268,10 @@ namespace mpfr
 				std::string num;
 				if (auto ok = helper_extract_float(in, &num); ok && !num.empty())
 				{
-					if (auto err = helper_set_stdstr(r._x, num, _rnd); err == -1)
+					if (auto err = mpfr_set_str(r._x, num.c_str(), 0, _rnd); err == -1)
 					{
 						in.setstate(std::ios_base::failbit);
-						MPFR_NS mpfr_set_zero(r._x, +1);
+						mpfr_set_zero(r._x, +1);
 						throw std::runtime_error(
 						    "in std::istream& operator>>(std::istream& s, real<_prec, _rnd>& r):\n  invalid input "
 						    "format " +
@@ -426,13 +281,13 @@ namespace mpfr
 				else
 				{
 					in.setstate(std::ios_base::failbit);
-					MPFR_NS mpfr_set_zero(r._x, +1);
+					mpfr_set_zero(r._x, +1);
 				}
 			}
 		}
 		catch (std::ios_base::failure&)
 		{
-			MPFR_NS mpfr_set_zero(r._x, +1);
+			mpfr_set_zero(r._x, +1);
 			throw;
 		}
 		return in;
