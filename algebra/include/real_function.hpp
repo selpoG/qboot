@@ -32,46 +32,46 @@ namespace algebra
 		explicit RealFunction(uint32_t lambda) : lambda_(lambda), coeffs_(lambda + 1) {}
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		[[nodiscard]] uint32_t size() const { return coeffs_.size(); }
-		void swap(RealFunction& other)
+		void swap(RealFunction& other) &
 		{
 			coeffs_.swap(other.coeffs_);
 			std::swap(lambda_, other.lambda_);
 		}
-		void negate() { coeffs_.negate(); }
+		void negate() & { coeffs_.negate(); }
 		[[nodiscard]] bool iszero() const { return coeffs_.iszero(); }
 		[[nodiscard]] RealFunction clone() const { return RealFunction(coeffs_.clone()); }
 		// get coefficient of the term x ^ k
 		// 0 <= k <= lambda
-		[[nodiscard]] Ring& at(uint32_t k) { return coeffs_[k]; }
-		[[nodiscard]] const Ring& at(uint32_t k) const { return coeffs_[k]; }
+		[[nodiscard]] Ring& at(uint32_t k) & { return coeffs_[k]; }
+		[[nodiscard]] const Ring& at(uint32_t k) const& { return coeffs_[k]; }
 
 		[[nodiscard]] auto abs() const { return coeffs_.abs(); }
 		[[nodiscard]] auto norm() const { return coeffs_.norm(); }
 		// multiply x ^ p
-		void shift(uint32_t p)
+		void shift(uint32_t p) &
 		{
 			for (uint32_t i = lambda_; i >= p; i--) at(i) = at(i - p);
 			for (uint32_t i = 0; i < p; ++i) at(i) = {};
 		}
 
-		RealFunction& operator+=(const RealFunction& v)
+		RealFunction& operator+=(const RealFunction& v) &
 		{
 			coeffs_ += v.coeffs_;
 			return *this;
 		}
-		RealFunction& operator-=(const RealFunction& v)
+		RealFunction& operator-=(const RealFunction& v) &
 		{
 			coeffs_ -= v.coeffs_;
 			return *this;
 		}
 		template <class T>
-		RealFunction& operator*=(const T& r)
+		RealFunction& operator*=(const T& r) &
 		{
 			coeffs_ *= r;
 			return *this;
 		}
 		template <class T>
-		RealFunction& operator/=(const T& r)
+		RealFunction& operator/=(const T& r) &
 		{
 			coeffs_ /= r;
 			return *this;
@@ -211,12 +211,12 @@ namespace algebra
 		[[nodiscard]] const RealFunction<Ring>& func() const { return f_; }
 		[[nodiscard]] const Ring& power() const { return pow_; }
 		// take derivative
-		void derivate()
+		void derivate() &
 		{
 			for (uint32_t k = 0; k <= f_.lambda(); ++k) f_.at(k) *= pow_ + k;
 			pow_ -= 1;
 		}
-		void swap(RealFunctionWithPower& f)
+		void swap(RealFunctionWithPower& f) &
 		{
 			f_.swap(f.f_);
 			pow_.swap(f.pow_);

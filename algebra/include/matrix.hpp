@@ -97,36 +97,36 @@ namespace algebra
 			for (uint32_t i = 0; i < len; ++i) arr_[i] = val.clone();
 		}
 		Vector(Vector&& v) noexcept = default;
-		Vector& operator=(Vector&& v) noexcept = default;
+		Vector& operator=(Vector&& v) & noexcept = default;
 		~Vector() = default;
 		Vector(const Vector& v) = delete;
-		Vector& operator=(const Vector& v) = default;
+		Vector& operator=(const Vector& v) = delete;
 		Vector(std::initializer_list<Ring> v) : Vector(uint32_t(v.size()))
 		{
 			uint32_t i = 0;
 			for (auto& t : v) arr_[i++] = t.clone();
 		}
-		[[nodiscard]] Ring& at(uint32_t i) { return arr_[i]; }
-		[[nodiscard]] const Ring& at(uint32_t i) const { return arr_[i]; }
-		[[nodiscard]] Ring& operator[](uint32_t i) { return at(i); }
-		[[nodiscard]] const Ring& operator[](uint32_t i) const { return at(i); }
+		[[nodiscard]] Ring& at(uint32_t i) & { return arr_[i]; }
+		[[nodiscard]] const Ring& at(uint32_t i) const& { return arr_[i]; }
+		[[nodiscard]] Ring& operator[](uint32_t i) & { return at(i); }
+		[[nodiscard]] const Ring& operator[](uint32_t i) const& { return at(i); }
 		[[nodiscard]] const uint32_t& size() const noexcept { return sz_; }
-		[[nodiscard]] const Ring* begin() const noexcept { return arr_.get(); }
-		[[nodiscard]] const Ring* end() const noexcept { return arr_.get() + sz_; }
-		[[nodiscard]] Ring* begin() noexcept { return arr_.get(); }
-		[[nodiscard]] Ring* end() noexcept { return arr_.get() + sz_; }
+		[[nodiscard]] const Ring* begin() const& noexcept { return arr_.get(); }
+		[[nodiscard]] const Ring* end() const& noexcept { return arr_.get() + sz_; }
+		[[nodiscard]] Ring* begin() & noexcept { return arr_.get(); }
+		[[nodiscard]] Ring* end() & noexcept { return arr_.get() + sz_; }
 		[[nodiscard]] Vector clone() const
 		{
 			Vector v(sz_);
 			for (uint32_t i = 0; i < sz_; ++i) v.arr_[i] = arr_[i].clone();
 			return v;
 		}
-		void swap(Vector& other)
+		void swap(Vector& other) &
 		{
 			arr_.swap(other.arr_);
 			std::swap(sz_, other.sz_);
 		}
-		void negate()
+		void negate() &
 		{
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] = -arr_[i];
 		}
@@ -143,26 +143,26 @@ namespace algebra
 			for (uint32_t i = 1; i < sz_; ++i) s += arr_[i].norm();
 			return s;
 		}
-		Vector& operator+=(const Vector& v)
+		Vector& operator+=(const Vector& v) &
 		{
 			assert(v.sz_ == sz_);
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] += v.arr_[i];
 			return *this;
 		}
-		Vector& operator-=(const Vector& v)
+		Vector& operator-=(const Vector& v) &
 		{
 			assert(v.sz_ == sz_);
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] -= v.arr_[i];
 			return *this;
 		}
 		template <class T>
-		Vector& operator*=(const T& v)
+		Vector& operator*=(const T& v) &
 		{
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] *= v;
 			return *this;
 		}
 		template <class T>
-		Vector& operator/=(const T& v)
+		Vector& operator/=(const T& v) &
 		{
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] /= v;
 			return *this;
@@ -241,52 +241,52 @@ namespace algebra
 		Matrix() : Matrix(0, 0) {}
 		Matrix(uint32_t r, uint32_t c) : arr_(r * c), row_(r), col_(c) {}
 		Matrix(Matrix&& v) noexcept = default;
-		Matrix& operator=(Matrix&& v) noexcept = default;
+		Matrix& operator=(Matrix&& v) & noexcept = default;
 		~Matrix() = default;
 		Matrix(const Matrix& v) = delete;
-		Matrix& operator=(const Matrix& v) = default;
-		[[nodiscard]] Ring& at(uint32_t r, uint32_t c) { return arr_[r * col_ + c]; }
-		[[nodiscard]] const Ring& at(uint32_t r, uint32_t c) const { return arr_[r * col_ + c]; }
+		Matrix& operator=(const Matrix& v) = delete;
+		[[nodiscard]] Ring& at(uint32_t r, uint32_t c) & { return arr_[r * col_ + c]; }
+		[[nodiscard]] const Ring& at(uint32_t r, uint32_t c) const& { return arr_[r * col_ + c]; }
 		[[nodiscard]] const uint32_t& row() const noexcept { return row_; }
 		[[nodiscard]] const uint32_t& column() const noexcept { return col_; }
 		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
 		[[nodiscard]] auto abs() const { return mpfr::sqrt(norm()); }
 		[[nodiscard]] auto norm() const { return arr_.norm(); }
 		[[nodiscard]] Matrix clone() const { return Matrix(arr_.clone(), row_, col_); }
-		void swap(Matrix& other)
+		void swap(Matrix& other) &
 		{
 			arr_.swap(other.arr_);
 			std::swap(row_, other.row_);
 			std::swap(col_, other.col_);
 		}
 		[[nodiscard]] bool iszero() const noexcept { return arr_.iszero(); }
-		void negate() { arr_.negate(); }
-		Matrix& operator+=(const Matrix& v)
+		void negate() & { arr_.negate(); }
+		Matrix& operator+=(const Matrix& v) &
 		{
 			assert(v.row_ == row_ && v.col_ == col_);
 			arr_ += v.arr_;
 			return *this;
 		}
-		Matrix& operator-=(const Matrix& v)
+		Matrix& operator-=(const Matrix& v) &
 		{
 			assert(v.row_ == row_ && v.col_ == col_);
 			arr_ -= v.arr_;
 			return *this;
 		}
 		template <class T>
-		Matrix& operator*=(const T& v)
+		Matrix& operator*=(const T& v) &
 		{
 			arr_ *= v;
 			return *this;
 		}
 		template <class T>
-		Matrix& operator/=(const T& v)
+		Matrix& operator/=(const T& v) &
 		{
 			arr_ /= v;
 			return *this;
 		}
 		Vector<Ring> flatten() && { return std::move(arr_); }
-		void transpose()
+		void transpose() &
 		{
 			assert(is_square());
 			for (uint32_t i = 0; i < row_; ++i)
@@ -307,33 +307,33 @@ namespace algebra
 				uint32_t p = j;
 				for (uint32_t i = j + 1; i < row_; ++i)
 					if (mpfr::cmpabs(at(p, j), at(i, j)) < 0) p = i;
-				inv.swap_row(p, j);
-				swap_row(p, j, j);
+				inv._swap_row(p, j);
+				_swap_row(p, j, j);
 				auto t = 1 / at(j, j);
-				inv.multiply_row(j, t);
-				multiply_row(j, t, j);
+				inv._multiply_row(j, t);
+				_multiply_row(j, t, j);
 				for (uint32_t i = j + 1; i < row_; ++i)
 				{
-					inv.add_row(j, i, -at(i, j));
-					add_row(j, i, -at(i, j), j);
+					inv._add_row(j, i, -at(i, j));
+					_add_row(j, i, -at(i, j), j);
 				}
 			}
 			for (uint32_t j = row_ - 1; j < row_; --j)
-				for (uint32_t r = j - 1; r < j; --r) inv.add_row(j, r, -at(r, j));
+				for (uint32_t r = j - 1; r < j; --r) inv._add_row(j, r, -at(r, j));
 			return inv;
 		}
 		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		void add_row(uint32_t f, uint32_t t, const Ring& x, uint32_t c0 = 0)
+		void _add_row(uint32_t f, uint32_t t, const Ring& x, uint32_t c0 = 0)
 		{
 			for (uint32_t c = c0; c < col_; ++c) at(t, c) += mul_scalar(x, at(f, c));
 		}
 		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		void multiply_row(uint32_t r, const Ring& x, uint32_t c0 = 0)
+		void _multiply_row(uint32_t r, const Ring& x, uint32_t c0 = 0)
 		{
 			for (uint32_t c = c0; c < col_; ++c) at(r, c) *= x;
 		}
 		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		void swap_row(uint32_t r1, uint32_t r2, uint32_t c0 = 0)
+		void _swap_row(uint32_t r1, uint32_t r2, uint32_t c0 = 0)
 		{
 			for (uint32_t c = c0; c < col_; ++c) at(r1, c).swap(at(r2, c));
 		}

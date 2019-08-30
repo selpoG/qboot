@@ -92,6 +92,11 @@ namespace qboot
 		algebra::Vector<Real> objectives_;
 		std::unique_ptr<std::optional<DualConstraint<Real>>[]> constraints_;
 		uint32_t num_constraints_;
+		template <class OStr>
+		void set_manip(OStr& out) const
+		{
+			out << std::defaultfloat << std::setprecision(3 + int32_t(Real::prec * 0.302));
+		}
 
 	public:
 		SDPBInput(const Real& constant, algebra::Vector<Real>&& obj, uint32_t num_constraints)
@@ -102,16 +107,11 @@ namespace qboot
 		{
 		}
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
-		void register_constraint(uint32_t index, DualConstraint<Real>&& c)
+		void register_constraint(uint32_t index, DualConstraint<Real>&& c) &
 		{
 			assert(!constraints_[index].has_value());
 			assert(objectives_.size() == c.obj_B().column());
 			constraints_[index] = std::move(c);
-		}
-		template <class OStr>
-		void set_manip(OStr& out) const
-		{
-			out << std::defaultfloat << std::setprecision(3 + int32_t(Real::prec * 0.302));
 		}
 		void write_objectives(const std::filesystem::path& root) const
 		{

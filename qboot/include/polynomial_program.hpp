@@ -266,7 +266,7 @@ namespace qboot
 		[[nodiscard]] Real& objective_constant() { return obj_const_; }
 		[[nodiscard]] const Real& objective_constant() const { return obj_const_; }
 		[[nodiscard]] const algebra::Vector<Real>& objectives() const { return obj_; }
-		void objectives(algebra::Vector<Real>&& obj)
+		void objectives(algebra::Vector<Real>&& obj) &
 		{
 			assert(obj.size() == N_);
 			obj_ = std::move(obj);
@@ -275,7 +275,7 @@ namespace qboot
 		// we assume that all equations are linear independent
 		// the order of call of this function may affects the resulting SDPB input
 		// to guarantee the reproducibility, call this function in some fixed order
-		void add_equation(algebra::Vector<Real>&& vec, Real&& target)
+		void add_equation(algebra::Vector<Real>&& vec, Real&& target) &
 		{
 			assert(vec.size() == N_);
 			// apply previous equations to new equation
@@ -308,7 +308,7 @@ namespace qboot
 					break;
 				}
 		}
-		void add_inequality(std::unique_ptr<PolynomialInequality<Real>>&& ineq)
+		void add_inequality(std::unique_ptr<PolynomialInequality<Real>>&& ineq) &
 		{
 			assert(ineq->num_of_variables() == N_);
 			inequality_.push_back(std::move(ineq));

@@ -92,23 +92,23 @@ namespace algebra
 		[[nodiscard]] FunctionSymmetry symmetry() const { return sym_; }
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		[[nodiscard]] uint32_t size() const { return coeffs_.size(); }
-		void swap(ComplexFunction& other)
+		void swap(ComplexFunction& other) &
 		{
 			std::swap(sym_, other.sym_);
 			std::swap(lambda_, other.lambda_);
 			coeffs_.swap(other.coeffs_);
 		}
-		void negate() { coeffs_.negate(); }
+		void negate() & { coeffs_.negate(); }
 		[[nodiscard]] bool iszero() const { return coeffs_.iszero(); }
 		[[nodiscard]] ComplexFunction clone() const { return ComplexFunction(coeffs_.clone(), lambda_, sym_); }
 		// get coefficient of the term (x - x0) ^ {dx} (y - y0) ^ {dy}
 		// 0 <= dx, dy and dx + 2 dy <= lambda
 		// if symmetry is even or odd, the parity of dx must equals symmetry
-		[[nodiscard]] Ring& at(uint32_t dx, uint32_t dy) { return coeffs_[index(dx, dy)]; }
-		[[nodiscard]] const Ring& at(uint32_t dx, uint32_t dy) const { return coeffs_[index(dx, dy)]; }
+		[[nodiscard]] Ring& at(uint32_t dx, uint32_t dy) & { return coeffs_[index(dx, dy)]; }
+		[[nodiscard]] const Ring& at(uint32_t dx, uint32_t dy) const& { return coeffs_[index(dx, dy)]; }
 
 		// z -> 1 - z
-		void flip()
+		void flip() &
 		{
 			switch (sym_)
 			{
@@ -148,26 +148,26 @@ namespace algebra
 		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) const& { return clone().proj(sym); }
 		ComplexFunction operator+() const { return clone(); }
 		ComplexFunction operator-() const { return ComplexFunction(-coeffs_, lambda_, sym_); }
-		ComplexFunction& operator+=(const ComplexFunction& f)
+		ComplexFunction& operator+=(const ComplexFunction& f) &
 		{
 			assert(sym_ == f.sym_);
 			coeffs_ += f.coeffs_;
 			return *this;
 		}
-		ComplexFunction& operator-=(const ComplexFunction& f)
+		ComplexFunction& operator-=(const ComplexFunction& f) &
 		{
 			assert(sym_ == f.sym_);
 			coeffs_ -= f.coeffs_;
 			return *this;
 		}
 		template <class T>
-		ComplexFunction& operator*=(const T& r)
+		ComplexFunction& operator*=(const T& r) &
 		{
 			coeffs_ *= r;
 			return *this;
 		}
 		template <class T>
-		ComplexFunction& operator/=(const T& r)
+		ComplexFunction& operator/=(const T& r) &
 		{
 			coeffs_ /= r;
 			return *this;

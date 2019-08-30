@@ -23,7 +23,7 @@ namespace algebra
 	public:
 		Polynomial() : coeff_(0) {}
 		Polynomial(Polynomial&&) noexcept = default;
-		Polynomial& operator=(Polynomial&&) noexcept = default;
+		Polynomial& operator=(Polynomial&&) & noexcept = default;
 		Polynomial(const Polynomial&) = delete;
 		Polynomial& operator=(const Polynomial&) = delete;
 		~Polynomial() = default;
@@ -85,9 +85,9 @@ namespace algebra
 			p.coeff_ = +coeff_;
 			return p;
 		}
-		void swap(Polynomial& other) { coeff_.swap(other.coeff_); }
-		void negate() { coeff_.negate(); }
-		Polynomial& operator+=(const Polynomial& p)
+		void swap(Polynomial& other) & { coeff_.swap(other.coeff_); }
+		void negate() & { coeff_.negate(); }
+		Polynomial& operator+=(const Polynomial& p) &
 		{
 			if (p.iszero()) return *this;
 			if (iszero())
@@ -104,7 +104,7 @@ namespace algebra
 			}
 			return *this = *this + p;
 		}
-		Polynomial& operator-=(const Polynomial& p)
+		Polynomial& operator-=(const Polynomial& p) &
 		{
 			if (p.iszero()) return *this;
 			if (iszero())
@@ -124,7 +124,7 @@ namespace algebra
 			return *this;
 		}
 		template <class R>
-		Polynomial& operator*=(const R& c)
+		Polynomial& operator*=(const R& c) &
 		{
 			if (iszero()) return *this;
 			if (algebra::iszero(c)) return *this = {};
@@ -132,7 +132,7 @@ namespace algebra
 			return *this;
 		}
 		template <class R>
-		Polynomial& operator/=(const R& c)
+		Polynomial& operator/=(const R& c) &
 		{
 			coeff_ /= c;
 			return *this;

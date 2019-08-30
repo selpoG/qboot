@@ -45,7 +45,7 @@ namespace qboot
 			default: return 2 * epsilon + (1 + spin - k);  // note: k <= spin -> 1 + spin - k >= 1
 			}
 		}
-		void next() { k += type == 2 || include_odd ? 1 : 2; }
+		void next() & { k += type == 2 || include_odd ? 1 : 2; }
 	};
 	template <class L, class R, class Real = typename L::value_type>
 	class Merged
@@ -53,12 +53,12 @@ namespace qboot
 		L seql;
 		R seqr;
 		bool next_l{};
-		void update() { next_l = !seqr.valid() || (seql.valid() && seql.get() >= seqr.get()); }
+		void update() & { next_l = !seqr.valid() || (seql.valid() && seql.get() >= seqr.get()); }
 
 	public:
 		using value_type = Real;
 		Merged(L&& l, R&& r) : seql(std::move(l)), seqr(std::move(r)) { update(); }
-		void next()
+		void next() &
 		{
 			if (next_l)
 				seql.next();
