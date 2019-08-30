@@ -205,12 +205,12 @@ int main()
 	constexpr uint32_t n_Max = 100, lambda = 5, dim_ = 3, maxdim = 10, maxspin = 10;
 	[[maybe_unused]] constexpr uint32_t numax = 5;
 	R very_small = R("2e-591");
-	R d12 = mpfr::sqrt(R(3)), d34 = mpfr::sqrt(R(5)) - 1;
+	R d12 = R::sqrt(3), d34 = R::sqrt(5) - 1;
 	R S = (d34 - d12) / 2, P = -d12 * d34 / 2, d23h = R(0.7);
 	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);
 	{
 		Context<R> c(n_Max, lambda, dim_);
-		R d_s = R(0.5181475), d_e = R(1.412617);
+		R d_s = R("0.5181475"), d_e = R("1.412617");
 		for (uint32_t spin = 0; spin <= 2; ++spin)
 		{
 			R gap = R(spin == 0 ? 3 : spin + 1);
@@ -243,7 +243,7 @@ int main()
 		Context<R> c(n_Max, lambda, dim);
 		for (uint32_t spin = 0; spin <= maxspin; ++spin)
 		{
-			test_op(c, c2, Op(c.unitary_bound(spin) + mpfr::sqrt(R(2)), spin, c.epsilon()), d12, d34, very_small);
+			test_op(c, c2, Op(c.unitary_bound(spin) + R::sqrt(2), spin, c.epsilon()), d12, d34, very_small);
 			test_op(c, c2, Op(c.unitary_bound(spin), spin, c.epsilon()), d12, d34, very_small);
 		}
 		test_op(c, c2, Op(c.unitary_bound(0) + R("0.5"), 0, c.epsilon()), d12, d34, very_small);

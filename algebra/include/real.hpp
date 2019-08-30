@@ -463,6 +463,22 @@ namespace mpfr
 		return temp;
 	}
 
+	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
+	inline auto sqrt(mpfr_old_ulong r)
+	{
+		real<prec, rnd> temp;
+		mpfr_sqrt_ui(temp._x, r, rnd);
+		return temp;
+	}
+
+	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
+	inline auto pow(mpfr_old_ulong op1, mpfr_old_ulong op2)
+	{
+		real<_prec, _rnd> temp;
+		mpfr_ui_pow_ui(temp._x, op1, op2, _rnd);
+		return temp;
+	}
+
 	/////////////////////////////////////////////////////////////////
 	// class definition
 	/////////////////////////////////////////////////////////////////
@@ -488,6 +504,8 @@ namespace mpfr
 		static real zero(int sign = 1) { return mpfr::zero<_prec, _rnd>(sign); }
 		// return n! = Gamma(n + 1)
 		static real factorial(mpfr_old_ulong n) { return mpfr::factorial<_prec, _rnd>(n); }
+		static real pow(mpfr_old_ulong n, mpfr_old_ulong m) { return mpfr::pow<_prec, _rnd>(n, m); }
+		static real sqrt(mpfr_old_ulong n) { return mpfr::sqrt<_prec, _rnd>(n); }
 
 		/////////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
@@ -1112,14 +1130,6 @@ namespace mpfr
 	{
 		mpfr_ui_pow(op2._x, op1, op2._x, _rnd);
 		return std::move(op2);
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(mpfr_old_ulong op1, mpfr_old_ulong op2)
-	{
-		real<_prec, _rnd> temp;
-		mpfr_ui_pow_ui(temp._x, op1, op2, _rnd);
-		return temp;
 	}
 
 	// returns (x)_(n) = x (x + 1) ... (x + n - 1)
