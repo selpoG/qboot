@@ -37,17 +37,17 @@
 // inclusion of headers
 /////////////////////////////////////////////////////////////////
 
-#include <algorithm>    // for max
 #include <cstddef>      // for size_t
 #include <cstdint>      // for intmax_t
 #include <cstring>      // for strlen
 #include <ios>          // for ios_base, streamsize
 #include <iostream>     // for basic_ostram, basic_istream
+#include <limits>       // for numeric_limits
 #include <locale>       // for use_facet, ctype
 #include <sstream>      // for ostringstream
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string, to_string, basic_string
-#include <type_traits>  // for void_t, enable_if, enable_if_t, is_same_v, true_type, false_type
+#include <type_traits>  // for enable_if_t, is_same_v, true_type, false_type, is_integral_v, is_signed_v
 #include <utility>      // for move
 
 #include "mpfr.h"
@@ -59,8 +59,8 @@ namespace mpfr
 	/////////////////////////////////////////////////////////////////
 
 	// clang-tidy warns to use int32_t or int64_t instead of long int
-	using mpfr_old_long = long int;            // NOLINT
-	using mpfr_old_ulong = unsigned long int;  // NOLINT
+	using _long = long int;            // NOLINT
+	using _ulong = unsigned long int;  // NOLINT
 
 	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
 	class real;
@@ -77,94 +77,85 @@ namespace mpfr
 
 	template <class Tp>
 	inline constexpr bool is_other_operands =
-	    std::is_same_v<Tp, int> || std::is_same_v<Tp, unsigned int> || std::is_same_v<Tp, mpfr_old_long> ||
-	    std::is_same_v<Tp, mpfr_old_ulong> || std::is_same_v<Tp, double>;
+	    std::is_same_v<Tp, int> || std::is_same_v<Tp, unsigned int> || std::is_same_v<Tp, _long> ||
+	    std::is_same_v<Tp, _ulong> || std::is_same_v<Tp, double>;
 
 	template <class Tp>
 	struct type_traits;
 
 	template <>
-	struct type_traits<mpfr_old_ulong>
+	struct type_traits<_ulong>
 	{
-		inline static int set(mpfr_ptr rop, const mpfr_old_ulong op, mpfr_rnd_t rnd)
-		{
-			return mpfr_set_ui(rop, op, rnd);
-		}
-		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_ulong op2, mpfr_rnd_t rnd)
+		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_ui(rop, op1, op2, rnd);
 		}
-		inline static int sub_a(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_ulong op2, mpfr_rnd_t rnd)
+		inline static int sub_a(mpfr_ptr rop, mpfr_srcptr op1, const _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_sub_ui(rop, op1, op2, rnd);
 		}
-		inline static int sub_b(mpfr_ptr rop, const mpfr_old_ulong op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
+		inline static int sub_b(mpfr_ptr rop, const _ulong op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_ui_sub(rop, op1, op2, rnd);
 		}
-		inline static int mul(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_ulong op2, mpfr_rnd_t rnd)
+		inline static int mul(mpfr_ptr rop, mpfr_srcptr op1, const _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_mul_ui(rop, op1, op2, rnd);
 		}
-		inline static int div_a(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_ulong op2, mpfr_rnd_t rnd)
+		inline static int div_a(mpfr_ptr rop, mpfr_srcptr op1, const _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_div_ui(rop, op1, op2, rnd);
 		}
-		inline static int div_b(mpfr_ptr rop, const mpfr_old_ulong op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
+		inline static int div_b(mpfr_ptr rop, const _ulong op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_ui_div(rop, op1, op2, rnd);
 		}
-		inline static int cmp(mpfr_srcptr op1, const mpfr_old_ulong op2) { return mpfr_cmp_ui(op1, op2); }
+		inline static int cmp(mpfr_srcptr op1, const _ulong op2) { return mpfr_cmp_ui(op1, op2); }
 	};
 
 	template <>
-	struct type_traits<mpfr_old_long>
+	struct type_traits<_long>
 	{
-		inline static int set(mpfr_ptr rop, const mpfr_old_long op, mpfr_rnd_t rnd)
-		{
-			return mpfr_set_si(rop, op, rnd);
-		}
-		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_long op2, mpfr_rnd_t rnd)
+		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_si(rop, op1, op2, rnd);
 		}
-		inline static int sub_a(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_long op2, mpfr_rnd_t rnd)
+		inline static int sub_a(mpfr_ptr rop, mpfr_srcptr op1, const _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_sub_si(rop, op1, op2, rnd);
 		}
-		inline static int sub_b(mpfr_ptr rop, const mpfr_old_long op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
+		inline static int sub_b(mpfr_ptr rop, const _long op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_si_sub(rop, op1, op2, rnd);
 		}
-		inline static int mul(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_long op2, mpfr_rnd_t rnd)
+		inline static int mul(mpfr_ptr rop, mpfr_srcptr op1, const _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_mul_si(rop, op1, op2, rnd);
 		}
-		inline static int div_a(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_long op2, mpfr_rnd_t rnd)
+		inline static int div_a(mpfr_ptr rop, mpfr_srcptr op1, const _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_div_si(rop, op1, op2, rnd);
 		}
-		inline static int div_b(mpfr_ptr rop, const mpfr_old_long op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
+		inline static int div_b(mpfr_ptr rop, const _long op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_si_div(rop, op1, op2, rnd);
 		}
-		inline static int cmp(mpfr_srcptr op1, const mpfr_old_long op2) { return mpfr_cmp_si(op1, op2); }
+		inline static int cmp(mpfr_srcptr op1, const _long op2) { return mpfr_cmp_si(op1, op2); }
 	};
 
 	template <>
-	struct type_traits<unsigned int> : type_traits<mpfr_old_ulong>
+	struct type_traits<unsigned int> : type_traits<_ulong>
 	{
 	};
 
 	template <>
-	struct type_traits<int> : type_traits<mpfr_old_long>
+	struct type_traits<int> : type_traits<_long>
 	{
 	};
 
 	template <>
 	struct type_traits<double>
 	{
-		inline static int set(mpfr_ptr rop, const double op, mpfr_rnd_t rnd) { return mpfr_set_d(rop, op, rnd); }
 		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const double op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_d(rop, op1, op2, rnd);
@@ -212,11 +203,11 @@ namespace mpfr
 
 	// check all values in integral class I1 are included in integral class I2
 	// and I1, I2 has the same signed property
-	template <class I1, class I2, class = std::enable_if_t<std::is_integral_v<I1> && std::is_integral_v<I2>>>
-	inline constexpr bool is_included = (std::is_signed_v<I1> ==
-	                                     std::is_signed_v<I2>)&&(std::numeric_limits<I2>::min() <=
-	                                                             std::numeric_limits<I1>::min()) &&
-	                                    (std::numeric_limits<I1>::max() <= std::numeric_limits<I2>::max());
+	template <class I1, class I2,
+	          class = std::enable_if_t<std::is_integral_v<I1> && std::is_integral_v<I2> &&
+	                                   std::is_signed_v<I1> == std::is_signed_v<I2>>>
+	inline constexpr bool is_included_v = std::numeric_limits<I2>::min() <= std::numeric_limits<I1>::min() &&
+	                                      std::numeric_limits<I1>::max() <= std::numeric_limits<I2>::max();
 }  // namespace mpfr
 
 namespace mpfr
@@ -461,7 +452,7 @@ namespace mpfr
 	}
 
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto factorial(const mpfr_old_ulong n)
+	inline auto factorial(const _ulong n)
 	{
 		real<_prec, _rnd> temp;
 		mpfr_fac_ui(temp._x, n, _rnd);
@@ -469,7 +460,7 @@ namespace mpfr
 	}
 
 	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto sqrt(mpfr_old_ulong r)
+	inline auto sqrt(_ulong r)
 	{
 		real<prec, rnd> temp;
 		mpfr_sqrt_ui(temp._x, r, rnd);
@@ -477,7 +468,7 @@ namespace mpfr
 	}
 
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(mpfr_old_ulong op1, mpfr_old_ulong op2)
+	inline auto pow(_ulong op1, _ulong op2)
 	{
 		real<_prec, _rnd> temp;
 		mpfr_ui_pow_ui(temp._x, op1, op2, _rnd);
@@ -508,9 +499,9 @@ namespace mpfr
 		// if sign is negative, return -0
 		static real zero(int sign = 1) { return mpfr::zero<_prec, _rnd>(sign); }
 		// return n! = Gamma(n + 1)
-		static real factorial(mpfr_old_ulong n) { return mpfr::factorial<_prec, _rnd>(n); }
-		static real pow(mpfr_old_ulong n, mpfr_old_ulong m) { return mpfr::pow<_prec, _rnd>(n, m); }
-		static real sqrt(mpfr_old_ulong n) { return mpfr::sqrt<_prec, _rnd>(n); }
+		static real factorial(_ulong n) { return mpfr::factorial<_prec, _rnd>(n); }
+		static real pow(_ulong n, _ulong m) { return mpfr::pow<_prec, _rnd>(n, m); }
+		static real sqrt(_ulong n) { return mpfr::sqrt<_prec, _rnd>(n); }
 
 		/////////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
@@ -604,13 +595,6 @@ namespace mpfr
 				throw std::runtime_error("in mpfr::real(const std::string&):\n  invalid input format " + op);
 		}
 
-		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
-		explicit inline real(const Tp& o)
-		{
-			mpfr_init2(_x, _prec);
-			type_traits<Tp>::set(_x, o, _rnd);
-		}
-
 		template <mpfr_prec_t _prec2, mpfr_rnd_t _rnd2, class = std::enable_if_t<_prec != _prec2 || _rnd != _rnd2>>
 		explicit inline real(const real<_prec2, _rnd2>& o)
 		{
@@ -621,55 +605,81 @@ namespace mpfr
 		explicit inline real(real<_prec2, _rnd2>&& o)
 		{
 			mpfr_init2(_x, _prec);
-			mpfr_swap(_x, o._x);
+			if (_prec == _prec2)
+				mpfr_swap(_x, o._x);
+			else
+				mpfr_set(_x, o._x, _rnd);
 		}
 
-		template <class = std::void_t<std::enable_if<!std::is_same_v<mpfr_old_ulong, uintmax_t>>>>
-		explicit inline real(uintmax_t o)
+		explicit inline real(double o)
 		{
 			mpfr_init2(_x, _prec);
-			mpfr_set_uj(_x, o, _rnd);
+			mpfr_set_d(_x, o, _rnd);
+		}
+		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
+		explicit inline real(T o)
+		{
+			mpfr_init2(_x, _prec);
+			if constexpr (std::is_signed_v<T>)
+			{
+				if constexpr (is_included_v<T, _long>)
+					mpfr_set_si(_x, o, _rnd);
+				else
+					mpfr_set_sj(_x, o, _rnd);
+			}
+			else
+			{
+				if constexpr (is_included_v<T, _ulong>)
+					mpfr_set_ui(_x, o, _rnd);
+				else
+					mpfr_set_uj(_x, o, _rnd);
+			}
 		}
 
-		template <class = std::void_t<std::enable_if<!std::is_same_v<mpfr_old_long, intmax_t>>>>
-		explicit inline real(intmax_t o)
+		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
+		inline real(T op, mpfr_exp_t e)
 		{
 			mpfr_init2(_x, _prec);
-			mpfr_set_sj(_x, o, _rnd);
-		}
-
-		inline real(mpfr_old_ulong op, mpfr_exp_t e)
-		{
-			mpfr_init2(_x, _prec);
-			mpfr_set_ui_2exp(_x, op, e, _rnd);
-		}
-
-		inline real(mpfr_old_long op, mpfr_exp_t e)
-		{
-			mpfr_init2(_x, _prec);
-			mpfr_set_si_2exp(_x, op, e, _rnd);
-		}
-
-		template <class = std::void_t<std::enable_if<!std::is_same_v<uintmax_t, mpfr_old_ulong>>>>
-		inline real(uintmax_t op, mpfr_exp_t e)
-		{
-			mpfr_init2(_x, _prec);
-			mpfr_set_uj_2exp(_x, op, e, _rnd);
-		}
-
-		template <class = std::void_t<std::enable_if<!std::is_same_v<intmax_t, mpfr_old_long>>>>
-		inline real(intmax_t op, mpfr_exp_t e)
-		{
-			mpfr_init2(_x, _prec);
-			mpfr_set_sj_2exp(_x, op, e, _rnd);
+			if constexpr (std::is_signed_v<T>)
+			{
+				if constexpr (is_included_v<T, _long>)
+					mpfr_set_si_2exp(_x, op, e, _rnd);
+				else
+					mpfr_set_sj_2exp(_x, op, e, _rnd);
+			}
+			else
+			{
+				if constexpr (is_included_v<T, _ulong>)
+					mpfr_set_ui_2exp(_x, op, e, _rnd);
+				else
+					mpfr_set_uj_2exp(_x, op, e, _rnd);
+			}
 		}
 
 		// converting assignment operators
 
-		template <class Tp, class = std::enable_if_t<!is_mpfr_real_v<Tp>>>
-		inline real& operator=(const Tp& o) &
+		inline real& operator=(double o) &
 		{
-			type_traits<Tp>::set(_x, o, _rnd);
+			mpfr_set_d(_x, o, _rnd);
+			return *this;
+		}
+		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
+		inline real& operator=(T o) &
+		{
+			if constexpr (std::is_signed_v<T>)
+			{
+				if constexpr (is_included_v<T, _long>)
+					mpfr_set_si(_x, o, _rnd);
+				else
+					mpfr_set_sj(_x, o, _rnd);
+			}
+			else
+			{
+				if constexpr (is_included_v<T, _ulong>)
+					mpfr_set_ui(_x, o, _rnd);
+				else
+					mpfr_set_uj(_x, o, _rnd);
+			}
 			return *this;
 		}
 
@@ -682,7 +692,10 @@ namespace mpfr
 		template <mpfr_prec_t _prec1, mpfr_rnd_t _rnd1, class = std::enable_if_t<_prec != _prec1 || _rnd != _rnd1>>
 		inline real& operator=(real<_prec1, _rnd1>&& o) &
 		{
-			mpfr_swap(_x, o._x);
+			if (_prec == _prec1)
+				mpfr_swap(_x, o._x);
+			else
+				mpfr_set(_x, o._x, _rnd);
 			return *this;
 		}
 
@@ -850,9 +863,12 @@ namespace mpfr
 		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
 		explicit inline operator T() const
 		{
-			if constexpr (is_included<T, mpfr_old_long>) return mpfr_get_si(_x, _rnd);
-			if constexpr (is_included<T, mpfr_old_ulong>) return mpfr_get_ui(_x, _rnd);
-			if constexpr (is_included<T, intmax_t>) return mpfr_get_sj(_x, _rnd);
+			if constexpr (std::is_signed_v<T>)
+			{
+				if constexpr (is_included_v<T, _long>) return mpfr_get_si(_x, _rnd);
+				return mpfr_get_sj(_x, _rnd);
+			}
+			if constexpr (is_included_v<T, _ulong>) return mpfr_get_ui(_x, _rnd);
 			return mpfr_get_uj(_x, _rnd);
 		}
 		template <mpfr_prec_t prec2, mpfr_rnd_t rnd2>
@@ -1094,42 +1110,42 @@ namespace mpfr
 	}
 
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(const real<_prec, _rnd>& op1, mpfr_old_ulong op2)
+	inline auto pow(const real<_prec, _rnd>& op1, _ulong op2)
 	{
 		real<_prec, _rnd> temp;
 		mpfr_pow_ui(temp._x, op1._x, op2, _rnd);
 		return temp;
 	}
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(real<_prec, _rnd>&& op1, mpfr_old_ulong op2)
+	inline auto pow(real<_prec, _rnd>&& op1, _ulong op2)
 	{
 		mpfr_pow_ui(op1._x, op1._x, op2, _rnd);
 		return std::move(op1);
 	}
 
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(const real<_prec, _rnd>& op1, mpfr_old_long op2)
+	inline auto pow(const real<_prec, _rnd>& op1, _long op2)
 	{
 		real<_prec, _rnd> temp;
 		mpfr_pow_si(temp._x, op1._x, op2, _rnd);
 		return temp;
 	}
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(real<_prec, _rnd>&& op1, mpfr_old_long op2)
+	inline auto pow(real<_prec, _rnd>&& op1, _long op2)
 	{
 		mpfr_pow_si(op1._x, op1._x, op2, _rnd);
 		return std::move(op1);
 	}
 
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(mpfr_old_ulong op1, const real<_prec, _rnd>& op2)
+	inline auto pow(_ulong op1, const real<_prec, _rnd>& op2)
 	{
 		real<_prec, _rnd> temp;
 		mpfr_ui_pow(temp._x, op1, op2._x, _rnd);
 		return temp;
 	}
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(mpfr_old_ulong op1, real<_prec, _rnd>&& op2)
+	inline auto pow(_ulong op1, real<_prec, _rnd>&& op2)
 	{
 		mpfr_ui_pow(op2._x, op1, op2._x, _rnd);
 		return std::move(op2);
@@ -1137,10 +1153,10 @@ namespace mpfr
 
 	// returns (x)_(n) = x (x + 1) ... (x + n - 1)
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pochhammer(const real<_prec, _rnd>& x, mpfr_old_ulong n)
+	inline auto pochhammer(const real<_prec, _rnd>& x, _ulong n)
 	{
 		real<_prec, _rnd> temp(1);
-		for (mpfr_old_ulong i = 0; i < n; ++i) temp *= x + i;
+		for (_ulong i = 0; i < n; ++i) temp *= x + i;
 		return temp;
 	}
 	// do not need to define rvalue version because we cannot reuse x in the above algorithm
