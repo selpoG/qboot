@@ -114,7 +114,8 @@ namespace qboot
 			}
 		}
 		[[nodiscard]] uint32_t max_degree() const { return poles.size() + lambda; }
-		[[nodiscard]] const algebra::Vector<Real>& get_poles() const { return poles; }
+		[[nodiscard]] const algebra::Vector<Real>& get_poles() const& { return poles; }
+		[[nodiscard]] algebra::Vector<Real> get_poles() && { return std::move(poles); }
 		[[nodiscard]] Real get_scale(const Real& delta) const
 		{
 			Real ans = mpfr::pow(4 * rho, delta);

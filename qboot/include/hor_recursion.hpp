@@ -96,7 +96,7 @@ namespace qboot
 		auto h_at_0 = hBlock_shifted(op, S, P, context.n_Max());
 		h_at_0 *= mpfr::pow(4, exp);
 		const auto& rho = context.rho();
-		algebra::RealFunctionWithPower<Real> f_at_0(h_at_0, exp);
+		algebra::RealFunctionWithPower<Real> f_at_0(std::move(h_at_0), exp);
 		algebra::RealFunction<Real> f_of_rho(context.lambda());
 		f_of_rho.at(0) = f_at_0.approximate(rho);
 		Real tmp(1);
@@ -106,7 +106,7 @@ namespace qboot
 			f_at_0.derivate();
 			f_of_rho.at(k) = f_at_0.approximate(rho) / tmp;
 		}
-		return context.rho_to_z().convert(f_of_rho);
+		return context.rho_to_z().convert(std::move(f_of_rho));
 	}
 
 	template <class Real>

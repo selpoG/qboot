@@ -139,13 +139,19 @@ namespace algebra
 		}
 		// coefficient of x ^ p
 		const Ring& operator[](uint32_t p) const { return coeff_[p]; }
-		Polynomial operator+() const { return clone(); }
-		Polynomial operator-() const
+		Polynomial operator+() const& { return clone(); }
+		Polynomial operator+() && { return std::move(*this); }
+		Polynomial operator-() const&
 		{
 			if (iszero()) return Polynomial();
 			auto q = clone();
 			q.negate();
 			return q;
+		}
+		Polynomial operator-() &&
+		{
+			negate();
+			return std::move(*this);
 		}
 		friend Polynomial mul(const Polynomial& p, const Polynomial& q)
 		{

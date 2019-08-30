@@ -76,16 +76,32 @@ namespace algebra
 			coeffs_ /= r;
 			return *this;
 		}
-		RealFunction operator+() const { return clone(); }
-		RealFunction operator-() const { return RealFunction(-coeffs_); }
+		RealFunction operator+() const& { return clone(); }
+		RealFunction operator+() && { return std::move(*this); }
+		RealFunction operator-() const& { return RealFunction(-coeffs_); }
+		RealFunction operator-() &&
+		{
+			negate();
+			return std::move(*this);
+		}
 		friend RealFunction operator+(const RealFunction& x, const RealFunction& y)
 		{
 			return RealFunction(x.coeffs_ + y.coeffs_);
 		}
+		friend RealFunction operator+(RealFunction&& x, const RealFunction& y) { return std::move(x += y); }
+		friend RealFunction operator+(const RealFunction& x, RealFunction&& y) { return std::move(y += x); }
+		friend RealFunction operator+(RealFunction&& x, RealFunction&& y) { return std::move(x += y); }
 		friend RealFunction operator-(const RealFunction& x, const RealFunction& y)
 		{
 			return RealFunction(x.coeffs_ - y.coeffs_);
 		}
+		friend RealFunction operator-(RealFunction&& x, const RealFunction& y) { return std::move(x -= y); }
+		friend RealFunction operator-(const RealFunction& x, RealFunction&& y)
+		{
+			y.coeffs_ = x.coeffs_ - std::move(y.coeffs_);
+			return std::move(y);
+		}
+		friend RealFunction operator-(RealFunction&& x, RealFunction&& y) { return std::move(x -= y); }
 		friend RealFunction mul(const RealFunction& x, const RealFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
@@ -100,9 +116,19 @@ namespace algebra
 			return RealFunction(mul_scalar(r, x.coeffs_));
 		}
 		template <class R>
+		friend RealFunction mul_scalar(const R& r, RealFunction&& x)
+		{
+			return std::move(x *= r);
+		}
+		template <class R>
 		friend RealFunction operator/(const RealFunction& x, const R& r)
 		{
 			return RealFunction(x.coeffs_ / r);
+		}
+		template <class R>
+		friend RealFunction operator/(RealFunction&& x, const R& r)
+		{
+			return std::move(x /= r);
 		}
 		friend bool operator==(const RealFunction& x, const RealFunction& y)
 		{
@@ -194,7 +220,6 @@ namespace algebra
 			assert(lambda_ == f.lambda());
 			return RealFunction<R>(dot(f.coeffs_, mat_));
 		}
-		[[nodiscard]] const Matrix<Ring>& matrix() const { return mat_; }
 	};
 	// real function multiplied by x ^ {pow} of x at x = 0
 	// take derivatives (der x) ^ k upto k <= lambda
@@ -208,6 +233,7 @@ namespace algebra
 
 	public:
 		RealFunctionWithPower(const RealFunction<Ring>& f, const Ring& p) : f_(f.clone()), pow_(p) {}
+		RealFunctionWithPower(RealFunction<Ring>&& f, const Ring& p) : f_(std::move(f)), pow_(p) {}
 		[[nodiscard]] const RealFunction<Ring>& func() const { return f_; }
 		[[nodiscard]] const Ring& power() const { return pow_; }
 		// take derivative

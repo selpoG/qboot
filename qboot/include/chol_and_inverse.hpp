@@ -15,7 +15,7 @@ namespace qboot
 		algebra::Matrix<Ring> A(dim, dim);
 		for (uint32_t i = 0; i < dim; ++i)
 			for (uint32_t j = 0; j < dim; ++j) A.at(i, j) = ab[i + j];
-		return A.cholesky_decomposition().lower_triangular_inverse();
+		return std::move(A).cholesky_decomposition().lower_triangular_inverse();
 	}
 }  // namespace qboot
 

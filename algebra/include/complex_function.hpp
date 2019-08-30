@@ -146,10 +146,17 @@ namespace algebra
 		}
 		// project this function to sym-symmetric part
 		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) const& { return clone().proj(sym); }
-		ComplexFunction operator+() const { return clone(); }
-		ComplexFunction operator-() const { return ComplexFunction(-coeffs_, lambda_, sym_); }
+		ComplexFunction operator+() const& { return clone(); }
+		ComplexFunction operator+() && { return std::move(*this); }
+		ComplexFunction operator-() const& { return ComplexFunction(-coeffs_, lambda_, sym_); }
+		ComplexFunction operator-() &&
+		{
+			negate();
+			return std::move(*this);
+		}
 		ComplexFunction& operator+=(const ComplexFunction& f) &
 		{
+			// TODO(selpo): remove assert
 			assert(sym_ == f.sym_);
 			coeffs_ += f.coeffs_;
 			return *this;
@@ -172,6 +179,7 @@ namespace algebra
 			coeffs_ /= r;
 			return *this;
 		}
+		// TODO(selpo): implement rvalue versions
 		friend ComplexFunction operator+(const ComplexFunction& x, const ComplexFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
@@ -225,9 +233,19 @@ namespace algebra
 			return ComplexFunction(mul_scalar(r, x.coeffs_), x.lambda_, x.sym_);
 		}
 		template <class R>
+		friend ComplexFunction mul_scalar(const R& r, ComplexFunction&& x)
+		{
+			return std::move(x *= r);
+		}
+		template <class R>
 		friend ComplexFunction operator/(const ComplexFunction& x, const R& r)
 		{
 			return ComplexFunction(x.coeffs_ / r, x.lambda_, x.sym_);
+		}
+		template <class R>
+		friend ComplexFunction operator/(ComplexFunction&& x, const R& r)
+		{
+			return std::move(x /= r);
 		}
 		friend bool operator==(const ComplexFunction& x, const ComplexFunction& y)
 		{

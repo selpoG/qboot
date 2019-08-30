@@ -174,6 +174,9 @@ namespace algebra
 			for (uint32_t i = 0; i < x.sz_; ++i) z[i] = x.arr_[i] + y.arr_[i];
 			return z;
 		}
+		friend Vector operator+(Vector&& x, const Vector& y) { return std::move(x += y); }
+		friend Vector operator+(const Vector& x, Vector&& y) { return std::move(y += x); }
+		friend Vector operator+(Vector&& x, Vector&& y) { return std::move(x += y); }
 		friend Vector operator-(const Vector& x, const Vector& y)
 		{
 			assert(x.sz_ == y.sz_);
@@ -181,6 +184,14 @@ namespace algebra
 			for (uint32_t i = 0; i < x.sz_; ++i) z[i] = x.arr_[i] - y.arr_[i];
 			return z;
 		}
+		friend Vector operator-(Vector&& x, const Vector& y) { return std::move(x -= y); }
+		friend Vector operator-(const Vector& x, Vector&& y)
+		{
+			assert(x.sz_ == y.sz_);
+			for (uint32_t i = 0; i < x.sz_; ++i) y.arr_[i] = x.arr_[i] - y.arr_[i];
+			return std::move(y);
+		}
+		friend Vector operator-(Vector&& x, Vector&& y) { return std::move(x -= y); }
 		template <class R>
 		friend Vector mul_scalar(const R& r, const Vector& x)
 		{
@@ -189,11 +200,21 @@ namespace algebra
 			return z;
 		}
 		template <class R>
+		friend Vector mul_scalar(const R& r, Vector&& x)
+		{
+			return std::move(x *= r);
+		}
+		template <class R>
 		friend Vector operator/(const Vector& x, const R& r)
 		{
 			Vector z(x.sz_);
 			for (uint32_t i = 0; i < x.sz_; ++i) z.arr_[i] = x.arr_[i] / r;
 			return z;
+		}
+		template <class R>
+		friend Vector operator/(Vector&& x, const R& r)
+		{
+			return std::move(x /= r);
 		}
 		friend bool operator==(const Vector& x, const Vector& y)
 		{
@@ -203,12 +224,18 @@ namespace algebra
 			return true;
 		}
 		friend bool operator!=(const Vector& x, const Vector& y) { return !(x == y); }
-		friend Vector operator+(const Vector& x) { return x.clone(); }
-		friend Vector operator-(const Vector& x)
+		Vector operator+() const& { return clone(); }
+		Vector operator+() && { return std::move(*this); }
+		Vector operator-() const&
 		{
-			auto y = x.clone();
+			auto y = clone();
 			y.negate();
 			return y;
+		}
+		Vector operator-() &&
+		{
+			negate();
+			return std::move(*this);
 		}
 		template <class Ring2 = Ring, class = std::enable_if<std::is_same_v<Ring, Ring2>>>
 		friend Ring dot(const Vector& x, const Vector<Ring2>& y)
@@ -383,27 +410,54 @@ namespace algebra
 			}
 			return res;
 		}
-		friend Matrix operator+(const Matrix& x) { return x.clone(); }
-		friend Matrix operator-(const Matrix& x) { return Matrix(-x.arr_, x.row_, x.col_); }
+		Matrix operator+() const& { return clone(); }
+		Matrix operator+() && { return std::move(*this); }
+		Matrix operator-() const& { return Matrix(-arr_, row_, col_); }
+		Matrix operator-() &&
+		{
+			negate();
+			return std::move(*this);
+		}
 		friend Matrix operator+(const Matrix& x, const Matrix& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_);
 			return Matrix(x.arr_ + y.arr_, x.row_, x.col_);
 		}
+		friend Matrix operator+(Matrix&& x, const Matrix& y) { return std::move(x += y); }
+		friend Matrix operator+(const Matrix& x, Matrix&& y) { return std::move(y += x); }
+		friend Matrix operator+(Matrix&& x, Matrix&& y) { return std::move(x += y); }
 		friend Matrix operator-(const Matrix& x, const Matrix& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_);
 			return Matrix(x.arr_ - y.arr_, x.row_, x.col_);
 		}
+		friend Matrix operator-(Matrix&& x, const Matrix& y) { return std::move(x -= y); }
+		friend Matrix operator-(const Matrix& x, Matrix&& y)
+		{
+			assert(x.row_ == y.row_ && x.col_ == y.col_);
+			y.arr_ = x.arr_ - std::move(y.arr_);
+			return std::move(y);
+		}
+		friend Matrix operator-(Matrix&& x, Matrix&& y) { return std::move(x -= y); }
 		template <class R>
 		friend Matrix mul_scalar(const R& r, const Matrix& x)
 		{
 			return Matrix(mul_scalar(r, x.arr_), x.row_, x.col_);
 		}
 		template <class R>
+		friend Matrix mul_scalar(const R& r, Matrix&& x)
+		{
+			return std::move(x *= r);
+		}
+		template <class R>
 		friend Matrix operator/(const Matrix& x, const R& r)
 		{
 			return Matrix(x.arr_ / r, x.row_, x.col_);
+		}
+		template <class R>
+		friend Matrix operator/(Matrix&& x, const R& r)
+		{
+			return std::move(x /= r);
 		}
 		friend bool operator==(const Matrix& x, const Matrix& y)
 		{
