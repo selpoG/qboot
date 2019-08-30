@@ -90,7 +90,6 @@ namespace mpfr
 		{
 			return mpfr_set_ui(rop, op, rnd);
 		}
-		inline static mpfr_old_ulong get(mpfr_srcptr op, mpfr_rnd_t rnd) { return mpfr_get_ui(op, rnd); }
 		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_ui(rop, op1, op2, rnd);
@@ -125,7 +124,6 @@ namespace mpfr
 		{
 			return mpfr_set_si(rop, op, rnd);
 		}
-		inline static mpfr_old_long get(mpfr_srcptr op, mpfr_rnd_t rnd) { return mpfr_get_si(op, rnd); }
 		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const mpfr_old_long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_si(rop, op1, op2, rnd);
@@ -167,7 +165,6 @@ namespace mpfr
 	struct type_traits<double>
 	{
 		inline static int set(mpfr_ptr rop, const double op, mpfr_rnd_t rnd) { return mpfr_set_d(rop, op, rnd); }
-		inline static double get(mpfr_srcptr op, mpfr_rnd_t rnd) { return mpfr_get_d(op, rnd); }
 		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, const double op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_d(rop, op1, op2, rnd);
@@ -212,6 +209,14 @@ namespace mpfr
 	// T is mpfr::real or not
 	template <class T>
 	inline constexpr bool is_mpfr_real_v = is_mpfr_real<T>::value;
+
+	// check all values in integral class I1 are included in integral class I2
+	// and I1, I2 has the same signed property
+	template <class I1, class I2, class = std::enable_if_t<std::is_integral_v<I1> && std::is_integral_v<I2>>>
+	inline constexpr bool is_included = (std::is_signed_v<I1> ==
+	                                     std::is_signed_v<I2>)&&(std::numeric_limits<I2>::min() <=
+	                                                             std::numeric_limits<I1>::min()) &&
+	                                    (std::numeric_limits<I1>::max() <= std::numeric_limits<I2>::max());
 }  // namespace mpfr
 
 namespace mpfr
@@ -841,23 +846,21 @@ namespace mpfr
 		// conversion operators
 		/////////////////////////////////////////////////////////////////
 
-		template <class Tp>
-		explicit inline operator Tp() const
+		explicit inline operator double() const { return mpfr_get_d(_x, _rnd); }
+		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
+		explicit inline operator T() const
 		{
-			static_assert(is_mpfr_real_v<Tp> || is_other_operands<Tp> || std::is_same_v<Tp, uintmax_t> ||
-			              std::is_same_v<Tp, intmax_t>);
-			if constexpr (is_other_operands<Tp>)
-				return type_traits<Tp>::get(_x, _rnd);
-			else if constexpr (is_mpfr_real_v<Tp>)
-			{
-				Tp temp;
-				mpfr_set(temp._x, _x, Tp::rnd);
-				return temp;
-			}
-			else if constexpr (std::is_same_v<Tp, uintmax_t>)
-				return mpfr_get_uj(_x, _rnd);
-			else
-				return mpfr_get_sj(_x, _rnd);
+			if constexpr (is_included<T, mpfr_old_long>) return mpfr_get_si(_x, _rnd);
+			if constexpr (is_included<T, mpfr_old_ulong>) return mpfr_get_ui(_x, _rnd);
+			if constexpr (is_included<T, intmax_t>) return mpfr_get_sj(_x, _rnd);
+			return mpfr_get_uj(_x, _rnd);
+		}
+		template <mpfr_prec_t prec2, mpfr_rnd_t rnd2>
+		explicit inline operator real<prec2, rnd2>() const
+		{
+			real<prec2, rnd2> temp;
+			mpfr_set(temp._x, _x, rnd2);
+			return temp;
 		}
 
 		/////////////////////////////////////////////////////////////////
