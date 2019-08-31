@@ -10,9 +10,8 @@
 
 namespace qboot
 {
-	using std::size_t;
 	// x -> (p * x + q) / (r * x + s)
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class MobiusTransformation
 	{
 		Real p_, q_, r_, s_;
@@ -60,14 +59,14 @@ namespace qboot
 	// function of x
 	// pow(base_, k / (c - x)) (if c has value)
 	// pow(base_, k * x) (otherwise)
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class ExpLike
 	{
 		Real base_, k_;
 		std::optional<Real> c_;
 	};
 	// function of x, c * e(x) / (\\prod_p pow(x - p, poles[p]))
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class DampedRational
 	{
 		Real c_;

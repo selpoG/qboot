@@ -12,7 +12,7 @@
 
 namespace qboot
 {
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	algebra::Vector<Real> sample_points(uint32_t degree)
 	{
 		algebra::Vector<Real> v(degree + 1);
@@ -20,7 +20,7 @@ namespace qboot
 		v /= (-64 * int32_t(degree + 1)) * mpfr::log(3 - Real::sqrt(8));
 		return v;
 	}
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class PoleSequence
 	{
 		bool include_odd;
@@ -69,17 +69,17 @@ namespace qboot
 		[[nodiscard]] bool valid() const { return seql.valid() || seqr.valid(); }
 		[[nodiscard]] Real get() const { return next_l ? seql.get() : seqr.get(); }
 	};
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	bool include_odd(const Real& d1, const Real& d2, const Real& d3, const Real& d4)
 	{
 		return d1 != d2 && d3 != d4;
 	}
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	bool include_odd(const Real& d12, const Real& d34)
 	{
 		return d12 != 0 && d34 != 0;
 	}
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class RationalApproxData
 	{
 		uint32_t spin, lambda;

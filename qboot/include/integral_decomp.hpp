@@ -15,7 +15,7 @@ namespace qboot
 	// = (-p) ^ n e ^ {p k} \Gamma(0, p k)
 	//   + (1 / k ^ n) \sum_{i = 0}^{n - 1} (n - i - 1)! (-p k) ^ i
 	// incomplete_gamma_factor = e ^ {p k} \Gamma(0, p k)
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	algebra::Vector<Real> simple_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position)
 	{
 		Real incomplete_gamma = pole_position == 0 ? Real(Real::prec)

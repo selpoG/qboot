@@ -36,18 +36,6 @@ namespace qboot2
 
 namespace qboot
 {
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::RealFunction<Real> hBlock_shifted(const PrimaryOperator<Real>& op, const Real& S, const Real& P,
-	                                           uint32_t n_Max);
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::RealFunction<Real> hBlock_powered(const Real& exp, const PrimaryOperator<Real>& op, const Real& S,
-	                                           const Real& P, const Context<Real>& context);
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::ComplexFunction<Real> gBlock(const PrimaryOperator<Real>& op, const Real& S, const Real& P,
-	                                      const Context<Real>& context);
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::RealFunction<Real> h_asymptotic(const Real& S, const Context<Real>& context);
-
 	// a function f(rho) of rho at rho = 0 (not crossing symmetric point)
 	// f(rho) = h_{Delta, spin}^{d12, d34}(z, z),
 	// g_{Delta, spin}^{d12, d34}(z, z) = (4 rho) ^ {Delta} f(rho)
@@ -78,14 +66,6 @@ namespace qboot
 		return b;
 	}
 
-	// a function of z - 1 / 2 expanded at z = 1 / 2, g_{Delta, spin}^{d12, d34}(z, z)
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
-	algebra::RealFunction<Real> gBlock_real(const PrimaryOperator<Real>& op, const Real& S, const Real& P,
-	                                        const Context<Real>& context)
-	{
-		return hBlock_powered(op.delta(), op, S, P, context);
-	}
-
 	// a function of z - 1 / 2 expanded at z = 1 / 2,
 	// (4 * rho) ^ {exp} * h_{Delta, spin}^{d12, d34}(z, z)
 	// = (4 * rho) ^ {exp - Delta} * g_{Delta, spin}^{d12, d34}(z, z)
@@ -107,6 +87,14 @@ namespace qboot
 			f_of_rho.at(k) = f_at_0.approximate(rho) / tmp;
 		}
 		return context.rho_to_z().convert(std::move(f_of_rho));
+	}
+
+	// a function of z - 1 / 2 expanded at z = 1 / 2, g_{Delta, spin}^{d12, d34}(z, z)
+	template <class Real>
+	algebra::RealFunction<Real> gBlock_real(const PrimaryOperator<Real>& op, const Real& S, const Real& P,
+	                                        const Context<Real>& context)
+	{
+		return hBlock_powered(op.delta(), op, S, P, context);
 	}
 
 	template <class Real>

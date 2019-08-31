@@ -8,7 +8,7 @@
 
 namespace qboot
 {
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	algebra::Vector<Real> fast_partial_fraction(const algebra::Vector<Real>& poles)
 	{
 		algebra::Vector<Real> result(poles.size());

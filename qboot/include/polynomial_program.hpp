@@ -26,7 +26,7 @@ namespace qboot
 	// class PolynomialInequalityEvaluated holds only evaluated matrices
 	// class PolynomialInequalityWithCoeffs holds full coefficients of matrices
 	// class PolynomialInequality is the base abstract class of the two
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class PolynomialInequality
 	{
 		uint32_t N_, sz_, max_deg_;
@@ -80,7 +80,7 @@ namespace qboot
 		[[nodiscard]] virtual algebra::Matrix<Real> target_eval(uint32_t k) && = 0;
 	};
 
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class PolynomialInequalityEvaluated : public PolynomialInequality<Real>
 	{
 		// mat[n]: evaluated values of M[n]
@@ -141,7 +141,7 @@ namespace qboot
 		[[nodiscard]] algebra::Matrix<Real> target_eval(uint32_t k) && override { return std::move(target_[k]); }
 	};
 
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class PolynomialInequalityWithCoeffs : public PolynomialInequality<Real>
 	{
 		algebra::Vector<algebra::Matrix<algebra::Polynomial<Real>>> mat_;
@@ -235,7 +235,7 @@ namespace qboot
 	// j-th inequalities:
 	//   \sum_{n = 0}^{N - 1} y[n] M_{j}^{n}(x) >= C_{j}(x) for all x >= 0
 	//   (each of M_{j}^{n} or C_{j} can be a polynomial matrix of x)
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class PolynomialProgramming
 	{
 		// num of free variables

@@ -12,7 +12,7 @@ namespace qboot
 {
 	// primary operator whose dimension is delta and spin is spin
 	// delta may be a polynomial, especially just a monomial f(x) = x
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class PrimaryOperator
 	{
 		Real delta_, epsilon_;
@@ -50,7 +50,7 @@ namespace qboot
 			return os.str();
 		}
 	};
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class GeneralPrimaryOperator
 	{
 		Real epsilon_;

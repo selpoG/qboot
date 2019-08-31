@@ -15,7 +15,7 @@ namespace algebra
 	// \sum_{i} coeff_[i] x ^ i
 	// the last value of coeff_ must be non-zero
 	// zero polynomial is represented by empty coeff_ (coeff_.size() = 0)
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>, class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
+	template <class Ring, class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
 	class Polynomial
 	{
 		Vector<Ring> coeff_;
@@ -294,7 +294,7 @@ namespace algebra
 	{
 		return Polynomial<mpfr::real<prec, rnd>>(coeffs.clone());
 	}
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	Matrix<polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>& coeffs)
 	{
 		uint32_t row = coeffs[0].row(), column = coeffs[0].column(), len = coeffs.size();
@@ -308,7 +308,7 @@ namespace algebra
 			}
 		return ans;
 	}
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	Vector<polynomialize_t<Ring>> to_pol(Vector<Vector<Ring>>& coeffs)
 	{
 		uint32_t sz = coeffs[0].size(), len = coeffs.size();
@@ -324,7 +324,7 @@ namespace algebra
 	// calculate coefficients c of polynomial f(x) s.t. for each i, f(points[i]) = vals[i]
 	// vals[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
 	// evals(polynomial_interpolate(vals, points), points) == vals (up to rounding errors)
-	template <class Ring, class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring, class Real>
 	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<Real>& points)
 	{
 		assert(vals.size() == points.size() && points.size() > 0);

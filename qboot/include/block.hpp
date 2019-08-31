@@ -10,7 +10,7 @@
 namespace qboot
 {
 	// F_{\mp, op}^{d1 d2, d3 d4}
-	template <class Real = mpfr::real<1000, MPFR_RNDN>, class Operator = PrimaryOperator<Real>>
+	template <class Real, class Operator>
 	class ConformalBlock
 	{
 		Operator op_;

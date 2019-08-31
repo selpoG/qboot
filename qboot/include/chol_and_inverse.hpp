@@ -8,7 +8,7 @@
 
 namespace qboot
 {
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	algebra::Matrix<Ring> anti_band_to_inverse(const algebra::Vector<Ring>& ab)
 	{
 		auto dim = (1 + ab.size()) / 2;

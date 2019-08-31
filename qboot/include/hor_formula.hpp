@@ -44,17 +44,17 @@ namespace qboot2
 
 namespace qboot
 {
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	algebra::Vector<algebra::Polynomial<Real>> _get_nonzero_spin_rec_coeffs(const PrimaryOperator<Real>& op,
 	                                                                        const Real& S, const Real& P);
 
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	algebra::Vector<algebra::Polynomial<Real>> _get_zero_spin_rec_coeffs(const PrimaryOperator<Real>& op, const Real& S,
 	                                                                     const Real& P);
 
 	// gives coefficient polynomials p[i] of recursion equation of b[i].
 	// \sum_{i = 0}^{p.size() - 1} b[n - i] p[i] = 0
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	algebra::Vector<algebra::Polynomial<Real>> _get_rec_coeffs(const PrimaryOperator<Real>& op, const Real& S,
 	                                                           const Real& P)
 	{

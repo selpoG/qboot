@@ -511,7 +511,7 @@ namespace algebra
 		}
 	};
 
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	std::ostream& operator<<(std::ostream& out, const Vector<Ring>& v)
 	{
 		out << "[";
@@ -525,7 +525,7 @@ namespace algebra
 		return out << "]";
 	}
 
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	std::ostream& operator<<(std::ostream& out, const Matrix<Ring>& v)
 	{
 		out << "[";

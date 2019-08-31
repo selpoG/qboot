@@ -34,7 +34,7 @@ namespace qboot
 {
 	// z = 4 r / (1 + r) ^ 2
 	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	algebra::RealFunction<Real> z_as_func_rho(uint32_t lambda)
 	{
 		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqt(2) + r') ^ {-2}
@@ -51,7 +51,7 @@ namespace qboot
 		// z - 1 / 2 = g1 + g2
 		return g1 + g2;
 	}
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class Context
 	{
 		const uint32_t n_Max_, lambda_, dim_;
@@ -103,7 +103,8 @@ namespace qboot
 		{
 			return mul(algebra::v_to_d(d, lambda_), gBlock).proj(sym);
 		}
-		[[nodiscard]] algebra::ComplexFunction<Real> evaluate(const ConformalBlock<Real>& block) const
+		[[nodiscard]] algebra::ComplexFunction<Real> evaluate(
+		    const ConformalBlock<Real, PrimaryOperator<Real>>& block) const
 		{
 			return F_block(block.delta_half(), gBlock(block.get_op(), block.S(), block.P(), *this), block.symmetry());
 		}

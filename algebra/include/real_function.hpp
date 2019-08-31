@@ -16,7 +16,7 @@ namespace algebra
 	// take derivatives (der x) ^ k upto k <= lambda
 	// namely, a function is represented as
 	//   \sum_{k = 0}^{lambda} this->at(k) x ^ k + O(x ^ {lambda + 1})
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	class RealFunction
 	{
 		template <class Ring2>
@@ -141,7 +141,7 @@ namespace algebra
 			return RealFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_);
 		}
 	};
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	RealFunction<polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>& coeffs)
 	{
 		uint32_t lambda = coeffs[0].lambda(), len = coeffs.size();
@@ -169,7 +169,7 @@ namespace algebra
 		return out;
 	}
 	// f(x) = (a + b * x) ^ p
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	RealFunction<Ring> power_function(const Ring& a, const Ring& b, const Ring& p, uint32_t lambda)
 	{
 		assert(a != 0);
@@ -183,7 +183,7 @@ namespace algebra
 	// convert a function f(x) of x to a function g(y) of y
 	// Let x = x(y), then g(y) = f(x(y))
 	// x(0) must be 0
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	class RealConverter
 	{
 		uint32_t lambda_;
@@ -225,7 +225,7 @@ namespace algebra
 	// take derivatives (der x) ^ k upto k <= lambda
 	// namely, a function is represented as
 	//   \sum_{k = 0}^{lambda} this->at(k) x ^ {k + pow} + O(x ^ {pow + lambda + 1})
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	class RealFunctionWithPower
 	{
 		RealFunction<Ring> f_;

@@ -26,7 +26,7 @@ namespace std  // NOLINT
 
 namespace qboot
 {
-	template <class OStr, class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class OStr, class Real>
 	OStr& write_mat(OStr& out, const algebra::Matrix<Real>& v)
 	{
 		out << v.row() << " " << v.column() << "\n";
@@ -35,7 +35,7 @@ namespace qboot
 		return out;
 	}
 
-	template <class OStr, class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class OStr, class Real>
 	OStr& write_vec(OStr& out, const algebra::Vector<Real>& v)
 	{
 		out << v.size() << "\n";
@@ -49,7 +49,7 @@ namespace qboot
 	//   Tr(A_p Y) + (B y)_p = c_p (B.row() = P, B.column() == N).
 	// p <-> (r, s, k) where 0 <= r <= s < dim, 0 <= k <= deg,
 	// and 0 <= p < P = schur_size().
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class DualConstraint
 	{
 		uint32_t dim_{}, deg_{};
@@ -85,7 +85,7 @@ namespace qboot
 
 	// maximize b_0 + \sum_{n=1}^{N} b_n y_n over y_n such that all constraints are satisfied.
 	// constant_term_ = b_0, objectives_[n] = b_n
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	class SDPBInput
 	{
 		Real constant_term_;

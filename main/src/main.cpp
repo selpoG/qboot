@@ -104,8 +104,8 @@ void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34, const R& 
 	auto p = qboot::hBlock_shifted<R>(op, S, P, nMax);
 	auto q_ptr =
 	    op.spin() == 0
-	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, &delta._x, S._x, P._x, 1000, MPFR_RNDN)
-	        : qboot2::recursionNonZeroVector(nMax, op.epsilon()._x, ell._x, delta._x, S._x, P._x, 1000, MPFR_RNDN);
+	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, &delta._x, S._x, P._x, R::prec, R::rnd)
+	        : qboot2::recursionNonZeroVector(nMax, op.epsilon()._x, ell._x, delta._x, S._x, P._x, R::prec, R::rnd);
 	auto q = to_func(q_ptr, p.lambda());
 	check(p, q, very_small, [&]() {
 		cout << "test_rec(nMax=" << nMax << "op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")" << endl;

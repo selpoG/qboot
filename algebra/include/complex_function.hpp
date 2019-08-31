@@ -57,7 +57,7 @@ namespace algebra
 	//   \sum_{n = 0}^{lambda / 2} \sum_{m = 0}^{lambda - 2 n} this->at(n, m) (x - x0) ^ m (y - y0) ^ n + ...
 	// we take (x0, y0) = (1 / 2, 0)
 	// if a nontrivial symmetry even (resp. odd) is given, m runs over even (resp. odd) number only.
-	template <class Ring = mpfr::real<1000, MPFR_RNDN>>
+	template <class Ring>
 	class ComplexFunction
 	{
 		template <class Ring2>
@@ -299,7 +299,7 @@ namespace algebra
 		return out << "]";
 	}
 	// v ^ d = ((1 - z) (1 - z_bar)) ^ d as a function of x, y
-	template <class Real = mpfr::real<1000, MPFR_RNDN>>
+	template <class Real>
 	ComplexFunction<Real> v_to_d(const Real& d, uint32_t lambda)
 	{
 		// f.at(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
