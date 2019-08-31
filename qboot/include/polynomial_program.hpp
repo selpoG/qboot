@@ -5,10 +5,11 @@
 #include <memory>   // for unique_ptr
 #include <vector>   // for vector
 
-#include "matrix.hpp"      // for Matrix, Vector
-#include "polynomial.hpp"  // for Polynomial
-#include "real.hpp"        // for real
-#include "sdpb_input.hpp"  // for SDPBInput
+#include "matrix.hpp"        // for Matrix, Vector
+#include "polynomial.hpp"    // for Polynomial
+#include "real.hpp"          // for real
+#include "scale_factor.hpp"  // for ScaleFactor
+#include "sdpb_input.hpp"    // for SDPBInput
 
 namespace qboot
 {
@@ -21,7 +22,7 @@ namespace qboot
 	//     deg(q[m](x)) = m
 	//   - sample points x[k] (for k = 0, ..., d)
 	//   - sample scalings s[k] (for k = 0, ..., d)
-	// each element of M[n] and C are polynomial of x, but SDPB v.2 requires only there evaluation at x = x[k]
+	// each element of M[n] and C is a polynomial of x, but SDPB v.2 requires only there evaluation at x = x[k]
 	// while SDPB v.1 requires explicit coefficients of polynomials in xml file
 	// class PolynomialInequalityEvaluated holds only evaluated matrices
 	// class PolynomialInequalityWithCoeffs holds full coefficients of matrices
@@ -29,43 +30,45 @@ namespace qboot
 	template <class Real>
 	class PolynomialInequality
 	{
-		uint32_t N_, sz_, max_deg_;
-		algebra::Vector<algebra::Polynomial<Real>> bilinear_;
-		algebra::Vector<Real> sample_x, sample_sc;
+		uint32_t N_, sz_;
+		std::unique_ptr<ScaleFactor<Real>> scale_;
 
 	public:
-		PolynomialInequality(uint32_t N, uint32_t sz, uint32_t max_deg,
-		                     algebra::Vector<algebra::Polynomial<Real>>&& bilinear_bases,
-		                     algebra::Vector<Real>&& sample_points, algebra::Vector<Real>&& sample_scalings)
-		    : N_(N),
-		      sz_(sz),
-		      max_deg_(max_deg),
-		      bilinear_(std::move(bilinear_bases)),
-		      sample_x(std::move(sample_points)),
-		      sample_sc(std::move(sample_scalings))
+		PolynomialInequality(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor<Real>>&& scale)
+		    : N_(N), sz_(sz), scale_(std::move(scale))
 		{
-			assert(bilinear_.size() >= max_deg / 2 + 1);
-			assert(sample_x.size() == max_deg + 1);
-			assert(sample_sc.size() == max_deg + 1);
-			for (uint32_t i = 0; i < bilinear_.size(); ++i) assert(bilinear_[i].degree() == int32_t(i));
 		}
 		PolynomialInequality(const PolynomialInequality&) = delete;
 		PolynomialInequality& operator=(const PolynomialInequality&) = delete;
 		PolynomialInequality(PolynomialInequality&&) noexcept = default;
 		PolynomialInequality& operator=(PolynomialInequality&&) noexcept = default;
 		virtual ~PolynomialInequality() = default;
+		[[nodiscard]] const std::unique_ptr<ScaleFactor<Real>>& get_scale() const& { return scale_; }
+		[[nodiscard]] std::unique_ptr<ScaleFactor<Real>> get_scale() && { return std::move(scale_); }
 		// size of matrix
 		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
 		// size of matrix
 		[[nodiscard]] uint32_t size() const { return sz_; }
 		// size of matrix
-		[[nodiscard]] uint32_t max_degree() const { return max_deg_; }
+		[[nodiscard]] uint32_t max_degree() const { return scale_->max_degree(); }
 		// q[m](x)
-		[[nodiscard]] const algebra::Vector<algebra::Polynomial<Real>>& bilinear_bases() const { return bilinear_; }
+		[[nodiscard]] algebra::Vector<algebra::Polynomial<Real>> bilinear_bases() const&
+		{
+			return scale_->bilinear_bases();
+		}
+		// q[m](x)
+		[[nodiscard]] algebra::Vector<algebra::Polynomial<Real>> bilinear_bases() &&
+		{
+			return std::move(*scale_).bilinear_bases();
+		}
 		// x[k]
-		[[nodiscard]] const algebra::Vector<Real>& sample_points() const { return sample_x; }
+		[[nodiscard]] algebra::Vector<Real> sample_points() const& { return scale_->sample_points(); }
+		// x[k]
+		[[nodiscard]] algebra::Vector<Real> sample_points() && { return std::move(*scale_).sample_points(); }
 		// s[k]
-		[[nodiscard]] const algebra::Vector<Real>& sample_scalings() const { return sample_sc; }
+		[[nodiscard]] algebra::Vector<Real> sample_scalings() const& { return scale_->sample_scalings(); }
+		// s[k]
+		[[nodiscard]] algebra::Vector<Real> sample_scalings() && { return std::move(*scale_).sample_scalings(); }
 		// M[n]
 		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) const& = 0;
 		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial<Real>> matrix_polynomial(uint32_t n) && = 0;
@@ -89,24 +92,20 @@ namespace qboot
 		algebra::Vector<algebra::Matrix<Real>> target_;
 
 	public:
-		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, uint32_t max_deg,
+		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor<Real>>&& scale,
 		                              algebra::Vector<algebra::Vector<algebra::Matrix<Real>>>&& mat,
-		                              algebra::Vector<algebra::Matrix<Real>>&& target,
-		                              algebra::Vector<algebra::Polynomial<Real>>&& bilinear_bases,
-		                              algebra::Vector<Real>&& sample_points, algebra::Vector<Real>&& sample_scalings)
-		    : PolynomialInequality<Real>(N, sz, max_deg, std::move(bilinear_bases), std::move(sample_points),
-		                                 std::move(sample_scalings)),
-		      mat_(std::move(mat)),
-		      target_(std::move(target))
+		                              algebra::Vector<algebra::Matrix<Real>>&& target)
+		    : PolynomialInequality<Real>(N, sz, std::move(scale)), mat_(std::move(mat)), target_(std::move(target))
 		{
+			uint32_t deg = PolynomialInequality<Real>::get_scale()->max_degree();
 			assert(mat_.size() == N);
 			for (uint32_t i = 0; i < N; i++)
 			{
-				assert(mat_[i].size() == max_deg + 1);
-				for (uint32_t k = 0; k <= max_deg; k++) assert(mat_[i][k].is_square() && mat_[i][k].row() == sz);
+				assert(mat_[i].size() == deg + 1);
+				for (uint32_t k = 0; k <= deg; k++) assert(mat_[i][k].is_square() && mat_[i][k].row() == sz);
 			}
-			assert(target_.size() == max_deg + 1);
-			for (uint32_t k = 0; k <= max_deg; k++) assert(target_[k].is_square() && target_[k].row() == sz);
+			assert(target_.size() == deg + 1);
+			for (uint32_t k = 0; k <= deg; k++) assert(target_[k].is_square() && target_[k].row() == sz);
 		}
 		PolynomialInequalityEvaluated(const PolynomialInequalityEvaluated&) = delete;
 		PolynomialInequalityEvaluated& operator=(const PolynomialInequalityEvaluated&) = delete;
@@ -148,47 +147,40 @@ namespace qboot
 		algebra::Matrix<algebra::Polynomial<Real>> target_;
 
 	public:
-		PolynomialInequalityWithCoeffs(uint32_t N, uint32_t max_deg, algebra::Vector<algebra::Polynomial<Real>>&& mat,
-		                               algebra::Polynomial<Real>&& target,
-		                               algebra::Vector<algebra::Polynomial<Real>>&& bilinear_bases,
-		                               algebra::Vector<Real>&& sample_points, algebra::Vector<Real>&& sample_scalings)
-		    : PolynomialInequality<Real>(N, 1, max_deg, std::move(bilinear_bases), std::move(sample_points),
-		                                 std::move(sample_scalings)),
-		      mat_{},
-		      target_{}
+		PolynomialInequalityWithCoeffs(uint32_t N, std::unique_ptr<ScaleFactor<Real>>&& scale,
+		                               algebra::Vector<algebra::Polynomial<Real>>&& mat,
+		                               algebra::Polynomial<Real>&& target)
+		    : PolynomialInequality<Real>(N, 1, std::move(scale)), mat_{}, target_{}
 		{
+			auto deg = int32_t(PolynomialInequality<Real>::get_scale()->max_degree());
 			assert(mat.size() == N);
 			mat_ = algebra::Vector<algebra::Matrix<algebra::Polynomial<Real>>>(N);
 			for (uint32_t i = 0; i < N; i++)
 			{
 				mat_[i] = {1, 1};
-				assert(mat[i].degree() <= int32_t(max_deg));
+				assert(mat[i].degree() <= deg);
 				mat_[i].at(0, 0) = std::move(mat[i]);
 			}
 			target_ = {1, 1};
-			assert(target.degree() <= int32_t(max_deg));
+			assert(target.degree() <= deg);
 			target_.at(0, 0) = std::move(target);
 		}
-		PolynomialInequalityWithCoeffs(uint32_t N, uint32_t sz, uint32_t max_deg,
+		PolynomialInequalityWithCoeffs(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor<Real>>&& scale,
 		                               algebra::Vector<algebra::Matrix<algebra::Polynomial<Real>>>&& mat,
-		                               algebra::Matrix<algebra::Polynomial<Real>>&& target,
-		                               algebra::Vector<algebra::Polynomial<Real>>&& bilinear_bases,
-		                               algebra::Vector<Real>&& sample_points, algebra::Vector<Real>&& sample_scalings)
-		    : PolynomialInequality<Real>(N, sz, max_deg, std::move(bilinear_bases), std::move(sample_points),
-		                                 std::move(sample_scalings)),
-		      mat_(std::move(mat)),
-		      target_(std::move(target))
+		                               algebra::Matrix<algebra::Polynomial<Real>>&& target)
+		    : PolynomialInequality<Real>(N, sz, std::move(scale)), mat_(std::move(mat)), target_(std::move(target))
 		{
+			auto deg = int32_t(PolynomialInequality<Real>::get_scale()->max_degree());
 			assert(mat_.size() == N);
 			for (uint32_t i = 0; i < N; i++)
 			{
 				assert(mat_[i].is_square() && mat_[i].row() == sz);
 				for (uint32_t r = 0; r < sz; r++)
-					for (uint32_t c = 0; c < sz; c++) assert(mat_[i].at(r, c).degree() <= int32_t(max_deg));
+					for (uint32_t c = 0; c < sz; c++) assert(mat_[i].at(r, c).degree() <= deg);
 			}
 			assert(target_.is_square() && target_.row() == sz);
 			for (uint32_t r = 0; r < sz; r++)
-				for (uint32_t c = 0; c < sz; c++) assert(target_.at(r, c).degree() <= int32_t(max_deg));
+				for (uint32_t c = 0; c < sz; c++) assert(target_.at(r, c).degree() <= deg);
 		}
 		PolynomialInequalityWithCoeffs(const PolynomialInequalityWithCoeffs&) = delete;
 		PolynomialInequalityWithCoeffs& operator=(const PolynomialInequalityWithCoeffs&) = delete;

@@ -179,22 +179,62 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 	}
 }
 
+class TestScale : public qboot::ScaleFactor<R>
+{
+	static constexpr uint32_t deg_ = 4;
+	Vector<R> xs_;
+
+public:
+	TestScale() : xs_(qboot::sample_points<R>(deg_)) {}
+	TestScale(const TestScale&) = delete;
+	TestScale& operator=(const TestScale&) = delete;
+	TestScale(TestScale&&) noexcept = default;
+	TestScale& operator=(TestScale&&) noexcept = default;
+	~TestScale() override;
+	[[nodiscard]] uint32_t max_degree() const override { return deg_; }
+	[[nodiscard]] R eval(const R& v) const override { return mpfr::exp(-v); }
+	[[nodiscard]] Vector<R> sample_scalings() const& override
+	{
+		Vector<R> sc(deg_ + 1);
+		for (uint32_t i = 0; i <= deg_; i++) sc[i] = eval(xs_[i]);
+		return sc;
+	}
+	[[nodiscard]] Vector<R> sample_scalings() && override { return sample_scalings(); }
+	[[nodiscard]] R sample_point(uint32_t k) const override { return xs_[k]; }
+	[[nodiscard]] Vector<R> sample_points() const& override { return xs_.clone(); }
+	[[nodiscard]] Vector<R> sample_points() && override { return sample_points(); }
+	[[nodiscard]] Polynomial<R> bilinear_base(uint32_t m) const override
+	{
+		assert(m <= deg_ / 2);
+		switch (m)
+		{
+		case 0: return {R(1)};                  // 1
+		case 1: return {R(-1), R(1)};           // -1 + x
+		default: return {R(1), R(-2), R(0.5)};  // 1 - 2 x + x ^ 2 / 2
+		}
+	}
+	[[nodiscard]] Vector<Polynomial<R>> bilinear_bases() const& override
+	{
+		Vector<Polynomial<R>> q(deg_ / 2 + 1);
+		for (uint32_t i = 0; i <= deg_ / 2; i++) q[i] = bilinear_base(i);
+		return q;
+	}
+	[[nodiscard]] Vector<Polynomial<R>> bilinear_bases() && override { return bilinear_bases(); }
+};
+TestScale::~TestScale() = default;
+
 void test_sdpb()
 {
 	// https://github.com/davidsd/sdpb/blob/master/test/test.xml
-	constexpr uint32_t deg = 4;
-	Vector<Polynomial<R>> bilinear{{R(1)}, {R(-1), R(1)}, {R(1), R(-2), R(0.5)}};
+	// {1 + x ^ 4, x ^ 2 + x ^ 4 / 12}
 	Vector<Polynomial<R>> elm{{R(1), R(0), R(0), R(0), R(1)}, {R(0), R(0), R(1), R(0), R(1) / 12}};
-	auto sample_points = qboot::sample_points<R>(deg);
-	Vector<R> sample_scale(deg + 1);
-	for (uint32_t i = 0; i <= deg; ++i) sample_scale[i] = mpfr::exp(-sample_points[i]);
 
 	PolynomialProgramming<R> prg(1);
 	prg.objective_constant() = R(0);
 	prg.objectives({R(-1)});
-	auto ineq = make_unique<PolIneq>(1u, 4u, Vector{elm[1].clone()}, -elm[0], bilinear.clone(), sample_points.clone(),
-	                                 sample_scale.clone());
+	auto ineq = make_unique<PolIneq>(1u, std::make_unique<TestScale>(), Vector{elm[1].clone()}, -elm[0]);
 	prg.add_inequality(move(ineq));
+
 	auto sdpb = move(prg).create_input();
 	auto root = fs::current_path() / "test";
 	sdpb.write_all(root);
