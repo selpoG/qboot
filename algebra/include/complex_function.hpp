@@ -106,6 +106,7 @@ namespace algebra
 		// if symmetry is even or odd, the parity of dx must equals symmetry
 		[[nodiscard]] Ring& at(uint32_t dx, uint32_t dy) & { return coeffs_[index(dx, dy)]; }
 		[[nodiscard]] const Ring& at(uint32_t dx, uint32_t dy) const& { return coeffs_[index(dx, dy)]; }
+		[[nodiscard]] Vector<Ring> flatten() && { return std::move(coeffs_); }
 
 		// z -> 1 - z
 		void flip() &

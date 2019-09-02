@@ -19,6 +19,8 @@ namespace qboot
 		uint32_t spin_;
 
 	public:
+		// unit operator
+		explicit PrimaryOperator(const Real& epsilon) : delta_{}, epsilon_(epsilon), spin_(0) {}
 		PrimaryOperator(const Real& delta, uint32_t spin, const Real& epsilon)
 		    : delta_(delta), epsilon_(epsilon), spin_(spin)
 		{
@@ -41,7 +43,7 @@ namespace qboot
 		[[nodiscard]] bool is_divergent_hor() const
 		{
 			if (spin_ > 0) return delta_ == spin_ + 2 * epsilon_ || (mpfr::isinteger(delta_) && delta_ <= 1);
-			return delta_ == epsilon_ || delta_ == epsilon_ + Real(0.5);
+			return delta_.iszero() || delta_ == epsilon_ || delta_ == epsilon_ + Real(0.5);
 		}
 		[[nodiscard]] std::string str() const
 		{

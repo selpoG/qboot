@@ -32,8 +32,10 @@ namespace fs = std::filesystem;
 using R = mpfr::real<1000, MPFR_RNDN>;
 using Op = qboot::PrimaryOperator<R>;
 using GOp = qboot::GeneralPrimaryOperator<R>;
+using Block = qboot::ConformalBlock<R, Op>;
 using GBlock = qboot::ConformalBlock<R, GOp>;
 using PolIneq = qboot::PolynomialInequalityWithCoeffs<R>;
+using EvalIneq = qboot::PolynomialInequalityEvaluated<R>;
 
 [[maybe_unused]] static Vector<R> to_vec(const unique_ptr<mpfr_t[]>& a, uint32_t s);
 [[maybe_unused]] static Matrix<R> to_mat(const unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c);
@@ -157,26 +159,35 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, 
 
 void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax = 20, uint32_t maxspin = 24)
 {
+	auto N = algebra::function_dimension(c.lambda(), FunctionSymmetry::Odd);
+	PolynomialProgramming<R> prg(N);
+	prg.objective_constant() = R(0);
+	prg.objectives(Vector(N, R(0)));
+	{
+		// alpha(F_{-, 0, 0}) = 1
+		Op op{c.epsilon()};
+		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
+		prg.add_equation(c.evaluate(block).flatten(), R(1));
+	}
 	for (uint32_t spin = 0; spin <= maxspin; spin += 2)
 	{
+		// alpha(F_{-, op}) >= 0
 		R gap = spin == 0 ? de : c.unitary_bound(spin);
 		auto op = GOp(spin, c.epsilon());
 		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
-		RationalApproxData<R> ag(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
-		auto sp = ag.sample_points();
-		auto q = ag.get_bilinear_basis(gap);
-		Vector<ComplexFunction<R>> bls(sp.size());
-		Vector<R> scales(sp.size());
-		for (uint32_t i = 0; i < sp.size(); ++i)
+		auto ag = make_unique<RationalApproxData<R>>(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
+		ag->set_gap(gap);
+		auto sp = ag->sample_points();
+		Vector<Vector<R>> mat(N, Vector<R>(sp.size()));
+		for (uint32_t k = 0; k < sp.size(); ++k)
 		{
-			R delta = gap + sp[i];
-			scales[i] = ag.get_scale(delta);
-			bls[i] = c.evaluate(block, delta) / scales[i];
+			auto v = c.evaluate(block, gap + sp[k]).flatten();
+			for (uint32_t i = 0; i < N; ++i) mat[i][k] = move(v[i]);
 		}
-		cout << "F_{-} = " << algebra::polynomial_interpolate(bls, sp) << endl;
-		cout << "basis = " << q << endl;
-		cout << "scales = " << scales << endl;
+		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(sp.size(), R(0))));
 	}
+	auto root = fs::current_path() / ("sdp-ising-" + ds.str() + "-" + de.str());
+	move(prg).create_input().write_all(root);
 }
 
 class TestScale : public qboot::ScaleFactor<R>
@@ -193,17 +204,15 @@ public:
 	~TestScale() override;
 	[[nodiscard]] uint32_t max_degree() const override { return deg_; }
 	[[nodiscard]] R eval(const R& v) const override { return mpfr::exp(-v); }
-	[[nodiscard]] Vector<R> sample_scalings() const& override
+	[[nodiscard]] Vector<R> sample_scalings() override
 	{
 		Vector<R> sc(deg_ + 1);
 		for (uint32_t i = 0; i <= deg_; i++) sc[i] = eval(xs_[i]);
 		return sc;
 	}
-	[[nodiscard]] Vector<R> sample_scalings() && override { return sample_scalings(); }
-	[[nodiscard]] R sample_point(uint32_t k) const override { return xs_[k]; }
-	[[nodiscard]] Vector<R> sample_points() const& override { return xs_.clone(); }
-	[[nodiscard]] Vector<R> sample_points() && override { return sample_points(); }
-	[[nodiscard]] Polynomial<R> bilinear_base(uint32_t m) const override
+	[[nodiscard]] R sample_point(uint32_t k) override { return xs_[k]; }
+	[[nodiscard]] Vector<R> sample_points() override { return xs_.clone(); }
+	[[nodiscard]] Polynomial<R> bilinear_base(uint32_t m) override
 	{
 		assert(m <= deg_ / 2);
 		switch (m)
@@ -213,13 +222,12 @@ public:
 		default: return {R(1), R(-2), R(0.5)};  // 1 - 2 x + x ^ 2 / 2
 		}
 	}
-	[[nodiscard]] Vector<Polynomial<R>> bilinear_bases() const& override
+	[[nodiscard]] Vector<Polynomial<R>> bilinear_bases() override
 	{
 		Vector<Polynomial<R>> q(deg_ / 2 + 1);
 		for (uint32_t i = 0; i <= deg_ / 2; i++) q[i] = bilinear_base(i);
 		return q;
 	}
-	[[nodiscard]] Vector<Polynomial<R>> bilinear_bases() && override { return bilinear_bases(); }
 };
 TestScale::~TestScale() = default;
 
@@ -240,44 +248,25 @@ void test_sdpb()
 	sdpb.write_all(root);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-	constexpr uint32_t n_Max = 100, lambda = 5, dim_ = 3, maxdim = 10, maxspin = 10;
-	[[maybe_unused]] constexpr uint32_t numax = 5;
-	R very_small = R("2e-591");
+	constexpr uint32_t n_Max = 500, lambda = 11, dim_ = 3, maxdim = 10, maxspin = 24;
+	[[maybe_unused]] constexpr uint32_t numax = 10;
+	if (argc > 1)
+	{
+		assert(argc == 3);
+		unique_ptr<char*[]> args(argv);
+		auto d_s = R(args[1]);
+		auto d_e = R(args[2]);
+		Context<R> c(n_Max, lambda, dim_);
+		solve_ising(c, d_s, d_e, numax, maxspin);
+		args.release();
+		return 0;
+	}
+	R very_small = R("4e-577");
 	R d12 = R::sqrt(3), d34 = R::sqrt(5) - 1;
 	R S = (d34 - d12) / 2, P = -d12 * d34 / 2, d23h = R(0.7);
 	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);
-	{
-		Context<R> c(n_Max, lambda, dim_);
-		R d_s = R("0.5181475"), d_e = R("1.412617");
-		for (uint32_t spin = 0; spin <= 2; ++spin)
-		{
-			R gap = R(spin == 0 ? 3 : spin + 1);
-			auto op = GOp(spin, c.epsilon());
-			auto block = GBlock(op, d_s, d_e, d_s, d_e, FunctionSymmetry::Odd);
-			cout << "block = " << block.str() << endl;
-			RationalApproxData<R> ag(numax, spin, c, d_s, d_e, d_s, d_e);
-			auto sp = ag.sample_points();
-			auto q = ag.get_bilinear_basis(gap);
-			const auto& pol = ag.get_poles();
-			cout << "pol = " << pol << endl;
-			Vector<ComplexFunction<R>> bls(sp.size());
-			Vector<R> scales(sp.size());
-			cout << "ps = " << gap << " + " << sp << endl;
-			for (uint32_t i = 0; i < sp.size(); ++i)
-			{
-				auto delta = gap + sp[i];
-				scales[i] = ag.get_scale(delta);
-				bls[i] = c.evaluate(block, delta) / scales[i];
-			}
-			const auto& ip = algebra::polynomial_interpolate(bls, sp);
-			cout << "F_{-} = " << ip << endl;
-			cout << "basis = " << q << endl;
-			cout << "scales = " << scales << endl;
-			cout << "error = " << (evals(ip, sp) - bls).norm() << endl;
-		}
-	}
 	for (uint32_t dim = 3; dim <= maxdim; dim += 2)
 	{
 		Context<R> c(n_Max, lambda, dim);

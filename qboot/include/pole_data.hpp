@@ -9,9 +9,16 @@
 #include "matrix.hpp"             // for Vector
 #include "polynomial.hpp"         // for Polynomial
 #include "real.hpp"               // for real, pow, log
+#include "scale_factor.hpp"       // for ScaleFactor
 
 namespace qboot
 {
+	template <class Real>
+	Real sample_point(uint32_t degree, uint32_t k)
+	{
+		return mpfr::pow(Real::pi() * (-1 + 4 * int32_t(k)), 2uL) /
+		       ((-64 * int32_t(degree + 1)) * mpfr::log(3 - Real::sqrt(8)));
+	}
 	template <class Real>
 	algebra::Vector<Real> sample_points(uint32_t degree)
 	{
@@ -80,12 +87,35 @@ namespace qboot
 		return d12 != 0 && d34 != 0;
 	}
 	template <class Real>
-	class RationalApproxData
+	class RationalApproxData : public ScaleFactor<Real>
 	{
-		uint32_t spin, lambda;
-		const Real &epsilon, &rho;
-		Real unitarity_bound{};
-		algebra::Vector<Real> poles;
+		uint32_t spin_, lambda_;
+		const Real &epsilon_, &rho_;
+		Real unitarity_bound_{}, gap_{};
+		algebra::Vector<Real> poles_;
+		std::optional<algebra::Vector<algebra::Polynomial<Real>>> bilinear_bases_{};
+		void _set_bilinear_bases() &
+		{
+			if (bilinear_bases_.has_value()) return;
+			// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
+			algebra::Vector<Real> shifted_poles(poles_.size());
+			for (uint32_t i = 0; i < poles_.size(); ++i) shifted_poles[i] = poles_[i] - gap_;
+			auto weight = fast_partial_fraction(shifted_poles);
+			auto deg = max_degree() / 2;
+			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
+			algebra::Vector<Real> inner_prods(2 * deg + 1);
+			for (uint32_t i = 0; i < poles_.size(); ++i)
+				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho_, shifted_poles[i]));
+			inner_prods *= mpfr::pow(4 * rho_, gap_);
+			auto mat = anti_band_to_inverse(inner_prods);
+			bilinear_bases_ = algebra::Vector<algebra::Polynomial<Real>>{deg + 1};
+			for (uint32_t i = 0; i <= deg; ++i)
+			{
+				algebra::Vector<Real> v(i + 1);
+				for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
+				bilinear_bases_->at(i) = algebra::Polynomial<Real>(std::move(v));
+			}
+		}
 
 	public:
 		RationalApproxData(uint32_t cutoff, uint32_t spin, const Context<Real>& context, const Real& d1, const Real& d2,
@@ -99,51 +129,63 @@ namespace qboot
 		{
 		}
 		RationalApproxData(uint32_t cutoff, uint32_t spin, const Context<Real>& context, bool include_odd)
-		    : spin(spin), lambda(context.lambda()), epsilon(context.epsilon()), rho(context.rho()), poles(cutoff)
+		    : spin_(spin), lambda_(context.lambda()), epsilon_(context.epsilon()), rho_(context.rho()), poles_(cutoff)
 		{
 			// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
 			auto get_pols = [this, include_odd](uint32_t type) {
-				return PoleSequence<Real>(type, this->spin, this->epsilon, include_odd);
+				return PoleSequence<Real>(type, this->spin_, this->epsilon_, include_odd);
 			};
 			auto pole_seq = Merged(Merged(get_pols(1), get_pols(2)), get_pols(3));
 			uint32_t pos = 0;
 			while (pos < cutoff)
 			{
-				poles[pos++] = pole_seq.get();
+				poles_[pos++] = pole_seq.get();
 				pole_seq.next();
 			}
 		}
-		[[nodiscard]] uint32_t max_degree() const { return poles.size() + lambda; }
-		[[nodiscard]] const algebra::Vector<Real>& get_poles() const& { return poles; }
-		[[nodiscard]] algebra::Vector<Real> get_poles() && { return std::move(poles); }
-		[[nodiscard]] Real get_scale(const Real& delta) const
+		RationalApproxData(const RationalApproxData&) = delete;
+		RationalApproxData& operator=(const RationalApproxData&) = delete;
+		RationalApproxData(RationalApproxData&&) noexcept = default;
+		RationalApproxData& operator=(RationalApproxData&&) noexcept = default;
+		~RationalApproxData() override = default;
+		[[nodiscard]] uint32_t max_degree() const override { return poles_.size() + lambda_; }
+		[[nodiscard]] const algebra::Vector<Real>& get_poles() const& { return poles_; }
+		[[nodiscard]] algebra::Vector<Real> get_poles() && { return std::move(poles_); }
+		// evaluate at delta
+		[[nodiscard]] Real eval_d(const Real& delta) const
 		{
-			Real ans = mpfr::pow(4 * rho, delta);
-			for (uint32_t i = 0; i < poles.size(); ++i) ans /= delta - poles[i];
+			Real ans = mpfr::pow(4 * rho_, delta);
+			for (uint32_t i = 0; i < poles_.size(); ++i) ans /= delta - poles_[i];
 			return ans;
 		}
-		[[nodiscard]] algebra::Vector<algebra::Polynomial<Real>> get_bilinear_basis(const Real& gap) const
+		// evaluate at delta = x + gap
+		[[nodiscard]] Real eval(const Real& x) const override { return eval_d(x + gap_); }
+		[[nodiscard]] algebra::Vector<Real> sample_scalings() override
 		{
-			// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
-			algebra::Vector<Real> shifted_poles(poles.size());
-			for (uint32_t i = 0; i < poles.size(); ++i) shifted_poles[i] = poles[i] - gap;
-			auto weight = fast_partial_fraction(shifted_poles);
-			auto deg = max_degree() / 2;
-			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
-			algebra::Vector<Real> inner_prods(2 * deg + 1);
-			for (uint32_t i = 0; i < poles.size(); ++i)
-				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho, shifted_poles[i]));
-			auto mat = anti_band_to_inverse(inner_prods);
-			algebra::Vector<algebra::Polynomial<Real>> q(deg + 1);
-			for (uint32_t i = 0; i <= deg; ++i)
-			{
-				algebra::Vector<Real> v(i + 1);
-				for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
-				q[i] = algebra::Polynomial<Real>(std::move(v));
-			}
-			return q;
+			auto xs = sample_points();
+			for (uint32_t i = 0; i < xs.size(); i++) xs[i] = eval(xs[i]);
+			return xs;
 		}
-		[[nodiscard]] algebra::Vector<Real> sample_points() const { return qboot::sample_points<Real>(max_degree()); }
+		void set_gap(const Real& gap) &
+		{
+			bilinear_bases_ = {};  // reset cache
+			gap_ = gap;
+		}
+		[[nodiscard]] algebra::Polynomial<Real> bilinear_base(uint32_t m) override
+		{
+			_set_bilinear_bases();
+			return bilinear_bases_->at(m).clone();
+		}
+		[[nodiscard]] algebra::Vector<algebra::Polynomial<Real>> bilinear_bases() override
+		{
+			_set_bilinear_bases();
+			return bilinear_bases_.value().clone();
+		}
+		[[nodiscard]] Real sample_point(uint32_t k) override { return qboot::sample_point<Real>(max_degree(), k); }
+		[[nodiscard]] algebra::Vector<Real> sample_points() override
+		{
+			return qboot::sample_points<Real>(max_degree());
+		}
 	};
 }  // namespace qboot
 
