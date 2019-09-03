@@ -163,56 +163,29 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax 
 	PolynomialProgramming<R> prg(N);
 	prg.objective_constant() = R(0);
 	prg.objectives(Vector(N, R(0)));
+	// alpha(F_{-, 0, 0}) = 1
+	// unit operator
+	prg.add_equation(c.evaluate(Block(Op{c.epsilon()}, ds, ds, ds, ds, FunctionSymmetry::Odd)).flatten(), R(1));
+	auto num_poles = [numax](const auto& op) { return numax + std::min(numax, op.spin()) / 2; };
+	// epsilon', T_{\mu\nu}
+	for (const auto& op : {Op(de1, 0, c.epsilon()), Op(R(3), 2, c.epsilon())})
 	{
-		// alpha(F_{-, 0, 0}) = 1
-		// unit operator
-		Op op{c.epsilon()};
 		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
-		prg.add_equation(c.evaluate(block).flatten(), R(1));
-	}
-	{
-		// epsilon
-		auto op = GOp(0, c.epsilon());
-		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
-		auto ag = make_unique<ConformalScale<R>>(numax, 0, c, ds, ds, ds, ds);
-		ag->set_gap(R("1.409"), R("1.4135"));  // 1.409 <= Delta_{epsilon} < 1.4135
-		auto sp = ag->sample_points();
-		Vector<Vector<R>> mat(N, Vector<R>(sp.size()));
-		for (uint32_t k = 0; k < sp.size(); ++k)
-		{
-			auto v = c.evaluate(block, ag->get_delta(sp[k])).flatten();
-			for (uint32_t i = 0; i < N; ++i) mat[i][k] = move(v[i]);
-		}
-		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(sp.size(), R(0))));
-	}
-	{
-		// epsilon'
-		auto op = Op(de1, 0, c.epsilon());
-		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
-		auto ag = make_unique<qboot::TrivialScale<R>>();
+		auto ag = qboot::get_scale(block, num_poles(op), c);
 		Vector<Vector<R>> mat(N, Vector<R>(1));
 		auto v = c.evaluate(block).flatten();
 		for (uint32_t i = 0; i < N; ++i) mat[i][0] = move(v[i]);
 		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(1, R(0))));
 	}
+	std::vector<GOp> ops;
+	ops.emplace_back(0, c.epsilon(), R("1.409"), R("1.4135"));  // epsilon, 1.409 <= Delta_{epsilon} < 1.4135
+	ops.emplace_back(0, c.epsilon(), R("6"));                   // Delta_{\epsilon''} >= 6
+	ops.emplace_back(2, c.epsilon(), R("5"));                   // Delta_{T'_{\mu\nu}} >= 5
+	for (uint32_t spin = 4; spin <= maxspin; spin += 2) ops.emplace_back(spin, c.epsilon());
+	for (const auto& op : ops)
 	{
-		// T_{\mu\nu}
-		auto op = Op(R(3), 2, c.epsilon());
-		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
-		auto ag = make_unique<qboot::TrivialScale<R>>();
-		Vector<Vector<R>> mat(N, Vector<R>(1));
-		auto v = c.evaluate(block).flatten();
-		for (uint32_t i = 0; i < N; ++i) mat[i][0] = move(v[i]);
-		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(1, R(0))));
-	}
-	for (uint32_t spin = 0; spin <= maxspin; spin += 2)
-	{
-		// Delta_{\epsilon''} >= 6 and Delta_{T'_{\mu\nu}} >= 5
-		R gap = spin == 0 ? R("6") : spin == 2 ? R("5") : c.unitary_bound(spin);
-		auto op = GOp(spin, c.epsilon());
 		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
-		auto ag = make_unique<ConformalScale<R>>(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
-		ag->set_gap(gap);
+		auto ag = qboot::get_scale(block, num_poles(op), c);
 		auto sp = ag->sample_points();
 		Vector<Vector<R>> mat(N, Vector<R>(sp.size()));
 		for (uint32_t k = 0; k < sp.size(); ++k)
@@ -308,10 +281,10 @@ int main(int argc, char* argv[])
 		Context<R> c(n_Max, lambda, dim);
 		for (uint32_t spin = 0; spin <= maxspin; ++spin)
 		{
-			test_op(c, c2, Op(c.unitary_bound(spin) + R::sqrt(2), spin, c.epsilon()), d12, d34, very_small);
-			test_op(c, c2, Op(c.unitary_bound(spin), spin, c.epsilon()), d12, d34, very_small);
+			test_op(c, c2, Op(c.unitarity_bound(spin) + R::sqrt(2), spin, c.epsilon()), d12, d34, very_small);
+			test_op(c, c2, Op(c.unitarity_bound(spin), spin, c.epsilon()), d12, d34, very_small);
 		}
-		test_op(c, c2, Op(c.unitary_bound(0) + R("0.5"), 0, c.epsilon()), d12, d34, very_small);
+		test_op(c, c2, Op(c.unitarity_bound(0) + R("0.5"), 0, c.epsilon()), d12, d34, very_small);
 		test_h(c, c2, d12, d34, very_small);
 	}
 	qboot2::clear_cb_context(&c2);

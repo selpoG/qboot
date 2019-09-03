@@ -2,6 +2,7 @@
 #define QBOOT_PRIMARY_OP_HPP_
 
 #include <cstdint>      // for uint32_t
+#include <optional>     // for optional
 #include <sstream>      // for ostringstream
 #include <string>       // for string
 #include <type_traits>  // for true_type
@@ -10,8 +11,12 @@
 
 namespace qboot
 {
+	template <class Real>
+	Real unitarity_bound(const Real& epsilon, uint32_t spin)
+	{
+		return spin == 0 ? epsilon : spin + 2 * epsilon;
+	}
 	// primary operator whose dimension is delta and spin is spin
-	// delta may be a polynomial, especially just a monomial f(x) = x
 	template <class Real>
 	class PrimaryOperator
 	{
@@ -55,21 +60,39 @@ namespace qboot
 	template <class Real>
 	class GeneralPrimaryOperator
 	{
-		Real epsilon_;
+		Real epsilon_, from_;
+		std::optional<Real> to_;
 		uint32_t spin_;
 
 	public:
-		GeneralPrimaryOperator(uint32_t spin, const Real& epsilon) : epsilon_(epsilon), spin_(spin) {}
+		// primary operator whose dimension runs over unitarity bound
+		GeneralPrimaryOperator(uint32_t spin, const Real& epsilon)
+		    : epsilon_(epsilon), from_(unitarity_bound(epsilon, spin)), to_{}, spin_(spin)
+		{
+		}
+		// primary operator whose dimension runs from lb to ub (empty ub means infinity)
+		GeneralPrimaryOperator(uint32_t spin, const Real& epsilon, const Real& lb, std::optional<Real> ub = {})
+		    : epsilon_(epsilon), from_(lb), to_(ub), spin_(spin)
+		{
+		}
 		[[nodiscard]] uint32_t spin() const { return spin_; }
 		[[nodiscard]] const Real& epsilon() const { return epsilon_; }
+		[[nodiscard]] const Real& lower_bound() const { return from_; }
+		[[nodiscard]] bool is_finite() const noexcept { return to_.has_value(); }
+		// if not is_finite(), do not call this
+		[[nodiscard]] const Real& upper_bound() const { return *to_; }
+		// if not is_finite(), returns nullopt
+		[[nodiscard]] const std::optional<Real>& upper_bound_safe() const { return to_; }
 		[[nodiscard]] PrimaryOperator<Real> fix_delta(const Real& delta) const
 		{
+			assert(from_ <= delta && (!to_.has_value() || delta < *to_));
 			return PrimaryOperator<Real>(delta, spin_, epsilon_);
 		}
 		[[nodiscard]] std::string str() const
 		{
 			std::ostringstream os;
-			os << "GeneralPrimaryOperator(spin=" << spin_ << ", epsilon=" << epsilon_ << ")";
+			os << "GeneralPrimaryOperator(spin=" << spin_ << ", epsilon=" << epsilon_ << ", delta in [" << from_ << ", "
+			   << (to_.has_value() ? to_->str() : "infty") << "))";
 			return os.str();
 		}
 	};

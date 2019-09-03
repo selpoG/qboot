@@ -46,11 +46,7 @@ namespace qboot
 		[[nodiscard]] const Real& P() const { return P_; }
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
-		template <class = std::enable_if<is_primary_operator_v<Operator>>>
-		[[nodiscard]] PrimaryOperator<Real> get_op() const
-		{
-			return op_;
-		}
+		[[nodiscard]] const Operator& get_op() const { return op_; }
 		template <class = std::enable_if<!is_primary_operator_v<Operator>>>
 		[[nodiscard]] PrimaryOperator<Real> get_op(const Real& delta) const
 		{

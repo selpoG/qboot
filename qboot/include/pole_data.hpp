@@ -3,9 +3,11 @@
 
 #include <cassert>   // for assert
 #include <cstdint>   // for uint32_t, int32_t
+#include <memory>    // for make_unique, unique_ptr
 #include <optional>  // for optional
 #include <utility>   // for move
 
+#include "block.hpp"              // for ConformalBlock
 #include "context_variables.hpp"  // for Context
 #include "matrix.hpp"             // for Vector
 #include "polynomial.hpp"         // for Polynomial
@@ -216,6 +218,22 @@ namespace qboot
 			return qboot::sample_points<Real>(max_degree());
 		}
 	};
+	template <class Real>
+	std::unique_ptr<TrivialScale<Real>> get_scale(
+	    [[maybe_unused]] const ConformalBlock<Real, PrimaryOperator<Real>>& block, [[maybe_unused]] uint32_t num_poles,
+	    [[maybe_unused]] const Context<Real>& c)
+	{
+		return std::make_unique<TrivialScale<Real>>();
+	}
+	template <class Real>
+	std::unique_ptr<ConformalScale<Real>> get_scale(const ConformalBlock<Real, GeneralPrimaryOperator<Real>>& block,
+	                                                uint32_t num_poles, const Context<Real>& c)
+	{
+		auto scale = std::make_unique<ConformalScale<Real>>(num_poles, block.spin(), c, block.include_odd());
+		const auto& op = block.get_op();
+		scale->set_gap(op.lower_bound(), op.upper_bound_safe());
+		return scale;
+	}
 }  // namespace qboot
 
 #endif  // QBOOT_CONTEXT_VARIABLES_HPP_

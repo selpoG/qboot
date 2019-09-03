@@ -94,7 +94,7 @@ namespace qboot
 		{
 			return Real(val);
 		}
-		[[nodiscard]] Real unitary_bound(uint32_t spin) const { return spin == 0 ? epsilon_ : spin + 2 * epsilon_; }
+		[[nodiscard]] Real unitarity_bound(uint32_t spin) const { return qboot::unitarity_bound(epsilon_, spin); }
 		// calculate v ^ d gBlock and project to sym-symmetric part
 		// F-type corresponds to sym = Odd, H-type to Even
 		[[nodiscard]] algebra::ComplexFunction<Real> F_block(const Real& d,
