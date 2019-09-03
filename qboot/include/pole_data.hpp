@@ -1,9 +1,10 @@
 #ifndef QBOOT_POLE_DATA_HPP_
 #define QBOOT_POLE_DATA_HPP_
 
-#include <cassert>  // for assert
-#include <cstdint>  // for uint32_t, int32_t
-#include <utility>  // for move
+#include <cassert>   // for assert
+#include <cstdint>   // for uint32_t, int32_t
+#include <optional>  // for optional
+#include <utility>   // for move
 
 #include "context_variables.hpp"  // for Context
 #include "matrix.hpp"             // for Vector
@@ -87,48 +88,60 @@ namespace qboot
 		return d12 != 0 && d34 != 0;
 	}
 	template <class Real>
-	class RationalApproxData : public ScaleFactor<Real>
+	class ConformalScale : public ScaleFactor<Real>
 	{
 		uint32_t spin_, lambda_;
 		const Real &epsilon_, &rho_;
 		Real unitarity_bound_{}, gap_{};
+		std::optional<Real> end_{};
+		// pole at Delta = poles_[i]
+		// 1 / (Delta - poles_[i])
 		algebra::Vector<Real> poles_;
 		std::optional<algebra::Vector<algebra::Polynomial<Real>>> bilinear_bases_{};
 		void _set_bilinear_bases() &
 		{
 			if (bilinear_bases_.has_value()) return;
-			// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
-			algebra::Vector<Real> shifted_poles(poles_.size());
-			for (uint32_t i = 0; i < poles_.size(); ++i) shifted_poles[i] = poles_[i] - gap_;
-			auto weight = fast_partial_fraction(shifted_poles);
-			auto deg = max_degree() / 2;
-			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
-			algebra::Vector<Real> inner_prods(2 * deg + 1);
-			for (uint32_t i = 0; i < poles_.size(); ++i)
-				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho_, shifted_poles[i]));
-			inner_prods *= mpfr::pow(4 * rho_, gap_);
-			auto mat = anti_band_to_inverse(inner_prods);
-			bilinear_bases_ = algebra::Vector<algebra::Polynomial<Real>>{deg + 1};
-			for (uint32_t i = 0; i <= deg; ++i)
+			if (end_.has_value())
 			{
-				algebra::Vector<Real> v(i + 1);
-				for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
-				bilinear_bases_->at(i) = algebra::Polynomial<Real>(std::move(v));
+				bilinear_bases_ = algebra::Vector<algebra::Polynomial<Real>>{max_degree() / 2 + 1};
+				for (uint32_t i = 0; i < bilinear_bases_->size(); ++i)
+					bilinear_bases_->at(i) = algebra::Polynomial<Real>(i);
+			}
+			else
+			{
+				// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
+				algebra::Vector<Real> shifted_poles(poles_.size());
+				for (uint32_t i = 0; i < poles_.size(); ++i) shifted_poles[i] = poles_[i] - gap_;
+				auto weight = fast_partial_fraction(shifted_poles);
+				auto deg = max_degree() / 2;
+				// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
+				algebra::Vector<Real> inner_prods(2 * deg + 1);
+				for (uint32_t i = 0; i < poles_.size(); ++i)
+					inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho_, shifted_poles[i]));
+				inner_prods *= mpfr::pow(4 * rho_, gap_);
+				auto mat = anti_band_to_inverse(inner_prods);
+				bilinear_bases_ = algebra::Vector<algebra::Polynomial<Real>>{deg + 1};
+				for (uint32_t i = 0; i <= deg; ++i)
+				{
+					algebra::Vector<Real> v(i + 1);
+					for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
+					bilinear_bases_->at(i) = algebra::Polynomial<Real>(std::move(v));
+				}
 			}
 		}
 
 	public:
-		RationalApproxData(uint32_t cutoff, uint32_t spin, const Context<Real>& context, const Real& d1, const Real& d2,
-		                   const Real& d3, const Real& d4)
-		    : RationalApproxData(cutoff, spin, context, d1 - d2, d3 - d4)
+		ConformalScale(uint32_t cutoff, uint32_t spin, const Context<Real>& context, const Real& d1, const Real& d2,
+		               const Real& d3, const Real& d4)
+		    : ConformalScale(cutoff, spin, context, d1 - d2, d3 - d4)
 		{
 		}
-		RationalApproxData(uint32_t cutoff, uint32_t spin, const Context<Real>& context, const Real& delta12,
-		                   const Real& delta34)
-		    : RationalApproxData(cutoff, spin, context, include_odd(delta12, delta34))
+		ConformalScale(uint32_t cutoff, uint32_t spin, const Context<Real>& context, const Real& delta12,
+		               const Real& delta34)
+		    : ConformalScale(cutoff, spin, context, include_odd(delta12, delta34))
 		{
 		}
-		RationalApproxData(uint32_t cutoff, uint32_t spin, const Context<Real>& context, bool include_odd)
+		ConformalScale(uint32_t cutoff, uint32_t spin, const Context<Real>& context, bool include_odd)
 		    : spin_(spin), lambda_(context.lambda()), epsilon_(context.epsilon()), rho_(context.rho()), poles_(cutoff)
 		{
 			// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
@@ -143,11 +156,11 @@ namespace qboot
 				pole_seq.next();
 			}
 		}
-		RationalApproxData(const RationalApproxData&) = delete;
-		RationalApproxData& operator=(const RationalApproxData&) = delete;
-		RationalApproxData(RationalApproxData&&) noexcept = default;
-		RationalApproxData& operator=(RationalApproxData&&) noexcept = default;
-		~RationalApproxData() override = default;
+		ConformalScale(const ConformalScale&) = delete;
+		ConformalScale& operator=(const ConformalScale&) = delete;
+		ConformalScale(ConformalScale&&) noexcept = default;
+		ConformalScale& operator=(ConformalScale&&) noexcept = default;
+		~ConformalScale() override = default;
 		[[nodiscard]] uint32_t max_degree() const override { return poles_.size() + lambda_; }
 		[[nodiscard]] const algebra::Vector<Real>& get_poles() const& { return poles_; }
 		[[nodiscard]] algebra::Vector<Real> get_poles() && { return std::move(poles_); }
@@ -155,21 +168,37 @@ namespace qboot
 		[[nodiscard]] Real eval_d(const Real& delta) const
 		{
 			Real ans = mpfr::pow(4 * rho_, delta);
+			if (end_.has_value()) ans *= mpfr::pow(get_x(delta) + *end_, -int32_t(max_degree()));
 			for (uint32_t i = 0; i < poles_.size(); ++i) ans /= delta - poles_[i];
 			return ans;
 		}
-		// evaluate at delta = x + gap
-		[[nodiscard]] Real eval(const Real& x) const override { return eval_d(x + gap_); }
+		// convert x (in [0, \infty)) to delta
+		[[nodiscard]] Real get_delta(const Real& x) const
+		{
+			if (end_.has_value()) return *end_ * (x + gap_) / (x + *end_);
+			return x + gap_;
+		}
+		// convert delta to x (in [0, \infty))
+		[[nodiscard]] Real get_x(const Real& delta) const
+		{
+			if (end_.has_value()) return *end_ * (delta - gap_) / (*end_ - gap_);
+			return delta - gap_;
+		}
+		// evaluate at delta
+		[[nodiscard]] Real eval(const Real& x) const override { return eval_d(get_delta(x)); }
 		[[nodiscard]] algebra::Vector<Real> sample_scalings() override
 		{
 			auto xs = sample_points();
 			for (uint32_t i = 0; i < xs.size(); i++) xs[i] = eval(xs[i]);
 			return xs;
 		}
-		void set_gap(const Real& gap) &
+		// constrain delta to be in the range gap <= delta < end
+		// if end is nullopt (corresponds to infinity), gap <= delta
+		void set_gap(const Real& gap, std::optional<Real> end = {}) &
 		{
 			bilinear_bases_ = {};  // reset cache
 			gap_ = gap;
+			end_ = end;
 		}
 		[[nodiscard]] algebra::Polynomial<Real> bilinear_base(uint32_t m) override
 		{

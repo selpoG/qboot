@@ -72,7 +72,7 @@ namespace qboot
 			assert(constraint_c_.size() == schur);
 			assert(bilinear_[0].row() == (deg_ / 2) + 1);
 			assert(bilinear_[0].column() == deg_ + 1);
-			assert(bilinear_[1].row() == (deg_ == 0 ? 0 : ((deg_ - 1) / 2) + 1));
+			assert(bilinear_[1].row() == (deg_ == 0 ? 1 : ((deg_ - 1) / 2) + 1));
 			assert(bilinear_[1].column() == deg_ + 1);
 		}
 		[[nodiscard]] uint32_t dim() const { return dim_; }

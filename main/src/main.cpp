@@ -24,7 +24,7 @@
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
 using qboot::h_asymptotic, qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunction,
-    qboot::RationalApproxData, qboot::PolynomialProgramming;
+    qboot::ConformalScale, qboot::PolynomialProgramming;
 using FunctionSymmetry = algebra::FunctionSymmetry;
 using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move;
 namespace fs = std::filesystem;
@@ -50,7 +50,7 @@ static void test_op(const Context<R>& c, const qboot2::cb_context& cb, const Op&
                     const R& very_small);
 static void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, const R& d34,
                    const R& very_small);
-[[maybe_unused]] static void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax,
+[[maybe_unused]] static void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax,
                                          uint32_t maxspin);
 [[maybe_unused]] static void test_sdpb();
 
@@ -157,7 +157,7 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, 
 	      [&]() { cout << "test_h(cb1=" << cb1.str() << ", cb2, d12=" << d12 << ", d34=" << d34 << ")" << endl; });
 }
 
-void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax = 20, uint32_t maxspin = 24)
+void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax = 20, uint32_t maxspin = 24)
 {
 	auto N = algebra::function_dimension(c.lambda(), FunctionSymmetry::Odd);
 	PolynomialProgramming<R> prg(N);
@@ -165,28 +165,64 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de, uint32_t numax =
 	prg.objectives(Vector(N, R(0)));
 	{
 		// alpha(F_{-, 0, 0}) = 1
+		// unit operator
 		Op op{c.epsilon()};
 		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
 		prg.add_equation(c.evaluate(block).flatten(), R(1));
 	}
+	{
+		// epsilon
+		auto op = GOp(0, c.epsilon());
+		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
+		auto ag = make_unique<ConformalScale<R>>(numax, 0, c, ds, ds, ds, ds);
+		ag->set_gap(R("1.409"), R("1.4135"));  // 1.409 <= Delta_{epsilon} < 1.4135
+		auto sp = ag->sample_points();
+		Vector<Vector<R>> mat(N, Vector<R>(sp.size()));
+		for (uint32_t k = 0; k < sp.size(); ++k)
+		{
+			auto v = c.evaluate(block, ag->get_delta(sp[k])).flatten();
+			for (uint32_t i = 0; i < N; ++i) mat[i][k] = move(v[i]);
+		}
+		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(sp.size(), R(0))));
+	}
+	{
+		// epsilon'
+		auto op = Op(de1, 0, c.epsilon());
+		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
+		auto ag = make_unique<qboot::TrivialScale<R>>();
+		Vector<Vector<R>> mat(N, Vector<R>(1));
+		auto v = c.evaluate(block).flatten();
+		for (uint32_t i = 0; i < N; ++i) mat[i][0] = move(v[i]);
+		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(1, R(0))));
+	}
+	{
+		// T_{\mu\nu}
+		auto op = Op(R(3), 2, c.epsilon());
+		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
+		auto ag = make_unique<qboot::TrivialScale<R>>();
+		Vector<Vector<R>> mat(N, Vector<R>(1));
+		auto v = c.evaluate(block).flatten();
+		for (uint32_t i = 0; i < N; ++i) mat[i][0] = move(v[i]);
+		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(1, R(0))));
+	}
 	for (uint32_t spin = 0; spin <= maxspin; spin += 2)
 	{
-		// alpha(F_{-, op}) >= 0
-		R gap = spin == 0 ? de : c.unitary_bound(spin);
+		// Delta_{\epsilon''} >= 6 and Delta_{T'_{\mu\nu}} >= 5
+		R gap = spin == 0 ? R("6") : spin == 2 ? R("5") : c.unitary_bound(spin);
 		auto op = GOp(spin, c.epsilon());
 		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
-		auto ag = make_unique<RationalApproxData<R>>(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
+		auto ag = make_unique<ConformalScale<R>>(numax + std::min(numax, spin) / 2, spin, c, ds, ds, ds, ds);
 		ag->set_gap(gap);
 		auto sp = ag->sample_points();
 		Vector<Vector<R>> mat(N, Vector<R>(sp.size()));
 		for (uint32_t k = 0; k < sp.size(); ++k)
 		{
-			auto v = c.evaluate(block, gap + sp[k]).flatten();
+			auto v = c.evaluate(block, ag->get_delta(sp[k])).flatten();
 			for (uint32_t i = 0; i < N; ++i) mat[i][k] = move(v[i]);
 		}
 		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(sp.size(), R(0))));
 	}
-	auto root = fs::current_path() / ("sdp-ising-" + ds.str() + "-" + de.str());
+	auto root = fs::current_path() / ("sdp-ising-" + ds.str() + "-" + de1.str());
 	move(prg).create_input().write_all(root);
 }
 
@@ -250,8 +286,8 @@ void test_sdpb()
 
 int main(int argc, char* argv[])
 {
-	constexpr uint32_t n_Max = 500, lambda = 11, dim_ = 3, maxdim = 10, maxspin = 24;
-	[[maybe_unused]] constexpr uint32_t numax = 10;
+	constexpr uint32_t n_Max = 500, lambda = 15, dim_ = 3, maxdim = 10, maxspin = 28;
+	[[maybe_unused]] constexpr uint32_t numax = 16;
 	if (argc > 1)
 	{
 		assert(argc == 3);
@@ -263,7 +299,7 @@ int main(int argc, char* argv[])
 		args.release();
 		return 0;
 	}
-	R very_small = R("4e-577");
+	R very_small = R("3e-568");
 	R d12 = R::sqrt(3), d34 = R::sqrt(5) - 1;
 	R S = (d34 - d12) / 2, P = -d12 * d34 / 2, d23h = R(0.7);
 	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);

@@ -1122,6 +1122,16 @@ namespace mpfr
 		mpfr_pow_ui(op1._x, op1._x, op2, _rnd);
 		return std::move(op1);
 	}
+	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
+	inline auto pow(const real<_prec, _rnd>& op1, unsigned int op2)
+	{
+		return pow(op1, _ulong(op2));
+	}
+	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
+	inline auto pow(real<_prec, _rnd>&& op1, unsigned int op2)
+	{
+		return pow(std::move(op1), _ulong(op2));
+	}
 
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
 	inline auto pow(const real<_prec, _rnd>& op1, _long op2)
@@ -1135,6 +1145,16 @@ namespace mpfr
 	{
 		mpfr_pow_si(op1._x, op1._x, op2, _rnd);
 		return std::move(op1);
+	}
+	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
+	inline auto pow(const real<_prec, _rnd>& op1, int op2)
+	{
+		return pow(op1, _long(op2));
+	}
+	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
+	inline auto pow(real<_prec, _rnd>&& op1, int op2)
+	{
+		return pow(std::move(op1), _long(op2));
 	}
 
 	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>

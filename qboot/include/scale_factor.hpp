@@ -42,6 +42,30 @@ namespace qboot
 		// this function might store cache data
 		[[nodiscard]] virtual algebra::Vector<algebra::Polynomial<Real>> bilinear_bases() = 0;
 	};
+	template <class Real>
+	class TrivialScale : public ScaleFactor<Real>
+	{
+	public:
+		TrivialScale() = default;
+		TrivialScale(const TrivialScale&) = delete;
+		TrivialScale& operator=(const TrivialScale&) = delete;
+		TrivialScale(TrivialScale&&) noexcept = default;
+		TrivialScale& operator=(TrivialScale&&) noexcept = default;
+		~TrivialScale() override = default;
+		[[nodiscard]] uint32_t max_degree() const override { return 0; }
+		[[nodiscard]] Real eval([[maybe_unused]] const Real& v) const override { return Real(1); }
+		[[nodiscard]] algebra::Vector<Real> sample_scalings() override { return algebra::Vector<Real>{Real(1)}; }
+		[[nodiscard]] Real sample_point([[maybe_unused]] uint32_t k) override { return Real(0); }
+		[[nodiscard]] algebra::Vector<Real> sample_points() override { return algebra::Vector<Real>{Real(1)}; }
+		[[nodiscard]] algebra::Polynomial<Real> bilinear_base([[maybe_unused]] uint32_t m) override
+		{
+			return {Real(1)};
+		}
+		[[nodiscard]] algebra::Vector<algebra::Polynomial<Real>> bilinear_bases() override
+		{
+			return algebra::Vector<algebra::Polynomial<Real>>{algebra::Polynomial<Real>(Real(1))};
+		}
+	};
 }  // namespace qboot
 
 #endif  // QBOOT_SCALE_FACTOR_HPP_
