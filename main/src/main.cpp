@@ -2,9 +2,11 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <utility>
 #include <vector>
 
 #include "block.hpp"
+#include "bootstrap_equation.hpp"
 #include "chol_and_inverse.hpp"
 #include "complex_function.hpp"
 #include "context_variables.hpp"
@@ -26,7 +28,8 @@ using algebra::Vector, algebra::Matrix, algebra::Polynomial;
 using qboot::h_asymptotic, qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunction,
     qboot::ConformalScale, qboot::PolynomialProgramming;
 using FunctionSymmetry = algebra::FunctionSymmetry;
-using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move;
+using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move,
+    std::pair;
 namespace fs = std::filesystem;
 
 using R = mpfr::real<1000, MPFR_RNDN>;
@@ -34,6 +37,7 @@ using Op = qboot::PrimaryOperator<R>;
 using GOp = qboot::GeneralPrimaryOperator<R>;
 using Block = qboot::ConformalBlock<R, Op>;
 using GBlock = qboot::ConformalBlock<R, GOp>;
+using GGBlock = qboot::GeneralConformalBlock<R>;
 using PolIneq = qboot::PolynomialInequalityWithCoeffs<R>;
 using EvalIneq = qboot::PolynomialInequalityEvaluated<R>;
 
@@ -50,8 +54,9 @@ static void test_op(const Context<R>& c, const qboot2::cb_context& cb, const Op&
                     const R& very_small);
 static void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, const R& d34,
                    const R& very_small);
-[[maybe_unused]] static void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax,
+[[maybe_unused]] static void solve_ising(const Context<R>& c, const Op& sigma, const R& de1, uint32_t numax,
                                          uint32_t maxspin);
+[[maybe_unused]] void mixed_ising(const Context<R>& c, const Op& s, const Op& e, uint32_t numax, uint32_t maxspin);
 [[maybe_unused]] static void test_sdpb();
 
 template <class T, class CallBack_T>
@@ -157,7 +162,49 @@ void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, 
 	      [&]() { cout << "test_h(cb1=" << cb1.str() << ", cb2, d12=" << d12 << ", d34=" << d34 << ")" << endl; });
 }
 
-void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax = 20, uint32_t maxspin = 24)
+void mixed_ising(const Context<R>& c, const Op& s, const Op& e, uint32_t numax = 20, uint32_t maxspin = 24)
+{
+	constexpr FunctionSymmetry Od = FunctionSymmetry::Odd;
+	constexpr FunctionSymmetry Ev = FunctionSymmetry::Even;
+	using E = qboot::Entry<R>;
+	using B = Block;
+	using G = GGBlock;
+	qboot::BootstrapEquation<R> boot(c, numax,
+	                                 array{pair{"unit", 1u}, pair{"scalar", 2u}, pair{"T", 2u}, pair{"even", 2u},
+	                                       pair{"odd+", 1u}, pair{"odd-", 1u}});
+	boot.register_operator("even", {0, c.epsilon(), R("3.8"), R("3.88")});
+	boot.register_operator("even", {0, c.epsilon(), R(6)});
+	boot.register_operator("odd+", {0, c.epsilon(), R(3)});
+	boot.register_operator("even", {2, c.epsilon(), R(5)});
+	for (uint32_t spin = 1; spin <= maxspin; ++spin)
+		if (spin % 2 == 0)
+		{
+			if (spin != 2) boot.register_operator("even", {spin, c.epsilon()});
+			boot.register_operator("odd+", {spin, c.epsilon()});
+		}
+		else
+			boot.register_operator("odd-", {spin, c.epsilon()});
+	Op u{c.epsilon()}, T{2, c.epsilon()};
+	boot.add_equation(Od, array{pair{"unit", E(B{u, s, s, s, s, Od})}, pair{"scalar", E(0, 0, B{e, s, s, s, s, Od})},
+	                            pair{"T", E(0, 0, B{T, s, s, s, s, Od})}, pair{"even", E(0, 0, G{s, s, s, s, Od})}});
+	boot.add_equation(Od, array{pair{"unit", E(B{u, e, e, e, e, Od})}, pair{"scalar", E(1, 1, B{e, e, e, e, e, Od})},
+	                            pair{"T", E(1, 1, B{T, e, e, e, e, Od})}, pair{"even", E(1, 1, G{e, e, e, e, Od})}});
+	boot.add_equation(Od, array{pair{"scalar", E(1, 1, B{s, e, s, e, s, Od})}, pair{"odd+", E(G{e, s, e, s, Od})},
+	                            pair{"odd-", E(G{e, s, e, s, Od})}});
+	boot.add_equation(Od, array{pair{"unit", E(B{u, e, e, s, s, Od})}, pair{"scalar", E(0, 0, B{s, e, s, s, e, Od})},
+	                            pair{"scalar", E(0, 1, B{e, e, e, s, s, Od})}, pair{"T", E(0, 1, B{T, e, e, s, s, Od})},
+	                            pair{"odd+", E(G{e, s, s, e, Od})}, pair{"odd-", E(R(-1), G{e, s, s, e, Od})},
+	                            pair{"even", E(0, 1, G{e, e, s, s, Od})}});
+	boot.add_equation(Ev,
+	                  array{pair{"unit", E(B{u, e, e, s, s, Ev})}, pair{"scalar", E(0, 0, R(-1), B{s, e, s, s, e, Ev})},
+	                        pair{"scalar", E(0, 1, B{e, e, e, s, s, Ev})}, pair{"T", E(0, 1, B{T, e, e, s, s, Ev})},
+	                        pair{"odd+", E(R(-1), G{e, s, s, e, Ev})}, pair{"odd-", E(G{e, s, s, e, Ev})},
+	                        pair{"even", E(0, 1, G{e, e, s, s, Ev})}});
+	auto root = fs::current_path() / ("mixed-ising-" + s.delta().str() + "-" + e.delta().str());
+	boot.create_pmp().create_input().write_all(root);
+}
+
+void solve_ising(const Context<R>& c, const Op& s, const R& de1, uint32_t numax = 20, uint32_t maxspin = 24)
 {
 	auto N = algebra::function_dimension(c.lambda(), FunctionSymmetry::Odd);
 	PolynomialProgramming<R> prg(N);
@@ -165,12 +212,12 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax 
 	prg.objectives(Vector(N, R(0)));
 	// alpha(F_{-, 0, 0}) = 1
 	// unit operator
-	prg.add_equation(c.evaluate(Block(Op{c.epsilon()}, ds, ds, ds, ds, FunctionSymmetry::Odd)).flatten(), R(1));
+	prg.add_equation(c.evaluate(Block(Op{c.epsilon()}, s, s, s, s, FunctionSymmetry::Odd)).flatten(), R(1));
 	auto num_poles = [numax](const auto& op) { return numax + std::min(numax, op.spin()) / 2; };
 	// epsilon', T_{\mu\nu}
-	for (const auto& op : {Op(de1, 0, c.epsilon()), Op(R(3), 2, c.epsilon())})
+	for (const auto& op : {Op(de1, 0, c.epsilon()), Op(2, c.epsilon())})
 	{
-		auto block = Block(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
+		auto block = Block(op, s, s, s, s, FunctionSymmetry::Odd);
 		auto ag = qboot::get_scale(block, num_poles(op), c);
 		Vector<Vector<R>> mat(N, Vector<R>(1));
 		auto v = c.evaluate(block).flatten();
@@ -184,7 +231,7 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax 
 	for (uint32_t spin = 4; spin <= maxspin; spin += 2) ops.emplace_back(spin, c.epsilon());
 	for (const auto& op : ops)
 	{
-		auto block = GBlock(op, ds, ds, ds, ds, FunctionSymmetry::Odd);
+		auto block = GBlock(op, s, s, s, s, FunctionSymmetry::Odd);
 		auto ag = qboot::get_scale(block, num_poles(op), c);
 		auto sp = ag->sample_points();
 		Vector<Vector<R>> mat(N, Vector<R>(sp.size()));
@@ -195,7 +242,7 @@ void solve_ising(const Context<R>& c, const R& ds, const R& de1, uint32_t numax 
 		}
 		prg.add_inequality(make_unique<EvalIneq>(N, move(ag), move(mat), Vector<R>(sp.size(), R(0))));
 	}
-	auto root = fs::current_path() / ("sdp-ising-" + ds.str() + "-" + de1.str());
+	auto root = fs::current_path() / ("single-ising-" + s.delta().str() + "-" + de1.str());
 	move(prg).create_input().write_all(root);
 }
 
@@ -268,7 +315,8 @@ int main(int argc, char* argv[])
 		auto d_s = R(args[1]);
 		auto d_e = R(args[2]);
 		Context<R> c(n_Max, lambda, dim_);
-		solve_ising(c, d_s, d_e, numax, maxspin);
+		Op sigma(d_s, 0, c.epsilon());
+		solve_ising(c, sigma, d_e, numax, maxspin);
 		args.release();
 		return 0;
 	}

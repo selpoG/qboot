@@ -6,6 +6,7 @@
 #include <sstream>      // for ostringstream
 #include <string>       // for string
 #include <type_traits>  // for true_type
+#include <variant>      // for variant
 
 #include "real.hpp"  // for real, isinteger
 
@@ -26,6 +27,11 @@ namespace qboot
 	public:
 		// unit operator
 		explicit PrimaryOperator(const Real& epsilon) : delta_{}, epsilon_(epsilon), spin_(0) {}
+		// on the unitarity bound
+		PrimaryOperator(uint32_t spin, const Real& epsilon)
+		    : delta_(unitarity_bound(epsilon, spin)), epsilon_(epsilon), spin_(spin)
+		{
+		}
 		PrimaryOperator(const Real& delta, uint32_t spin, const Real& epsilon)
 		    : delta_(delta), epsilon_(epsilon), spin_(spin)
 		{
@@ -108,6 +114,8 @@ namespace qboot
 	struct is_primary_operator : std::false_type
 	{
 	};
+	template <class Real>
+	using Operator = std::variant<PrimaryOperator<Real>, GeneralPrimaryOperator<Real>>;
 }  // namespace qboot
 
 #endif  // QBOOT_PRIMARY_OP_HPP_
