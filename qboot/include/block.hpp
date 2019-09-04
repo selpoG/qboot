@@ -106,7 +106,7 @@ namespace qboot
 		template <class Operator>
 		[[nodiscard]] ConformalBlock<Real, Operator> fix_op(const Operator& op) const
 		{
-			return ConformalBlock<Real, Operator>(op, d12_, d34_, sym_);
+			return ConformalBlock<Real, Operator>(op, d12_, d34_, d23h_, sym_);
 		}
 		[[nodiscard]] std::string str() const
 		{
@@ -117,8 +117,7 @@ namespace qboot
 		}
 	};
 	template <class Real>
-	using Block = std::variant<ConformalBlock<Real, PrimaryOperator<Real>>,
-	                           ConformalBlock<Real, GeneralPrimaryOperator<Real>>, GeneralConformalBlock<Real>>;
+	using Block = std::variant<ConformalBlock<Real, PrimaryOperator<Real>>, GeneralConformalBlock<Real>>;
 }  // namespace qboot
 
 #endif  // QBOOT_BLOCK_HPP_

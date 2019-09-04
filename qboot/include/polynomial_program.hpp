@@ -99,22 +99,21 @@ namespace qboot
 			algebra::Vector<algebra::Matrix<Real>> ev(deg + 1);
 			const auto& chi = PolynomialInequality<Real>::get_scale();
 			auto xs = chi->sample_points();
-			for (uint32_t k = 0; k <= deg; k++) ev[k] = vals[k] / chi->eval(xs[k]);
+			for (uint32_t k = 0; k <= deg; ++k) ev[k] = vals[k] / chi->eval(xs[k]);
 			return algebra::polynomial_interpolate(ev, xs);
 		}
 
 	public:
 		PolynomialInequalityEvaluated(uint32_t N, std::unique_ptr<ScaleFactor<Real>>&& scale,
 		                              algebra::Vector<algebra::Vector<Real>>&& mat, algebra::Vector<Real>&& target)
-		    : PolynomialInequality<Real>(N, 1, std::move(scale)), mat_{}, target_{}
+		    : PolynomialInequality<Real>(N, 1, std::move(scale)), mat_(N), target_{}
 		{
 			uint32_t deg = PolynomialInequality<Real>::get_scale()->max_degree();
-			mat_ = algebra::Vector<algebra::Vector<algebra::Matrix<Real>>>(N);
-			for (uint32_t i = 0; i < N; i++)
+			for (uint32_t i = 0; i < N; ++i)
 			{
 				assert(mat[i].size() == deg + 1);
 				mat_[i] = algebra::Vector<algebra::Matrix<Real>>{deg + 1};
-				for (uint32_t k = 0; k <= deg; k++)
+				for (uint32_t k = 0; k <= deg; ++k)
 				{
 					mat_[i][k] = {1, 1};
 					mat_[i][k].at(0, 0) = std::move(mat[i][k]);
@@ -122,11 +121,42 @@ namespace qboot
 			}
 			assert(target.size() == deg + 1);
 			target_ = algebra::Vector<algebra::Matrix<Real>>{deg + 1};
-			for (uint32_t k = 0; k <= deg; k++)
+			for (uint32_t k = 0; k <= deg; ++k)
 			{
 				target_[k] = {1, 1};
 				target_[k].at(0, 0) = std::move(target[k]);
 			}
+		}
+		PolynomialInequalityEvaluated(uint32_t N, algebra::Vector<Real>&& mat, Real&& target)
+		    : PolynomialInequality<Real>(N, 1, std::make_unique<TrivialScale<Real>>()), mat_(N), target_(1)
+		{
+			assert(mat.size() == N);
+			for (uint32_t i = 0; i < N; ++i)
+			{
+				mat_[i] = algebra::Vector<algebra::Matrix<Real>>(1);
+				mat_[i][0] = {1, 1};
+				mat_[i][0].at(0, 0) = std::move(mat[i]);
+			}
+			target_[0] = {1, 1};
+			target_[0].at(0, 0) = std::move(target);
+		}
+		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, algebra::Vector<algebra::Matrix<Real>>&& mat,
+		                              algebra::Matrix<Real>&& target)
+		    : PolynomialInequality<Real>(N, sz, std::make_unique<TrivialScale<Real>>()), mat_(N), target_(1)
+		{
+			assert(mat.size() == N);
+			for (uint32_t i = 0; i < N; ++i)
+			{
+				assert(mat[i].is_square() && mat[i].row() == sz);
+				mat_[i] = algebra::Vector<algebra::Matrix<Real>>(1);
+				mat_[i][0] = {sz, sz};
+				for (uint32_t r = 0; r < sz; ++r)
+					for (uint32_t c = 0; c < sz; ++c) mat_[i][0].at(r, c) = std::move(mat[i].at(r, c));
+			}
+			assert(target.is_square() && target.row() == sz);
+			target_[0] = {sz, sz};
+			for (uint32_t r = 0; r < sz; ++r)
+				for (uint32_t c = 0; c < sz; ++c) target_[0].at(r, c) = std::move(target.at(r, c));
 		}
 		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor<Real>>&& scale,
 		                              algebra::Vector<algebra::Vector<algebra::Matrix<Real>>>&& mat,
@@ -135,13 +165,13 @@ namespace qboot
 		{
 			uint32_t deg = PolynomialInequality<Real>::get_scale()->max_degree();
 			assert(mat_.size() == N);
-			for (uint32_t i = 0; i < N; i++)
+			for (uint32_t i = 0; i < N; ++i)
 			{
 				assert(mat_[i].size() == deg + 1);
-				for (uint32_t k = 0; k <= deg; k++) assert(mat_[i][k].is_square() && mat_[i][k].row() == sz);
+				for (uint32_t k = 0; k <= deg; ++k) assert(mat_[i][k].is_square() && mat_[i][k].row() == sz);
 			}
 			assert(target_.size() == deg + 1);
-			for (uint32_t k = 0; k <= deg; k++) assert(target_[k].is_square() && target_[k].row() == sz);
+			for (uint32_t k = 0; k <= deg; ++k) assert(target_[k].is_square() && target_[k].row() == sz);
 		}
 		PolynomialInequalityEvaluated(const PolynomialInequalityEvaluated&) = delete;
 		PolynomialInequalityEvaluated& operator=(const PolynomialInequalityEvaluated&) = delete;
@@ -190,7 +220,7 @@ namespace qboot
 			auto deg = int32_t(PolynomialInequality<Real>::get_scale()->max_degree());
 			assert(mat.size() == N);
 			mat_ = algebra::Vector<algebra::Matrix<algebra::Polynomial<Real>>>(N);
-			for (uint32_t i = 0; i < N; i++)
+			for (uint32_t i = 0; i < N; ++i)
 			{
 				mat_[i] = {1, 1};
 				assert(mat[i].degree() <= deg);
@@ -207,15 +237,15 @@ namespace qboot
 		{
 			auto deg = int32_t(PolynomialInequality<Real>::get_scale()->max_degree());
 			assert(mat_.size() == N);
-			for (uint32_t i = 0; i < N; i++)
+			for (uint32_t i = 0; i < N; ++i)
 			{
 				assert(mat_[i].is_square() && mat_[i].row() == sz);
-				for (uint32_t r = 0; r < sz; r++)
-					for (uint32_t c = 0; c < sz; c++) assert(mat_[i].at(r, c).degree() <= deg);
+				for (uint32_t r = 0; r < sz; ++r)
+					for (uint32_t c = 0; c < sz; ++c) assert(mat_[i].at(r, c).degree() <= deg);
 			}
 			assert(target_.is_square() && target_.row() == sz);
-			for (uint32_t r = 0; r < sz; r++)
-				for (uint32_t c = 0; c < sz; c++) assert(target_.at(r, c).degree() <= deg);
+			for (uint32_t r = 0; r < sz; ++r)
+				for (uint32_t c = 0; c < sz; ++c) assert(target_.at(r, c).degree() <= deg);
 		}
 		PolynomialInequalityWithCoeffs(const PolynomialInequalityWithCoeffs&) = delete;
 		PolynomialInequalityWithCoeffs& operator=(const PolynomialInequalityWithCoeffs&) = delete;
@@ -288,7 +318,7 @@ namespace qboot
 	public:
 		explicit PolynomialProgramming(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
 		{
-			for (uint32_t i = 0; i < N_; i++) free_indices_.push_back(i);
+			for (uint32_t i = 0; i < N_; ++i) free_indices_.push_back(i);
 		}
 		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
 		[[nodiscard]] Real& objective_constant() { return obj_const_; }
@@ -353,15 +383,15 @@ namespace qboot
 			//   w[e] + \sum_{m = 0}^{M - 1} equation_[e][free_indices_[m]] y[free_indices_[m]] = equation_targets_[e]
 			// terms from eliminated variables w[e]
 			algebra::Vector<Real> obj_new(M);
-			for (uint32_t m = 0; m < M; m++) obj_new[m] = std::move(obj_[free_indices_[m]]);
+			for (uint32_t m = 0; m < M; ++m) obj_new[m] = std::move(obj_[free_indices_[m]]);
 			for (uint32_t e = 0; e < eq_sz; ++e)
 			{
 				const auto& t = obj_[leading_indices_[e]];
-				for (uint32_t m = 0; m < M; m++) obj_new[m] -= equation_[e][free_indices_[m]] * t;
+				for (uint32_t m = 0; m < M; ++m) obj_new[m] -= equation_[e][free_indices_[m]] * t;
 				obj_const_ += equation_targets_[e] * t;
 			}
 			SDPBInput<Real> sdpb(std::move(obj_const_), std::move(obj_new), uint32_t(inequality_.size()));
-			for (uint32_t j = 0; j < inequality_.size(); j++)
+			for (uint32_t j = 0; j < inequality_.size(); ++j)
 			{
 				auto&& ineq = inequality_[j];
 				// convert ineq to DualConstraint
@@ -396,7 +426,7 @@ namespace qboot
 							for (uint32_t e = 0; e < eq_sz; ++e)
 							{
 								const auto& t = e_B[leading_indices_[e]][k].at(r, c);
-								for (uint32_t m = 0; m < M; m++) d_B.at(p, m) -= equation_[e][free_indices_[m]] * t;
+								for (uint32_t m = 0; m < M; ++m) d_B.at(p, m) -= equation_[e][free_indices_[m]] * t;
 								d_c.at(p) -= equation_targets_[e] * t;
 							}
 							++p;

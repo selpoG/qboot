@@ -8,8 +8,11 @@
 #include <utility>   // for move
 
 #include "block.hpp"              // for ConformalBlock
+#include "chol_and_inverse.hpp"   // for anti_band_to_inverse
 #include "context_variables.hpp"  // for Context
+#include "integral_decomp.hpp"    // for simple_pole_integral
 #include "matrix.hpp"             // for Vector
+#include "partial_fraction.hpp"   // for fast_partial_fraction
 #include "polynomial.hpp"         // for Polynomial
 #include "real.hpp"               // for real, pow, log
 #include "scale_factor.hpp"       // for ScaleFactor
@@ -92,6 +95,7 @@ namespace qboot
 	template <class Real>
 	class ConformalScale : public ScaleFactor<Real>
 	{
+		bool odd_included_;
 		uint32_t spin_, lambda_;
 		const Real &epsilon_, &rho_;
 		Real unitarity_bound_{}, gap_{};
@@ -144,7 +148,12 @@ namespace qboot
 		{
 		}
 		ConformalScale(uint32_t cutoff, uint32_t spin, const Context<Real>& context, bool include_odd)
-		    : spin_(spin), lambda_(context.lambda()), epsilon_(context.epsilon()), rho_(context.rho()), poles_(cutoff)
+		    : odd_included_(include_odd),
+		      spin_(spin),
+		      lambda_(context.lambda()),
+		      epsilon_(context.epsilon()),
+		      rho_(context.rho()),
+		      poles_(cutoff)
 		{
 			// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
 			auto get_pols = [this, include_odd](uint32_t type) {
@@ -163,6 +172,7 @@ namespace qboot
 		ConformalScale(ConformalScale&&) noexcept = default;
 		ConformalScale& operator=(ConformalScale&&) noexcept = default;
 		~ConformalScale() override = default;
+		[[nodiscard]] bool odd_included() const { return odd_included_; }
 		[[nodiscard]] uint32_t max_degree() const override { return poles_.size() + lambda_; }
 		[[nodiscard]] const algebra::Vector<Real>& get_poles() const& { return poles_; }
 		[[nodiscard]] algebra::Vector<Real> get_poles() && { return std::move(poles_); }
@@ -191,7 +201,7 @@ namespace qboot
 		[[nodiscard]] algebra::Vector<Real> sample_scalings() override
 		{
 			auto xs = sample_points();
-			for (uint32_t i = 0; i < xs.size(); i++) xs[i] = eval(xs[i]);
+			for (uint32_t i = 0; i < xs.size(); ++i) xs[i] = eval(xs[i]);
 			return xs;
 		}
 		// constrain delta to be in the range gap <= delta < end

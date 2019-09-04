@@ -40,6 +40,7 @@
 #include <cstddef>      // for size_t
 #include <cstdint>      // for intmax_t
 #include <cstring>      // for strlen
+#include <iomanip>      // for setprecision
 #include <ios>          // for ios_base, streamsize
 #include <iostream>     // for basic_ostram, basic_istream
 #include <limits>       // for numeric_limits
@@ -562,6 +563,13 @@ namespace mpfr
 		real eval([[maybe_unused]] const T& x) const
 		{
 			return *this;
+		}
+
+		[[nodiscard]] std::string str(int32_t precision) const
+		{
+			std::ostringstream os;
+			os << std::setprecision(precision) << *this;
+			return os.str();
 		}
 
 		[[nodiscard]] std::string str() const
