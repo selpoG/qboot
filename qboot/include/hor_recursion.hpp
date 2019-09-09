@@ -1,8 +1,7 @@
 #ifndef QBOOT_HOR_RECURSION_HPP_
 #define QBOOT_HOR_RECURSION_HPP_
 
-#include <cstdint>  // for uint32_t, int32_t
-#include <memory>   // for unique_ptr
+#include <cstdint>  // for uint32_t
 
 #include "complex_function.hpp"   // for ComplexFunction
 #include "context_variables.hpp"  // for Context, cb_context
@@ -10,29 +9,6 @@
 #include "primary_op.hpp"         // for PrimaryOperator
 #include "real.hpp"               // for real, mpfr_prec_t, mpfr_rnd_t, mpfr_t, pow
 #include "real_function.hpp"      // for RealFunction, RealFunctionWithPower, power_function
-
-namespace qboot2
-{
-	std::unique_ptr<mpfr_t[]> recursionNonZeroVector(uint32_t nMax, const mpfr_t& epsilon, const mpfr_t& ell,
-	                                                 const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
-	                                                 mpfr_prec_t prec, mpfr_rnd_t rnd);
-	std::unique_ptr<mpfr_t[]> recursionSpinZeroVector(uint32_t nMax, const mpfr_t& epsilon, mpfr_t* Delta,
-	                                                  const mpfr_t& S, const mpfr_t& P, mpfr_prec_t prec,
-	                                                  mpfr_rnd_t rnd);
-	std::unique_ptr<mpfr_t[]> real_axis_result(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta, const mpfr_t& S,
-	                                           const mpfr_t& P, const cb_context& context);
-	uint32_t indexOfConformalBlock(const cb_context& context, int32_t n, int32_t m);
-	void element_helper(const cb_context& context, const std::unique_ptr<mpfr_t[]>& array, mpfr_t* r, int32_t m,
-	                    int32_t n);
-	std::unique_ptr<mpfr_t[]> casimirExpander(const std::unique_ptr<mpfr_t[]>& realAxisResult, const mpfr_t& epsilon,
-	                                          const mpfr_t& ell, const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P,
-	                                          const cb_context& context);
-	std::unique_ptr<mpfr_t[]> gBlock_full(const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta, const mpfr_t& S,
-	                                      const mpfr_t& P, const cb_context& context);
-	std::unique_ptr<mpfr_t[]> hBlock_times_rho_n(uint32_t n, const mpfr_t& epsilon, const mpfr_t& ell, mpfr_t* Delta,
-	                                             const mpfr_t& S, const mpfr_t& P, const cb_context& context);
-	std::unique_ptr<mpfr_t[]> h_asymptotic(const mpfr_t& epsilon, const mpfr_t& S, const cb_context& context);
-}  // namespace qboot2
 
 namespace qboot
 {

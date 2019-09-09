@@ -3,7 +3,6 @@
 
 #include <cassert>  // for assert
 #include <cstdint>  // for uint32_t, int32_t
-#include <memory>   // for unique_ptr
 #include <sstream>  // for ostringstream
 #include <string>   // for string
 
@@ -12,23 +11,6 @@
 #include "primary_op.hpp"        // for PrimaryOperator
 #include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt
 #include "real_function.hpp"     // for RealFunction, RealConverter, power_function
-
-namespace qboot2
-{
-	using cb_context = struct _context
-	{
-		uint32_t n_Max{};
-		mpfr_prec_t prec{};
-		mpfr_rnd_t rnd{};
-		uint32_t lambda{};
-		std::unique_ptr<mpfr_t[]> rho_to_z_matrix{};
-		mpfr_t rho;
-	};
-
-	// basic constructor for cb_context
-	cb_context context_construct(uint32_t n_Max, mpfr_prec_t prec, uint32_t lambda);
-	void clear_cb_context(cb_context* context);
-}  // namespace qboot2
 
 namespace qboot
 {

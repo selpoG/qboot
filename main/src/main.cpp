@@ -41,127 +41,11 @@ using GGBlock = qboot::GeneralConformalBlock<R>;
 using PolIneq = qboot::PolynomialInequalityWithCoeffs<R>;
 using EvalIneq = qboot::PolynomialInequalityEvaluated<R>;
 
-[[maybe_unused]] static Vector<R> to_vec(const unique_ptr<mpfr_t[]>& a, uint32_t s);
-[[maybe_unused]] static Matrix<R> to_mat(const unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c);
-[[maybe_unused]] static ComplexFunction<R> to_hol(const unique_ptr<mpfr_t[]>& a, uint32_t l);
-static RealFunction<R> to_func(const unique_ptr<mpfr_t[]>& a, uint32_t l);
-static void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34, const R& very_small);
-static void test_real(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
-                      const R& very_small);
-static void test_g(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
-                   const R& very_small);
-static void test_op(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
-                    const R& very_small);
-static void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, const R& d34,
-                   const R& very_small);
 [[maybe_unused]] static void single_ising(const Context<R>& c, const Op& s, const Op& e, uint32_t numax,
                                           uint32_t maxspin);
 [[maybe_unused]] static void mixed_ising(const Context<R>& c, const Op& s, const Op& e, const Op& e1, uint32_t numax,
                                          uint32_t maxspin);
 [[maybe_unused]] static void test_sdpb();
-
-template <class T, class CallBack_T>
-void check(const T& p, const T& q, const R& very_small, CallBack_T on_err)
-{
-	auto err = (p - q).norm();
-	if (err > very_small)
-	{
-		on_err();
-		cout << "p = " << p << endl;
-		cout << "q = " << q << endl;
-		cout << "p - q = " << (p - q) << endl;
-		cout << "err = " << err << endl;
-		assert(false);
-	}
-}
-
-Vector<R> to_vec(const unique_ptr<mpfr_t[]>& a, uint32_t s)
-{
-	Vector<R> v(s);
-	for (uint32_t i = 0; i < s; ++i) v[i] = R(a[i]);
-	return v;
-}
-
-Matrix<R> to_mat(const unique_ptr<mpfr_t[]>& a, uint32_t r, uint32_t c)
-{
-	Matrix<R> v(r, c);
-	for (uint32_t i = 0; i < r; ++i)
-		for (uint32_t j = 0; j < c; ++j) v.at(i, j) = R(a[i * c + j]);
-	return v;
-}
-
-ComplexFunction<R> to_hol(const unique_ptr<mpfr_t[]>& a, uint32_t l)
-{
-	ComplexFunction<R> f(l);
-	uint32_t i = 0;
-	for (uint32_t dy = 0; dy <= l / 2; ++dy)
-		for (uint32_t dx = 0; dx + 2 * dy <= l; ++dx) f.at(dx, dy) = R(a[i++]);
-	return f;
-}
-
-RealFunction<R> to_func(const unique_ptr<mpfr_t[]>& a, uint32_t l)
-{
-	RealFunction<R> f(l);
-	for (uint32_t k = 0; k <= l; ++k) f.at(k) = R(a[k]);
-	return f;
-}
-
-void test_rec(uint32_t nMax, const Op& op, const R& d12, const R& d34, const R& very_small)
-{
-	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = qboot::hBlock_shifted<R>(op, S, P, nMax);
-	auto q_ptr =
-	    op.spin() == 0
-	        ? qboot2::recursionSpinZeroVector(nMax, op.epsilon()._x, &delta._x, S._x, P._x, R::prec, R::rnd)
-	        : qboot2::recursionNonZeroVector(nMax, op.epsilon()._x, ell._x, delta._x, S._x, P._x, R::prec, R::rnd);
-	auto q = to_func(q_ptr, p.lambda());
-	check(p, q, very_small, [&]() {
-		cout << "test_rec(nMax=" << nMax << "op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")" << endl;
-	});
-}
-
-void test_real(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
-               const R& very_small)
-{
-	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = qboot::gBlock_real<R>(op, S, P, c);
-	auto q_ptr = qboot2::real_axis_result(op.epsilon()._x, ell._x, &delta._x, S._x, P._x, cb);
-	auto q = to_func(q_ptr, p.lambda());
-	check(p, q, very_small, [&]() {
-		cout << "test_real(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")"
-		     << endl;
-	});
-}
-
-void test_g(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
-            const R& very_small)
-{
-	R a = -d12 / 2, b = d34 / 2, S = a + b, P = 2 * a * b, ell = R(op.spin()), delta = op.delta();
-	auto p = gBlock<R>(op, S, P, c);
-	auto q_ptr = qboot2::gBlock_full(op.epsilon()._x, ell._x, &delta._x, S._x, P._x, cb);
-	auto q = to_hol(q_ptr, cb.lambda);
-	check(p, q, very_small, [&]() {
-		cout << "test_g(c=" << c.str() << ", cb, op=" << op.str() << ", d12=" << d12 << ", d34=" << d34 << ")" << endl;
-	});
-}
-
-void test_op(const Context<R>& c, const qboot2::cb_context& cb, const Op& op, const R& d12, const R& d34,
-             const R& very_small)
-{
-	test_rec(c.n_Max(), op, d12, d34, very_small);
-	test_real(c, cb, op, d12, d34, very_small);
-	test_g(c, cb, op, d12, d34, very_small);
-}
-
-void test_h(const Context<R>& cb1, const qboot2::cb_context& cb2, const R& d12, const R& d34, const R& very_small)
-{
-	R a = -d12 / 2, b = d34 / 2, S = a + b;
-	auto p = h_asymptotic(S, cb1);
-	auto q_ptr = qboot2::h_asymptotic(cb1.epsilon()._x, S._x, cb2);
-	auto q = to_func(q_ptr, p.lambda());
-	check(p, q, very_small,
-	      [&]() { cout << "test_h(cb1=" << cb1.str() << ", cb2, d12=" << d12 << ", d34=" << d34 << ")" << endl; });
-}
 
 void mixed_ising(const Context<R>& c, const Op& s, const Op& e, const Op& e1, uint32_t numax = 20,
                  uint32_t maxspin = 24)
@@ -299,36 +183,16 @@ int main(int argc, char* argv[])
 {
 	constexpr uint32_t n_Max = 400, lambda = 14, dim_ = 3, maxdim = 10, maxspin = 24;
 	[[maybe_unused]] constexpr uint32_t numax = 6;
-	if (argc > 1)
-	{
-		assert(argc == 4);
-		unique_ptr<char*[]> args(argv);
-		auto d_s = R(args[1]);
-		auto d_e = R(args[2]);
-		auto d_e1 = R(args[3]);
-		Context<R> c(n_Max, lambda, dim_);
-		Op sigma(d_s, 0, c.epsilon());
-		Op epsilon(d_e, 0, c.epsilon());
-		Op e1(d_e1, 0, c.epsilon());
-		mixed_ising(c, sigma, epsilon, e1, numax, maxspin);
-		args.release();
-		return 0;
-	}
-	R very_small = R("3e-568");
-	R d12 = R::sqrt(3), d34 = R::sqrt(5) - 1;
-	R S = (d34 - d12) / 2, P = -d12 * d34 / 2, d23h = R(0.7);
-	auto c2 = qboot2::context_construct(n_Max, R::prec, lambda);
-	for (uint32_t dim = 3; dim <= maxdim; dim += 2)
-	{
-		Context<R> c(n_Max, lambda, dim);
-		for (uint32_t spin = 0; spin <= maxspin; ++spin)
-		{
-			test_op(c, c2, Op(c.unitarity_bound(spin) + R::sqrt(2), spin, c.epsilon()), d12, d34, very_small);
-			test_op(c, c2, Op(c.unitarity_bound(spin), spin, c.epsilon()), d12, d34, very_small);
-		}
-		test_op(c, c2, Op(c.unitarity_bound(0) + R("0.5"), 0, c.epsilon()), d12, d34, very_small);
-		test_h(c, c2, d12, d34, very_small);
-	}
-	qboot2::clear_cb_context(&c2);
+	assert(argc == 4);
+	unique_ptr<char*[]> args(argv);
+	auto d_s = R(args[1]);
+	auto d_e = R(args[2]);
+	auto d_e1 = R(args[3]);
+	Context<R> c(n_Max, lambda, dim_);
+	Op sigma(d_s, 0, c.epsilon());
+	Op epsilon(d_e, 0, c.epsilon());
+	Op e1(d_e1, 0, c.epsilon());
+	mixed_ising(c, sigma, epsilon, e1, numax, maxspin);
+	args.release();
 	return 0;
 }

@@ -1,34 +1,13 @@
 #ifndef QBOOT_HOR_FORMULA_HPP_
 #define QBOOT_HOR_FORMULA_HPP_
 
-#include <array>    // for array
 #include <cassert>  // for assert
-#include <cstdint>  // for uint32_t, int32_t
+#include <cstdint>  // for uint32_t
 
 #include "matrix.hpp"      // for Vector
 #include "polynomial.hpp"  // for Polynomial
 #include "primary_op.hpp"  // for PrimaryOperator
 #include "real.hpp"        // for real, mpfr_t, mpfr_prec_t, mpfr_rnd_t
-
-namespace qboot2
-{
-	void set_nonzero_spin_rec_coeffs(std::array<std::array<mpfr_t, 5>, 8>* a, const mpfr_t& epsilon, const mpfr_t& ell,
-	                                 const mpfr_t& Delta, const mpfr_t& S, const mpfr_t& P, mpfr_prec_t prec,
-	                                 mpfr_rnd_t rnd);
-	void set_zero_spin_rec_coeffs(std::array<std::array<mpfr_t, 4>, 6>* a, const mpfr_t& epsilon, const mpfr_t& Delta,
-	                              const mpfr_t& S, const mpfr_t& P, mpfr_prec_t prec, mpfr_rnd_t rnd);
-
-	void initialize_spin_nonzero_coeffs_folder(std::array<std::array<mpfr_t, 5>, 8>* a, mpfr_prec_t prec);
-	void initialize_spin_zero_coeffs_folder(std::array<std::array<mpfr_t, 4>, 6>* a, mpfr_prec_t prec);
-
-	void deallocate_spin_nonzero_coeffs_folder(std::array<std::array<mpfr_t, 5>, 8>* a);
-	void deallocate_spin_zero_coeffs_folder(std::array<std::array<mpfr_t, 4>, 6>* a);
-
-	void spin_nonzero_evaluate_at_n(std::array<mpfr_t, 8>* a, std::array<std::array<mpfr_t, 5>, 8>* rho, int32_t n,
-	                                mpfr_rnd_t rnd);
-	void spin_zero_evaluate_at_n(std::array<mpfr_t, 6>* a, std::array<std::array<mpfr_t, 4>, 6>* rho, int32_t n,
-	                             mpfr_rnd_t rnd);
-}  // namespace qboot2
 
 // Hogervorst-Osborn-Rycykov recursion relation (derived from eq (4.9) in arXiv:1305.1321) takes the form
 //
