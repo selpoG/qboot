@@ -42,29 +42,29 @@ namespace algebra
 	{
 		using type = Vec<evaluated_t<R>>;
 	};
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	struct evaluated<mpfr::real<prec, rnd>>
+	template <>
+	struct evaluated<mpfr::real>
 	{
-		using type = mpfr::real<prec, rnd>;
+		using type = mpfr::real;
 	};
-	template <class Ring, template <class> class F>
+	template <class Ring, class S>
 	struct substitute;
-	// substitute the most inner template argument R by F<R>,
-	// i.e. substitute_t<A<B<...<C<R>>...>>> = A<B<...<C<F<R>>>...>>
-	template <class T, template <class> class F>
-	using substitute_t = typename substitute<T, F>::type;
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd, template <class> class F>
-	struct substitute<mpfr::real<prec, rnd>, F>
+	// substitute the most inner template argument R by S,
+	// i.e. substitute_t<A<B<...<C<R>>...>>> = A<B<...<C<S>>...>>
+	template <class T, class S>
+	using substitute_t = typename substitute<T, S>::type;
+	template <class S>
+	struct substitute<mpfr::real, S>
 	{
-		using type = F<mpfr::real<prec, rnd>>;
+		using type = S;
 	};
-	template <class R, template <class> class Vec, template <class> class F>
-	struct substitute<Vec<R>, F>
+	template <class R, template <class> class Vec, class S>
+	struct substitute<Vec<R>, S>
 	{
-		using type = Vec<substitute_t<R, F>>;
+		using type = Vec<substitute_t<R, S>>;
 	};
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd, class Real>
-	mpfr::real<prec, rnd> eval(const mpfr::real<prec, rnd>& v, [[maybe_unused]] const Real& x)
+	template <class Real>
+	mpfr::real eval(const mpfr::real& v, [[maybe_unused]] const Real& x)
 	{
 		return v;
 	}

@@ -13,18 +13,18 @@
 namespace qboot
 {
 	// F_{\mp, op}^{d1 d2, d3 d4}
-	template <class Real, class Operator>
+	template <class Operator>
 	class ConformalBlock
 	{
 		Operator op_;
-		Real d12_, d34_, d23h_, S_{}, P_{};
+		mpfr::real d12_, d34_, d23h_, S_{}, P_{};
 		// Odd  => type F (F_{-})
 		// Even => type H (F_{+})
 		algebra::FunctionSymmetry sym_;
 
 	public:
 		// sym must be Even or Odd (Mixed is not allowed)
-		ConformalBlock(const Operator& op, const Real& d12, const Real& d34, const Real& d23h,
+		ConformalBlock(const Operator& op, const mpfr::real& d12, const mpfr::real& d34, const mpfr::real& d23h,
 		               algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : op_(op), d12_(d12), d34_(d34), d23h_(d23h), sym_(sym)
 		{
@@ -32,39 +32,39 @@ namespace qboot
 			S_ = (d34_ - d12_) / 2;
 			P_ = d12_ * d34_ / (-2);
 		}
-		ConformalBlock(const Operator& op, const Real& d1, const Real& d2, const Real& d3, const Real& d4,
-		               algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
+		ConformalBlock(const Operator& op, const mpfr::real& d1, const mpfr::real& d2, const mpfr::real& d3,
+		               const mpfr::real& d4, algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : ConformalBlock(op, d1 - d2, d3 - d4, (d2 + d3) / 2, sym)
 		{
 		}
-		ConformalBlock(const Operator& op, const PrimaryOperator<Real>& op1, const PrimaryOperator<Real>& op2,
-		               const PrimaryOperator<Real>& op3, const PrimaryOperator<Real>& op4,
+		ConformalBlock(const Operator& op, const PrimaryOperator& op1, const PrimaryOperator& op2,
+		               const PrimaryOperator& op3, const PrimaryOperator& op4,
 		               algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : ConformalBlock(op, op1.delta(), op2.delta(), op3.delta(), op4.delta(), sym)
 		{
 		}
-		template <class = std::enable_if<is_primary_operator_v<Operator>>>
-		[[nodiscard]] const Real& delta() const
+		template <class = std::enable_if<std::is_same_v<Operator, PrimaryOperator>>>
+		[[nodiscard]] const mpfr::real& delta() const
 		{
 			return op_.delta();
 		}
 		[[nodiscard]] uint32_t spin() const { return op_.spin(); }
-		[[nodiscard]] const Real& epsilon() const { return op_.epsilon(); }
-		[[nodiscard]] const Real& delta_half() const { return d23h_; }
-		[[nodiscard]] const Real& S() const { return S_; }
-		[[nodiscard]] const Real& P() const { return P_; }
+		[[nodiscard]] const mpfr::real& epsilon() const { return op_.epsilon(); }
+		[[nodiscard]] const mpfr::real& delta_half() const { return d23h_; }
+		[[nodiscard]] const mpfr::real& S() const { return S_; }
+		[[nodiscard]] const mpfr::real& P() const { return P_; }
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
 		[[nodiscard]] const Operator& get_op() const { return op_; }
-		template <class = std::enable_if<!is_primary_operator_v<Operator>>>
-		[[nodiscard]] PrimaryOperator<Real> get_op(const Real& delta) const
+		template <class = std::enable_if<!std::is_same_v<Operator, PrimaryOperator>>>
+		[[nodiscard]] PrimaryOperator get_op(const mpfr::real& delta) const
 		{
 			return op_.fix_delta(delta);
 		}
-		template <class = std::enable_if<!is_primary_operator_v<Operator>>>
-		[[nodiscard]] ConformalBlock<Real, PrimaryOperator<Real>> fix_delta(const Real& delta) const
+		template <class = std::enable_if<!std::is_same_v<Operator, PrimaryOperator>>>
+		[[nodiscard]] ConformalBlock<PrimaryOperator> fix_delta(const mpfr::real& delta) const
 		{
-			return ConformalBlock<Real, PrimaryOperator<Real>>(op_.fix_delta(delta), d12_, d34_, d23h_, sym_);
+			return ConformalBlock<PrimaryOperator>(op_.fix_delta(delta), d12_, d34_, d23h_, sym_);
 		}
 		[[nodiscard]] std::string str() const
 		{
@@ -74,17 +74,16 @@ namespace qboot
 			return os.str();
 		}
 	};
-	template <class Real>
 	class GeneralConformalBlock
 	{
-		Real d12_, d34_, d23h_, S_{}, P_{};
+		mpfr::real d12_, d34_, d23h_, S_{}, P_{};
 		// Odd  => type F (F_{-})
 		// Even => type H (F_{+})
 		algebra::FunctionSymmetry sym_;
 
 	public:
 		// sym must be Even or Odd (Mixed is not allowed)
-		GeneralConformalBlock(const Real& d12, const Real& d34, const Real& d23h,
+		GeneralConformalBlock(const mpfr::real& d12, const mpfr::real& d34, const mpfr::real& d23h,
 		                      algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : d12_(d12), d34_(d34), d23h_(d23h), sym_(sym)
 		{
@@ -92,26 +91,26 @@ namespace qboot
 			S_ = (d34_ - d12_) / 2;
 			P_ = d12_ * d34_ / (-2);
 		}
-		GeneralConformalBlock(const Real& d1, const Real& d2, const Real& d3, const Real& d4,
+		GeneralConformalBlock(const mpfr::real& d1, const mpfr::real& d2, const mpfr::real& d3, const mpfr::real& d4,
 		                      algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : GeneralConformalBlock(d1 - d2, d3 - d4, (d2 + d3) / 2, sym)
 		{
 		}
-		GeneralConformalBlock(const PrimaryOperator<Real>& op1, const PrimaryOperator<Real>& op2,
-		                      const PrimaryOperator<Real>& op3, const PrimaryOperator<Real>& op4,
+		GeneralConformalBlock(const PrimaryOperator& op1, const PrimaryOperator& op2, const PrimaryOperator& op3,
+		                      const PrimaryOperator& op4,
 		                      algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : GeneralConformalBlock(op1.delta(), op2.delta(), op3.delta(), op4.delta(), sym)
 		{
 		}
-		[[nodiscard]] const Real& delta_half() const { return d23h_; }
-		[[nodiscard]] const Real& S() const { return S_; }
-		[[nodiscard]] const Real& P() const { return P_; }
+		[[nodiscard]] const mpfr::real& delta_half() const { return d23h_; }
+		[[nodiscard]] const mpfr::real& S() const { return S_; }
+		[[nodiscard]] const mpfr::real& P() const { return P_; }
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
 		template <class Operator>
-		[[nodiscard]] ConformalBlock<Real, Operator> fix_op(const Operator& op) const
+		[[nodiscard]] ConformalBlock<Operator> fix_op(const Operator& op) const
 		{
-			return ConformalBlock<Real, Operator>(op, d12_, d34_, d23h_, sym_);
+			return ConformalBlock<Operator>(op, d12_, d34_, d23h_, sym_);
 		}
 		[[nodiscard]] std::string str() const
 		{
@@ -121,8 +120,7 @@ namespace qboot
 			return os.str();
 		}
 	};
-	template <class Real>
-	using Block = std::variant<ConformalBlock<Real, PrimaryOperator<Real>>, GeneralConformalBlock<Real>>;
+	using Block = std::variant<ConformalBlock<PrimaryOperator>, GeneralConformalBlock>;
 }  // namespace qboot
 
 #endif  // QBOOT_BLOCK_HPP_

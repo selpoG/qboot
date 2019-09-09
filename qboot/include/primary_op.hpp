@@ -12,49 +12,47 @@
 
 namespace qboot
 {
-	template <class Real>
-	Real unitarity_bound(const Real& epsilon, uint32_t spin)
+	inline mpfr::real unitarity_bound(const mpfr::real& epsilon, uint32_t spin)
 	{
 		return spin == 0 ? epsilon : spin + 2 * epsilon;
 	}
 	// primary operator whose dimension is delta and spin is spin
-	template <class Real>
 	class PrimaryOperator
 	{
-		Real delta_, epsilon_;
+		mpfr::real delta_, epsilon_;
 		uint32_t spin_;
 
 	public:
 		// unit operator
-		explicit PrimaryOperator(const Real& epsilon) : delta_{}, epsilon_(epsilon), spin_(0) {}
+		explicit PrimaryOperator(const mpfr::real& epsilon) : delta_{}, epsilon_(epsilon), spin_(0) {}
 		// on the unitarity bound
-		PrimaryOperator(uint32_t spin, const Real& epsilon)
+		PrimaryOperator(uint32_t spin, const mpfr::real& epsilon)
 		    : delta_(unitarity_bound(epsilon, spin)), epsilon_(epsilon), spin_(spin)
 		{
 		}
-		PrimaryOperator(const Real& delta, uint32_t spin, const Real& epsilon)
+		PrimaryOperator(const mpfr::real& delta, uint32_t spin, const mpfr::real& epsilon)
 		    : delta_(delta), epsilon_(epsilon), spin_(spin)
 		{
 		}
-		[[nodiscard]] PrimaryOperator get_shifted(const Real& small) const
+		[[nodiscard]] PrimaryOperator get_shifted(const mpfr::real& small) const
 		{
 			return PrimaryOperator(delta_ == 0 ? small : delta_ * (1 + small), spin_, epsilon_);
 		}
-		[[nodiscard]] const Real& delta() const { return delta_; }
+		[[nodiscard]] const mpfr::real& delta() const { return delta_; }
 		[[nodiscard]] uint32_t spin() const { return spin_; }
-		[[nodiscard]] const Real& epsilon() const { return epsilon_; }
-		[[nodiscard]] Real quadratic_casimir() const
+		[[nodiscard]] const mpfr::real& epsilon() const { return epsilon_; }
+		[[nodiscard]] mpfr::real quadratic_casimir() const
 		{
 			return (2 * epsilon_ + spin_) * spin_ / 2 + (delta_ / 2 - epsilon_ - 1) * delta_;
 		}
-		[[nodiscard]] Real quartic_casimir() const
+		[[nodiscard]] mpfr::real quartic_casimir() const
 		{
 			return spin_ * (spin_ + 2 * epsilon_) * (delta_ - 1) * (delta_ - 1 - 2 * epsilon_);
 		}
 		[[nodiscard]] bool is_divergent_hor() const
 		{
 			if (spin_ > 0) return delta_ == spin_ + 2 * epsilon_ || (mpfr::isinteger(delta_) && delta_ <= 1);
-			return delta_.iszero() || delta_ == epsilon_ || delta_ == epsilon_ + Real(0.5);
+			return delta_.iszero() || delta_ == epsilon_ || delta_ == epsilon_ + mpfr::real(0.5);
 		}
 		[[nodiscard]] std::string str() const
 		{
@@ -63,38 +61,37 @@ namespace qboot
 			return os.str();
 		}
 	};
-	template <class Real>
 	class GeneralPrimaryOperator
 	{
-		Real epsilon_, from_;
-		std::optional<Real> to_;
+		mpfr::real epsilon_, from_;
+		std::optional<mpfr::real> to_;
 		uint32_t spin_, num_poles_;
 
 	public:
 		// primary operator whose dimension runs over unitarity bound
-		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const Real& epsilon)
+		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const mpfr::real& epsilon)
 		    : epsilon_(epsilon), from_(unitarity_bound(epsilon, spin)), to_{}, spin_(spin), num_poles_(num_poles)
 		{
 		}
 		// primary operator whose dimension runs from lb to ub (empty ub means infinity)
-		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const Real& epsilon, const Real& lb,
-		                       std::optional<Real> ub = {})
+		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const mpfr::real& epsilon, const mpfr::real& lb,
+		                       std::optional<mpfr::real> ub = {})
 		    : epsilon_(epsilon), from_(lb), to_(ub), spin_(spin), num_poles_(num_poles)
 		{
 		}
 		[[nodiscard]] uint32_t spin() const { return spin_; }
 		[[nodiscard]] uint32_t num_poles() const { return num_poles_; }
-		[[nodiscard]] const Real& epsilon() const { return epsilon_; }
-		[[nodiscard]] const Real& lower_bound() const { return from_; }
+		[[nodiscard]] const mpfr::real& epsilon() const { return epsilon_; }
+		[[nodiscard]] const mpfr::real& lower_bound() const { return from_; }
 		[[nodiscard]] bool is_finite() const noexcept { return to_.has_value(); }
 		// if not is_finite(), do not call this
-		[[nodiscard]] const Real& upper_bound() const { return *to_; }
+		[[nodiscard]] const mpfr::real& upper_bound() const { return *to_; }
 		// if not is_finite(), returns nullopt
-		[[nodiscard]] const std::optional<Real>& upper_bound_safe() const { return to_; }
-		[[nodiscard]] PrimaryOperator<Real> fix_delta(const Real& delta) const
+		[[nodiscard]] const std::optional<mpfr::real>& upper_bound_safe() const { return to_; }
+		[[nodiscard]] PrimaryOperator fix_delta(const mpfr::real& delta) const
 		{
 			assert(from_ <= delta && (!to_.has_value() || delta < *to_));
-			return PrimaryOperator<Real>(delta, spin_, epsilon_);
+			return PrimaryOperator(delta, spin_, epsilon_);
 		}
 		[[nodiscard]] std::string str() const
 		{
@@ -104,20 +101,6 @@ namespace qboot
 			return os.str();
 		}
 	};
-	template <class T>
-	struct is_primary_operator;
-	template <class T>
-	inline constexpr bool is_primary_operator_v = is_primary_operator<T>::value;
-	template <class Real>
-	struct is_primary_operator<PrimaryOperator<Real>> : std::true_type
-	{
-	};
-	template <class T>
-	struct is_primary_operator : std::false_type
-	{
-	};
-	template <class Real>
-	using Operator = std::variant<PrimaryOperator<Real>, GeneralPrimaryOperator<Real>>;
 }  // namespace qboot
 
 #endif  // QBOOT_PRIMARY_OP_HPP_

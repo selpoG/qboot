@@ -300,13 +300,12 @@ namespace algebra
 		return out << "]";
 	}
 	// v ^ d = ((1 - z) (1 - z_bar)) ^ d as a function of x, y
-	template <class Real>
-	ComplexFunction<Real> v_to_d(const Real& d, uint32_t lambda)
+	inline ComplexFunction<mpfr::real> v_to_d(const mpfr::real& d, uint32_t lambda)
 	{
 		// f.at(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
 		//            = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
 		// where lf(x, n) = x (x - 1) ... (x - (n - 1)) (falling factorial)
-		ComplexFunction<Real> f(lambda);
+		ComplexFunction<mpfr::real> f(lambda);
 		f.at(0, 0) = mpfr::pow(4, -d);
 		for (uint32_t n = 0; n <= lambda / 2; ++n)
 		{

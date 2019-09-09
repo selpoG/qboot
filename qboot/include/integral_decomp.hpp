@@ -15,19 +15,20 @@ namespace qboot
 	// = (-p) ^ n e ^ {p k} \Gamma(0, p k)
 	//   + (1 / k ^ n) \sum_{i = 0}^{n - 1} (n - i - 1)! (-p k) ^ i
 	// incomplete_gamma_factor = e ^ {p k} \Gamma(0, p k)
-	template <class Real>
-	algebra::Vector<Real> simple_pole_integral(uint32_t pole_order_max, const Real& base, const Real& pole_position)
+	inline algebra::Vector<mpfr::real> simple_pole_integral(uint32_t pole_order_max, const mpfr::real& base,
+	                                                        const mpfr::real& pole_position)
 	{
-		Real incomplete_gamma = pole_position == 0 ? Real(Real::prec)
-		                                           : mpfr::pow(base, pole_position) *
-		                                                 mpfr::gamma_inc(Real(0), pole_position * mpfr::log(base));
-		algebra::Vector<Real> result(pole_order_max + 1);
+		mpfr::real incomplete_gamma =
+		    pole_position == 0
+		        ? mpfr::real(mpfr::global_prec)
+		        : mpfr::pow(base, pole_position) * mpfr::gamma_inc(mpfr::real(0), pole_position * mpfr::log(base));
+		algebra::Vector<mpfr::real> result(pole_order_max + 1);
 		result[0] = incomplete_gamma;
-		Real tmp{}, pow = pole_position * incomplete_gamma;
-		Real minus_pole_position = -pole_position;
-		Real factorial(1);
-		Real minus_log_base = -1 / mpfr::log(base);
-		Real log_base_power = minus_log_base;
+		mpfr::real tmp{}, pow = pole_position * incomplete_gamma;
+		mpfr::real minus_pole_position = -pole_position;
+		mpfr::real factorial(1);
+		mpfr::real minus_log_base = -1 / mpfr::log(base);
+		mpfr::real log_base_power = minus_log_base;
 		for (uint32_t j = 1; j <= pole_order_max; ++j)
 		{
 			// factorial == (j - 1)!;

@@ -10,7 +10,6 @@
 #include "chol_and_inverse.hpp"
 #include "complex_function.hpp"
 #include "context_variables.hpp"
-#include "damped_rational.hpp"
 #include "hor_formula.hpp"
 #include "hor_recursion.hpp"
 #include "integral_decomp.hpp"
@@ -32,32 +31,30 @@ using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional
     std::pair;
 namespace fs = std::filesystem;
 
-using R = mpfr::real<1000, MPFR_RNDN>;
-using Op = qboot::PrimaryOperator<R>;
-using GOp = qboot::GeneralPrimaryOperator<R>;
-using Block = qboot::ConformalBlock<R, Op>;
-using GBlock = qboot::ConformalBlock<R, GOp>;
-using GGBlock = qboot::GeneralConformalBlock<R>;
-using PolIneq = qboot::PolynomialInequalityWithCoeffs<R>;
-using EvalIneq = qboot::PolynomialInequalityEvaluated<R>;
+using R = mpfr::real;
+using Op = qboot::PrimaryOperator;
+using GOp = qboot::GeneralPrimaryOperator;
+using Block = qboot::ConformalBlock<Op>;
+using GBlock = qboot::ConformalBlock<GOp>;
+using GGBlock = qboot::GeneralConformalBlock;
+using PolIneq = qboot::PolynomialInequalityWithCoeffs;
+using EvalIneq = qboot::PolynomialInequalityEvaluated;
 
-[[maybe_unused]] static void single_ising(const Context<R>& c, const Op& s, const Op& e, uint32_t numax,
-                                          uint32_t maxspin);
-[[maybe_unused]] static void mixed_ising(const Context<R>& c, const Op& s, const Op& e, const Op& e1, uint32_t numax,
+[[maybe_unused]] static void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax, uint32_t maxspin);
+[[maybe_unused]] static void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint32_t numax,
                                          uint32_t maxspin);
 [[maybe_unused]] static void test_sdpb();
 
-void mixed_ising(const Context<R>& c, const Op& s, const Op& e, const Op& e1, uint32_t numax = 20,
-                 uint32_t maxspin = 24)
+void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint32_t numax = 20, uint32_t maxspin = 24)
 {
 	constexpr FunctionSymmetry Od = FunctionSymmetry::Odd;
 	constexpr FunctionSymmetry Ev = FunctionSymmetry::Even;
-	using E = qboot::Entry<R>;
+	using E = qboot::Entry;
 	using B = Block;
 	using G = GGBlock;
-	qboot::BootstrapEquation<R> boot(c, numax,
-	                                 array{pair{"unit", 1u}, pair{"scalar", 2u}, pair{"e1", 2u}, pair{"T", 2u},
-	                                       pair{"even", 2u}, pair{"odd+", 1u}, pair{"odd-", 1u}});
+	qboot::BootstrapEquation boot(c, numax,
+	                              array{pair{"unit", 1u}, pair{"scalar", 2u}, pair{"e1", 2u}, pair{"T", 2u},
+	                                    pair{"even", 2u}, pair{"odd+", 1u}, pair{"odd-", 1u}});
 	auto num_poles = [numax](uint32_t spin) { return numax; };
 	// spectrum
 	Op u{c.epsilon()}, T{2, c.epsilon()};  // do not register point-like spectrums ("unit", "scalar", "T")
@@ -100,13 +97,13 @@ void mixed_ising(const Context<R>& c, const Op& s, const Op& e, const Op& e1, ui
 	move(pmp).create_input().write_all(root);
 }
 
-void single_ising(const Context<R>& c, const Op& s, const Op& e, uint32_t numax = 20, uint32_t maxspin = 24)
+void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax = 20, uint32_t maxspin = 24)
 {
 	constexpr FunctionSymmetry Od = FunctionSymmetry::Odd;
-	using E = qboot::Entry<R>;
+	using E = qboot::Entry;
 	using B = Block;
 	using G = GGBlock;
-	qboot::BootstrapEquation<R> boot(c, numax, array{pair{"unit", 1u}, pair{"e", 1u}, pair{"T", 1u}, pair{"even", 1u}});
+	qboot::BootstrapEquation boot(c, numax, array{pair{"unit", 1u}, pair{"e", 1u}, pair{"T", 1u}, pair{"even", 1u}});
 	auto num_poles = [numax](uint32_t spin) { return numax + std::min(numax, spin) / 2; };
 	Op u{c.epsilon()}, T{2, c.epsilon()};
 	boot.register_operator("even", {0, num_poles(0), c.epsilon(), R("1.409"), R("1.4135")});
@@ -121,13 +118,13 @@ void single_ising(const Context<R>& c, const Op& s, const Op& e, uint32_t numax 
 	move(pmp).create_input().write_all(root);
 }
 
-class TestScale : public qboot::ScaleFactor<R>
+class TestScale : public qboot::ScaleFactor
 {
 	static constexpr uint32_t deg_ = 4;
 	Vector<R> xs_;
 
 public:
-	TestScale() : xs_(qboot::sample_points<R>(deg_)) {}
+	TestScale() : xs_(qboot::sample_points(deg_)) {}
 	TestScale(const TestScale&) = delete;
 	TestScale& operator=(const TestScale&) = delete;
 	TestScale(TestScale&&) noexcept = default;
@@ -143,7 +140,7 @@ public:
 	}
 	[[nodiscard]] R sample_point(uint32_t k) override { return xs_[k]; }
 	[[nodiscard]] Vector<R> sample_points() override { return xs_.clone(); }
-	[[nodiscard]] Polynomial<R> bilinear_base(uint32_t m) override
+	[[nodiscard]] Polynomial bilinear_base(uint32_t m) override
 	{
 		assert(m <= deg_ / 2);
 		switch (m)
@@ -153,9 +150,9 @@ public:
 		default: return {R(1), R(-2), R(0.5)};  // 1 - 2 x + x ^ 2 / 2
 		}
 	}
-	[[nodiscard]] Vector<Polynomial<R>> bilinear_bases() override
+	[[nodiscard]] Vector<Polynomial> bilinear_bases() override
 	{
-		Vector<Polynomial<R>> q(deg_ / 2 + 1);
+		Vector<Polynomial> q(deg_ / 2 + 1);
 		for (uint32_t i = 0; i <= deg_ / 2; ++i) q[i] = bilinear_base(i);
 		return q;
 	}
@@ -166,9 +163,9 @@ void test_sdpb()
 {
 	// https://github.com/davidsd/sdpb/blob/master/test/test.xml
 	// {1 + x ^ 4, x ^ 2 + x ^ 4 / 12}
-	Vector<Polynomial<R>> elm{{R(1), R(0), R(0), R(0), R(1)}, {R(0), R(0), R(1), R(0), R(1) / 12}};
+	Vector<Polynomial> elm{{R(1), R(0), R(0), R(0), R(1)}, {R(0), R(0), R(1), R(0), R(1) / 12}};
 
-	PolynomialProgram<R> prg(1);
+	PolynomialProgram prg(1);
 	prg.objective_constant() = R(0);
 	prg.objectives({R(-1)});
 	auto ineq = make_unique<PolIneq>(1u, std::make_unique<TestScale>(), Vector{elm[1].clone()}, -elm[0]);
@@ -181,14 +178,16 @@ void test_sdpb()
 
 int main(int argc, char* argv[])
 {
-	constexpr uint32_t n_Max = 400, lambda = 14, dim_ = 3, maxdim = 10, maxspin = 24;
+	mpfr::global_prec = 1000;
+	mpfr::global_rnd = MPFR_RNDN;
+	constexpr uint32_t n_Max = 400, lambda = 14, dim_ = 3, maxspin = 24;
 	[[maybe_unused]] constexpr uint32_t numax = 6;
 	assert(argc == 4);
 	unique_ptr<char*[]> args(argv);
 	auto d_s = R(args[1]);
 	auto d_e = R(args[2]);
 	auto d_e1 = R(args[3]);
-	Context<R> c(n_Max, lambda, dim_);
+	Context c(n_Max, lambda, dim_);
 	Op sigma(d_s, 0, c.epsilon());
 	Op epsilon(d_e, 0, c.epsilon());
 	Op e1(d_e1, 0, c.epsilon());

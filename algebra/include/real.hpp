@@ -55,6 +55,9 @@
 
 namespace mpfr
 {
+	static inline mpfr_prec_t global_prec = 1000;
+	static inline mpfr_rnd_t global_rnd = MPFR_RNDN;
+
 	/////////////////////////////////////////////////////////////////
 	// type definitions
 	/////////////////////////////////////////////////////////////////
@@ -63,8 +66,11 @@ namespace mpfr
 	using _long = long int;            // NOLINT
 	using _ulong = unsigned long int;  // NOLINT
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
 	class real;
+
+	template <class Char, class Traits>
+	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_t x,
+	                                                        mpfr_rnd_t rnd);
 
 	inline bool _is_nan(mpfr_srcptr x) { return mpfr_nan_p(x) != 0; }    // NOLINT
 	inline bool _is_inf(mpfr_srcptr x) { return mpfr_inf_p(x) != 0; }    // NOLINT
@@ -190,17 +196,9 @@ namespace mpfr
 	/////////////////////////////////////////////////////////////////
 	// basic meta-programming
 	/////////////////////////////////////////////////////////////////
-	template <class T>
-	struct is_mpfr_real : std::false_type
-	{
-	};
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	struct is_mpfr_real<real<prec, rnd>> : std::true_type
-	{
-	};
 	// T is mpfr::real or not
 	template <class T>
-	inline constexpr bool is_mpfr_real_v = is_mpfr_real<T>::value;
+	inline constexpr bool is_mpfr_real_v = std::is_same_v<T, real>;
 
 	// check all values in integral class I1 are included in integral class I2
 	// and I1, I2 has the same signed property
@@ -213,151 +211,6 @@ namespace mpfr
 
 namespace mpfr
 {
-	/////////////////////////////////////////////////////////////////
-	// definitions of arithmetic operators
-	/////////////////////////////////////////////////////////////////
-
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
-	{
-		return r1 * r2;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
-	{
-		return std::move(r1) * r2;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
-	{
-		return r1 * std::move(r2);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return std::move(r1) * r2;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul_scalar(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
-	{
-		return r1 * r2;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul_scalar(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
-	{
-		return std::move(r1) * r2;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul_scalar(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
-	{
-		return r1 * std::move(r2);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto mul_scalar(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return std::move(r1) * r2;
-	}
-
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator+(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
-	{
-		real<prec, rnd> temp;
-		mpfr_add(temp._x, r1._x, r2._x, rnd);
-		return temp;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator+(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
-	{
-		mpfr_add(r1._x, r1._x, r2._x, rnd);
-		return std::move(r1);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator+(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
-	{
-		mpfr_add(r2._x, r1._x, r2._x, rnd);
-		return std::move(r2);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator+(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return std::move(r1) + r2;
-	}
-
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator-(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
-	{
-		real<prec, rnd> temp;
-		mpfr_sub(temp._x, r1._x, r2._x, rnd);
-		return temp;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator-(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
-	{
-		mpfr_sub(r1._x, r1._x, r2._x, rnd);
-		return std::move(r1);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator-(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
-	{
-		mpfr_sub(r2._x, r1._x, r2._x, rnd);
-		return std::move(r2);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator-(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return std::move(r1) - r2;
-	}
-
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator*(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
-	{
-		real<prec, rnd> temp;
-		mpfr_mul(temp._x, r1._x, r2._x, rnd);
-		return temp;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator*(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
-	{
-		mpfr_mul(r1._x, r1._x, r2._x, rnd);
-		return std::move(r1);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator*(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
-	{
-		mpfr_mul(r2._x, r1._x, r2._x, rnd);
-		return std::move(r2);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator*(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return std::move(r1) * r2;
-	}
-
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator/(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
-	{
-		real<prec, rnd> temp;
-		mpfr_div(temp._x, r1._x, r2._x, rnd);
-		return temp;
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator/(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
-	{
-		mpfr_div(r1._x, r1._x, r2._x, rnd);
-		return std::move(r1);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator/(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
-	{
-		mpfr_div(r2._x, r1._x, r2._x, rnd);
-		return std::move(r2);
-	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto operator/(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return std::move(r1) / r2;
-	}
-
 	/////////////////////////////////////////////////////////////////
 	// definitions of relational operators
 	/////////////////////////////////////////////////////////////////
@@ -409,100 +262,29 @@ namespace mpfr
 	}
 
 	/////////////////////////////////////////////////////////////////
-	// mathematical constants
-	/////////////////////////////////////////////////////////////////
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto zero(const int n)
-	{
-		real<_prec, _rnd> temp;
-		mpfr_set_zero(temp._x, n);
-		return temp;
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto inf(const int n)
-	{
-		real<_prec, _rnd> temp;
-		mpfr_set_inf(temp._x, n);
-		return temp;
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto nan()
-	{
-		real<_prec, _rnd> temp;
-		mpfr_set_nan(temp._x);
-		return temp;
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto const_log2()
-	{
-		real<_prec, _rnd> temp;
-		mpfr_const_log2(temp._x, _rnd);
-		return temp;
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto const_pi() noexcept
-	{
-		real<_prec, _rnd> temp;
-		mpfr_const_pi(temp._x, _rnd);
-		return temp;
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto factorial(const _ulong n)
-	{
-		real<_prec, _rnd> temp;
-		mpfr_fac_ui(temp._x, n, _rnd);
-		return temp;
-	}
-
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto sqrt(_ulong r)
-	{
-		real<prec, rnd> temp;
-		mpfr_sqrt_ui(temp._x, r, rnd);
-		return temp;
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(_ulong op1, _ulong op2)
-	{
-		real<_prec, _rnd> temp;
-		mpfr_ui_pow_ui(temp._x, op1, op2, _rnd);
-		return temp;
-	}
-
-	/////////////////////////////////////////////////////////////////
 	// class definition
 	/////////////////////////////////////////////////////////////////
 
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
 	class real
 	{
 	public:
 		mpfr_t _x;  // NOLINT
 
-		static constexpr mpfr_prec_t prec = _prec;
-		static constexpr mpfr_rnd_t rnd = _rnd;
 		using type = real;
 		// return
-		static real log2() { return const_log2<_prec, _rnd>(); }
-		static real pi() { return const_pi<_prec, _rnd>(); }
-		static real nan() { return mpfr::nan<_prec, _rnd>(); }
-		// if sign is nonnegative, return +inf
-		// if sign is negative, return -inf
-		static real inf(int sign = 1) { return mpfr::inf<_prec, _rnd>(sign); }
-		// if sign is nonnegative, return +0
-		// if sign is negative, return -0
-		static real zero(int sign = 1) { return mpfr::zero<_prec, _rnd>(sign); }
-		// return n! = Gamma(n + 1)
-		static real factorial(_ulong n) { return mpfr::factorial<_prec, _rnd>(n); }
-		static real pow(_ulong n, _ulong m) { return mpfr::pow<_prec, _rnd>(n, m); }
-		static real sqrt(_ulong n) { return mpfr::sqrt<_prec, _rnd>(n); }
+		// static real log2() { return const_log2(); }
+		// static real pi() { return const_pi(); }
+		// static real nan() { return mpfr::nan(); }
+		//// if sign is nonnegative, return +inf
+		//// if sign is negative, return -inf
+		// static real inf(int sign = 1) { return mpfr::inf(sign); }
+		//// if sign is nonnegative, return +0
+		//// if sign is negative, return -0
+		// static real zero(int sign = 1) { return mpfr::zero(sign); }
+		//// return n! = Gamma(n + 1)
+		// static real factorial(_ulong n) { return mpfr::factorial(n); }
+		// static real pow(_ulong n, _ulong m) { return mpfr::pow(n, m); }
+		// static real sqrt(_ulong n) { return mpfr::sqrt(n); }
 
 		/////////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
@@ -512,19 +294,19 @@ namespace mpfr
 
 		inline real()
 		{
-			mpfr_init2(_x, _prec);
+			mpfr_init2(_x, global_prec);
 			mpfr_set_zero(_x, +1);
 		}
 
 		inline real(const real& o)
 		{
-			mpfr_init2(_x, _prec);
-			mpfr_set(_x, o._x, _rnd);
+			mpfr_init2(_x, global_prec);
+			mpfr_set(_x, o._x, global_rnd);
 		}
 
 		inline real(real&& o) noexcept
 		{
-			mpfr_init2(_x, _prec);
+			mpfr_init2(_x, global_prec);
 			mpfr_swap(_x, o._x);
 		}
 
@@ -533,7 +315,7 @@ namespace mpfr
 		inline real& operator=(const real& o) &
 		{
 			if (this == &o) return *this;
-			mpfr_set(_x, o._x, _rnd);
+			mpfr_set(_x, o._x, global_rnd);
 			return *this;
 		}
 
@@ -554,7 +336,7 @@ namespace mpfr
 
 		[[nodiscard]] bool iszero() const { return _is_zero(_x); }
 
-		void negate() & { mpfr_mul_si(_x, _x, -1, _rnd); }
+		void negate() & { mpfr_mul_si(_x, _x, -1, global_rnd); }
 
 		[[nodiscard]] real norm() const& { return *this * *this; }
 		[[nodiscard]] real norm() && { return std::move(*this) * *this; }
@@ -572,6 +354,12 @@ namespace mpfr
 			return os.str();
 		}
 
+		template <class Char, class Traits>
+		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const real& r)
+		{
+			return helper_ostream(s, const_cast<mpfr_t&>(r._x), global_rnd);  // NOLINT
+		}
+
 		[[nodiscard]] std::string str() const
 		{
 			std::ostringstream os;
@@ -585,82 +373,66 @@ namespace mpfr
 
 		explicit inline real(const mpfr_t& o)
 		{
-			mpfr_init2(_x, _prec);
-			mpfr_set(_x, o, _rnd);
+			mpfr_init2(_x, global_prec);
+			mpfr_set(_x, o, global_rnd);
 		}
 
 		explicit inline real(const char* op)
 		{
-			mpfr_init2(_x, _prec);
-			if (auto err = mpfr_set_str(_x, op, 0, _rnd); err == -1)
+			mpfr_init2(_x, global_prec);
+			if (auto err = mpfr_set_str(_x, op, 0, global_rnd); err == -1)
 				throw std::runtime_error(std::string("in mpfr::real(const char*):\n  invalid input format ") + op);
 		}
 
 		explicit inline real(const std::string& op)
 		{
-			mpfr_init2(_x, _prec);
-			if (auto err = mpfr_set_str(_x, op.c_str(), 0, _rnd); err == -1)
+			mpfr_init2(_x, global_prec);
+			if (auto err = mpfr_set_str(_x, op.c_str(), 0, global_rnd); err == -1)
 				throw std::runtime_error("in mpfr::real(const std::string&):\n  invalid input format " + op);
-		}
-
-		template <mpfr_prec_t _prec2, mpfr_rnd_t _rnd2, class = std::enable_if_t<_prec != _prec2 || _rnd != _rnd2>>
-		explicit inline real(const real<_prec2, _rnd2>& o)
-		{
-			mpfr_init2(_x, _prec);
-			mpfr_set(_x, o._x, _rnd);
-		}
-		template <mpfr_prec_t _prec2, mpfr_rnd_t _rnd2, class = std::enable_if_t<_prec != _prec2 || _rnd != _rnd2>>
-		explicit inline real(real<_prec2, _rnd2>&& o)
-		{
-			mpfr_init2(_x, _prec);
-			if (_prec == _prec2)
-				mpfr_swap(_x, o._x);
-			else
-				mpfr_set(_x, o._x, _rnd);
 		}
 
 		explicit inline real(double o)
 		{
-			mpfr_init2(_x, _prec);
-			mpfr_set_d(_x, o, _rnd);
+			mpfr_init2(_x, global_prec);
+			mpfr_set_d(_x, o, global_rnd);
 		}
 		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
 		explicit inline real(T o)
 		{
-			mpfr_init2(_x, _prec);
+			mpfr_init2(_x, global_prec);
 			if constexpr (std::is_signed_v<T>)
 			{
 				if constexpr (is_included_v<T, _long>)
-					mpfr_set_si(_x, o, _rnd);
+					mpfr_set_si(_x, o, global_rnd);
 				else
-					mpfr_set_sj(_x, o, _rnd);
+					mpfr_set_sj(_x, o, global_rnd);
 			}
 			else
 			{
 				if constexpr (is_included_v<T, _ulong>)
-					mpfr_set_ui(_x, o, _rnd);
+					mpfr_set_ui(_x, o, global_rnd);
 				else
-					mpfr_set_uj(_x, o, _rnd);
+					mpfr_set_uj(_x, o, global_rnd);
 			}
 		}
 
 		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
 		inline real(T op, mpfr_exp_t e)
 		{
-			mpfr_init2(_x, _prec);
+			mpfr_init2(_x, global_prec);
 			if constexpr (std::is_signed_v<T>)
 			{
 				if constexpr (is_included_v<T, _long>)
-					mpfr_set_si_2exp(_x, op, e, _rnd);
+					mpfr_set_si_2exp(_x, op, e, global_rnd);
 				else
-					mpfr_set_sj_2exp(_x, op, e, _rnd);
+					mpfr_set_sj_2exp(_x, op, e, global_rnd);
 			}
 			else
 			{
 				if constexpr (is_included_v<T, _ulong>)
-					mpfr_set_ui_2exp(_x, op, e, _rnd);
+					mpfr_set_ui_2exp(_x, op, e, global_rnd);
 				else
-					mpfr_set_uj_2exp(_x, op, e, _rnd);
+					mpfr_set_uj_2exp(_x, op, e, global_rnd);
 			}
 		}
 
@@ -668,7 +440,7 @@ namespace mpfr
 
 		inline real& operator=(double o) &
 		{
-			mpfr_set_d(_x, o, _rnd);
+			mpfr_set_d(_x, o, global_rnd);
 			return *this;
 		}
 		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
@@ -677,33 +449,17 @@ namespace mpfr
 			if constexpr (std::is_signed_v<T>)
 			{
 				if constexpr (is_included_v<T, _long>)
-					mpfr_set_si(_x, o, _rnd);
+					mpfr_set_si(_x, o, global_rnd);
 				else
-					mpfr_set_sj(_x, o, _rnd);
+					mpfr_set_sj(_x, o, global_rnd);
 			}
 			else
 			{
 				if constexpr (is_included_v<T, _ulong>)
-					mpfr_set_ui(_x, o, _rnd);
+					mpfr_set_ui(_x, o, global_rnd);
 				else
-					mpfr_set_uj(_x, o, _rnd);
+					mpfr_set_uj(_x, o, global_rnd);
 			}
-			return *this;
-		}
-
-		template <mpfr_prec_t _prec1, mpfr_rnd_t _rnd1, class = std::enable_if_t<_prec != _prec1 || _rnd != _rnd1>>
-		inline real& operator=(const real<_prec1, _rnd1>& o) &
-		{
-			mpfr_set(_x, o._x, _rnd);
-			return *this;
-		}
-		template <mpfr_prec_t _prec1, mpfr_rnd_t _rnd1, class = std::enable_if_t<_prec != _prec1 || _rnd != _rnd1>>
-		inline real& operator=(real<_prec1, _rnd1>&& o) &
-		{
-			if (_prec == _prec1)
-				mpfr_swap(_x, o._x);
-			else
-				mpfr_set(_x, o._x, _rnd);
 			return *this;
 		}
 
@@ -715,9 +471,9 @@ namespace mpfr
 		inline real& operator+=(const Tp& o) &
 		{
 			if constexpr (is_mpfr_real_v<Tp>)
-				mpfr_add(_x, _x, o._x, _rnd);
+				mpfr_add(_x, _x, o._x, global_rnd);
 			else
-				type_traits<Tp>::add(_x, _x, o, _rnd);
+				type_traits<Tp>::add(_x, _x, o, global_rnd);
 			return *this;
 		}
 
@@ -725,9 +481,9 @@ namespace mpfr
 		inline real& operator-=(const Tp& o) &
 		{
 			if constexpr (is_mpfr_real_v<Tp>)
-				mpfr_sub(_x, _x, o._x, _rnd);
+				mpfr_sub(_x, _x, o._x, global_rnd);
 			else
-				type_traits<Tp>::sub_a(_x, _x, o, _rnd);
+				type_traits<Tp>::sub_a(_x, _x, o, global_rnd);
 			return *this;
 		}
 
@@ -735,9 +491,9 @@ namespace mpfr
 		inline real& operator*=(const Tp& o) &
 		{
 			if constexpr (is_mpfr_real_v<Tp>)
-				mpfr_mul(_x, _x, o._x, _rnd);
+				mpfr_mul(_x, _x, o._x, global_rnd);
 			else
-				type_traits<Tp>::mul(_x, _x, o, _rnd);
+				type_traits<Tp>::mul(_x, _x, o, global_rnd);
 			return *this;
 		}
 
@@ -745,40 +501,120 @@ namespace mpfr
 		inline real& operator/=(const Tp& o) &
 		{
 			if constexpr (is_mpfr_real_v<Tp>)
-				mpfr_div(_x, _x, o._x, _rnd);
+				mpfr_div(_x, _x, o._x, global_rnd);
 			else
-				type_traits<Tp>::div_a(_x, _x, o, _rnd);
+				type_traits<Tp>::div_a(_x, _x, o, global_rnd);
 			return *this;
 		}
 
 		/////////////////////////////////////////////////////////////////
 		// optimized operators
 		/////////////////////////////////////////////////////////////////
+		friend real mul(const real& r1, const real& r2) { return r1 * r2; }
+		friend real mul(real&& r1, const real& r2) { return std::move(r1) * r2; }
+		friend real mul(const real& r1, real&& r2) { return r1 * std::move(r2); }
+		friend real mul(real&& r1, real&& r2) { return std::move(r1) * r2; }
+		friend real mul_scalar(const real& r1, const real& r2) { return r1 * r2; }
+		friend real mul_scalar(real&& r1, const real& r2) { return std::move(r1) * r2; }
+		friend real mul_scalar(const real& r1, real&& r2) { return r1 * std::move(r2); }
+		friend real mul_scalar(real&& r1, real&& r2) { return std::move(r1) * r2; }
+
+		friend real operator+(const real& r1, const real& r2)
+		{
+			real temp;
+			mpfr_add(temp._x, r1._x, r2._x, global_rnd);
+			return temp;
+		}
+		friend real operator+(real&& r1, const real& r2)
+		{
+			mpfr_add(r1._x, r1._x, r2._x, global_rnd);
+			return std::move(r1);
+		}
+		friend real operator+(const real& r1, real&& r2)
+		{
+			mpfr_add(r2._x, r1._x, r2._x, global_rnd);
+			return std::move(r2);
+		}
+		friend real operator+(real&& r1, real&& r2) { return std::move(r1) + r2; }
+
+		friend real operator-(const real& r1, const real& r2)
+		{
+			real temp;
+			mpfr_sub(temp._x, r1._x, r2._x, global_rnd);
+			return temp;
+		}
+		friend real operator-(real&& r1, const real& r2)
+		{
+			mpfr_sub(r1._x, r1._x, r2._x, global_rnd);
+			return std::move(r1);
+		}
+		friend real operator-(const real& r1, real&& r2)
+		{
+			mpfr_sub(r2._x, r1._x, r2._x, global_rnd);
+			return std::move(r2);
+		}
+		friend real operator-(real&& r1, real&& r2) { return std::move(r1) - r2; }
+
+		friend real operator*(const real& r1, const real& r2)
+		{
+			real temp;
+			mpfr_mul(temp._x, r1._x, r2._x, global_rnd);
+			return temp;
+		}
+		friend real operator*(real&& r1, const real& r2)
+		{
+			mpfr_mul(r1._x, r1._x, r2._x, global_rnd);
+			return std::move(r1);
+		}
+		friend real operator*(const real& r1, real&& r2)
+		{
+			mpfr_mul(r2._x, r1._x, r2._x, global_rnd);
+			return std::move(r2);
+		}
+		friend real operator*(real&& r1, real&& r2) { return std::move(r1) * r2; }
+
+		friend real operator/(const real& r1, const real& r2)
+		{
+			real temp;
+			mpfr_div(temp._x, r1._x, r2._x, global_rnd);
+			return temp;
+		}
+		friend real operator/(real&& r1, const real& r2)
+		{
+			mpfr_div(r1._x, r1._x, r2._x, global_rnd);
+			return std::move(r1);
+		}
+		friend real operator/(const real& r1, real&& r2)
+		{
+			mpfr_div(r2._x, r1._x, r2._x, global_rnd);
+			return std::move(r2);
+		}
+		friend real operator/(real&& r1, real&& r2) { return std::move(r1) / r2; }
 
 		template <class Tp, class = std::enable_if_t<!is_mpfr_real_v<Tp>>>
 		friend inline real operator+(const real& r1, const Tp& r2)
 		{
 			real temp;
-			type_traits<Tp>::add(temp._x, r1._x, r2, _rnd);
+			type_traits<Tp>::add(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<!is_mpfr_real_v<Tp>>>
 		friend inline real operator+(real&& r1, const Tp& r2)
 		{
-			type_traits<Tp>::add(r1._x, r1._x, r2, _rnd);
+			type_traits<Tp>::add(r1._x, r1._x, r2, global_rnd);
 			return std::move(r1);
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator+(const Tp& r1, const real& r2)
 		{
 			real temp;
-			type_traits<Tp>::add(temp._x, r2._x, r1, _rnd);
+			type_traits<Tp>::add(temp._x, r2._x, r1, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator+(const Tp& r1, real&& r2)
 		{
-			type_traits<Tp>::add(r2._x, r2._x, r1, _rnd);
+			type_traits<Tp>::add(r2._x, r2._x, r1, global_rnd);
 			return std::move(r2);
 		}
 
@@ -786,26 +622,26 @@ namespace mpfr
 		friend inline real operator-(const real& r1, const Tp& r2)
 		{
 			real temp;
-			type_traits<Tp>::sub_a(temp._x, r1._x, r2, _rnd);
+			type_traits<Tp>::sub_a(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<!is_mpfr_real_v<Tp>>>
 		friend inline real operator-(real&& r1, const Tp& r2)
 		{
-			type_traits<Tp>::sub_a(r1._x, r1._x, r2, _rnd);
+			type_traits<Tp>::sub_a(r1._x, r1._x, r2, global_rnd);
 			return std::move(r1);
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator-(const Tp& r1, const real& r2)
 		{
 			real temp;
-			type_traits<Tp>::sub_b(temp._x, r1, r2._x, _rnd);
+			type_traits<Tp>::sub_b(temp._x, r1, r2._x, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator-(const Tp& r1, real&& r2)
 		{
-			type_traits<Tp>::sub_b(r2._x, r1, r2._x, _rnd);
+			type_traits<Tp>::sub_b(r2._x, r1, r2._x, global_rnd);
 			return std::move(r2);
 		}
 
@@ -813,26 +649,26 @@ namespace mpfr
 		friend inline real operator*(const real& r1, const Tp& r2)
 		{
 			real temp;
-			type_traits<Tp>::mul(temp._x, r1._x, r2, _rnd);
+			type_traits<Tp>::mul(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<!is_mpfr_real_v<Tp>>>
 		friend inline real operator*(real&& r1, const Tp& r2)
 		{
-			type_traits<Tp>::mul(r1._x, r1._x, r2, _rnd);
+			type_traits<Tp>::mul(r1._x, r1._x, r2, global_rnd);
 			return std::move(r1);
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator*(const Tp& r1, const real& r2) noexcept
 		{
 			real temp;
-			type_traits<Tp>::mul(temp._x, r2._x, r1, _rnd);
+			type_traits<Tp>::mul(temp._x, r2._x, r1, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator*(const Tp& r1, real&& r2)
 		{
-			type_traits<Tp>::mul(r2._x, r2._x, r1, _rnd);
+			type_traits<Tp>::mul(r2._x, r2._x, r1, global_rnd);
 			return std::move(r2);
 		}
 
@@ -840,26 +676,26 @@ namespace mpfr
 		friend inline real operator/(const real& r1, const Tp& r2)
 		{
 			real temp;
-			type_traits<Tp>::div_a(temp._x, r1._x, r2, _rnd);
+			type_traits<Tp>::div_a(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<!is_mpfr_real_v<Tp>>>
 		friend inline real operator/(real&& r1, const Tp& r2)
 		{
-			type_traits<Tp>::div_a(r1._x, r1._x, r2, _rnd);
+			type_traits<Tp>::div_a(r1._x, r1._x, r2, global_rnd);
 			return std::move(r1);
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator/(const Tp& r1, const real& r2)
 		{
 			real temp;
-			type_traits<Tp>::div_b(temp._x, r1, r2._x, _rnd);
+			type_traits<Tp>::div_b(temp._x, r1, r2._x, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<is_other_operands<Tp>>>
 		friend inline real operator/(const Tp& r1, real&& r2)
 		{
-			type_traits<Tp>::div_b(r2._x, r1, r2._x, _rnd);
+			type_traits<Tp>::div_b(r2._x, r1, r2._x, global_rnd);
 			return std::move(r2);
 		}
 
@@ -867,24 +703,17 @@ namespace mpfr
 		// conversion operators
 		/////////////////////////////////////////////////////////////////
 
-		explicit inline operator double() const { return mpfr_get_d(_x, _rnd); }
+		explicit inline operator double() const { return mpfr_get_d(_x, global_rnd); }
 		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
 		explicit inline operator T() const
 		{
 			if constexpr (std::is_signed_v<T>)
 			{
-				if constexpr (is_included_v<T, _long>) return mpfr_get_si(_x, _rnd);
-				return mpfr_get_sj(_x, _rnd);
+				if constexpr (is_included_v<T, _long>) return mpfr_get_si(_x, global_rnd);
+				return mpfr_get_sj(_x, global_rnd);
 			}
-			if constexpr (is_included_v<T, _ulong>) return mpfr_get_ui(_x, _rnd);
-			return mpfr_get_uj(_x, _rnd);
-		}
-		template <mpfr_prec_t prec2, mpfr_rnd_t rnd2>
-		explicit inline operator real<prec2, rnd2>() const
-		{
-			real<prec2, rnd2> temp;
-			mpfr_set(temp._x, _x, rnd2);
-			return temp;
+			if constexpr (is_included_v<T, _ulong>) return mpfr_get_ui(_x, global_rnd);
+			return mpfr_get_uj(_x, global_rnd);
 		}
 
 		/////////////////////////////////////////////////////////////////
@@ -895,144 +724,171 @@ namespace mpfr
 		inline real operator+() && { return std::move(*this); }
 		inline real operator-() const&
 		{
-			real<_prec, _rnd> temp;
-			mpfr_neg(temp._x, _x, _rnd);
+			real temp;
+			mpfr_neg(temp._x, _x, global_rnd);
 			return temp;
 		}
 		inline real operator-() &&
 		{
-			mpfr_neg(_x, _x, _rnd);
+			mpfr_neg(_x, _x, global_rnd);
 			return std::move(*this);
 		}
 	};  // class real
-
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline bool iszero(const real<prec, rnd>& r)
+	inline auto zero(const int n)
 	{
-		return _is_zero(r._x);
+		real temp;
+		mpfr_set_zero(temp._x, n);
+		return temp;
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline int sgn(const real<prec, rnd>& r)
+	inline auto inf(const int n)
 	{
-		return _sgn(r._x);
+		real temp;
+		mpfr_set_inf(temp._x, n);
+		return temp;
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto ceil(const real<prec, rnd>& r)
+	inline auto nan()
 	{
-		real<prec, rnd> temp;
+		real temp;
+		mpfr_set_nan(temp._x);
+		return temp;
+	}
+
+	inline auto const_log2()
+	{
+		real temp;
+		mpfr_const_log2(temp._x, global_rnd);
+		return temp;
+	}
+
+	inline auto const_pi() noexcept
+	{
+		real temp;
+		mpfr_const_pi(temp._x, global_rnd);
+		return temp;
+	}
+
+	inline auto factorial(const _ulong n)
+	{
+		real temp;
+		mpfr_fac_ui(temp._x, n, global_rnd);
+		return temp;
+	}
+
+	inline auto sqrt(_ulong r)
+	{
+		real temp;
+		mpfr_sqrt_ui(temp._x, r, global_rnd);
+		return temp;
+	}
+
+	inline auto pow(_ulong op1, _ulong op2)
+	{
+		real temp;
+		mpfr_ui_pow_ui(temp._x, op1, op2, global_rnd);
+		return temp;
+	}
+
+	inline bool iszero(const real& r) { return _is_zero(r._x); }
+
+	inline int sgn(const real& r) { return _sgn(r._x); }
+
+	inline auto ceil(const real& r)
+	{
+		real temp;
 		mpfr_ceil(temp._x, r._x);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto ceil(real<prec, rnd>&& r)
+	inline auto ceil(real&& r)
 	{
 		mpfr_ceil(r._x, r._x);
 		return std::move(r);
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto round(const real<prec, rnd>& r)
+	inline auto round(const real& r)
 	{
-		real<prec, rnd> temp;
+		real temp;
 		mpfr_round(temp._x, r._x);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto round(real<prec, rnd>&& r)
+	inline auto round(real&& r)
 	{
 		mpfr_round(r._x, r._x);
 		return std::move(r);
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto floor(const real<prec, rnd>& r)
+	inline auto floor(const real& r)
 	{
-		real<prec, rnd> temp;
+		real temp;
 		mpfr_floor(temp._x, r._x);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto floor(real<prec, rnd>&& r)
+	inline auto floor(real&& r)
 	{
 		mpfr_floor(r._x, r._x);
 		return std::move(r);
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline bool isinteger(const real<prec, rnd>& r)
-	{
-		return mpfr_integer_p(r._x) != 0;
-	}
+	inline bool isinteger(const real& r) { return mpfr_integer_p(r._x) != 0; }
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto exp(const real<prec, rnd>& r)
+	inline auto exp(const real& r)
 	{
-		real<prec, rnd> temp;
-		mpfr_exp(temp._x, r._x, rnd);
+		real temp;
+		mpfr_exp(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto exp(real<prec, rnd>&& r)
+	inline auto exp(real&& r)
 	{
-		mpfr_exp(r._x, r._x, rnd);
+		mpfr_exp(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto abs(const real<prec, rnd>& r)
+	inline auto abs(const real& r)
 	{
-		real<prec, rnd> temp;
-		mpfr_abs(temp._x, r._x, rnd);
+		real temp;
+		mpfr_abs(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto abs(real<prec, rnd>&& r)
+	inline auto abs(real&& r)
 	{
-		mpfr_abs(r._x, r._x, rnd);
+		mpfr_abs(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto log(const real<prec, rnd>& r)
+	inline auto log(const real& r)
 	{
-		real<prec, rnd> temp;
-		mpfr_log(temp._x, r._x, rnd);
+		real temp;
+		mpfr_log(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto log(real<prec, rnd>&& r)
+	inline auto log(real&& r)
 	{
-		mpfr_log(r._x, r._x, rnd);
+		mpfr_log(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto log2(const real<prec, rnd>& r)
+	inline auto log2(const real& r)
 	{
-		real<prec, rnd> temp;
-		mpfr_log2(temp._x, r._x, rnd);
+		real temp;
+		mpfr_log2(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto log2(real<prec, rnd>&& r)
+	inline auto log2(real&& r)
 	{
-		mpfr_log2(r._x, r._x, rnd);
+		mpfr_log2(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto sqrt(const real<prec, rnd>& r)
+	inline auto sqrt(const real& r)
 	{
-		real<prec, rnd> temp;
-		mpfr_sqrt(temp._x, r._x, rnd);
+		real temp;
+		mpfr_sqrt(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto sqrt(real<prec, rnd>&& r)
+	inline auto sqrt(real&& r)
 	{
-		mpfr_sqrt(r._x, r._x, rnd);
+		mpfr_sqrt(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
@@ -1043,157 +899,113 @@ namespace mpfr
 	// operands must have same pricision!
 	// if you need to compute f(x, y) where x and y have different precisions, you must cast x or y
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto gamma_inc(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
+	inline auto gamma_inc(const real& r1, const real& r2)
 	{
-		real<prec, rnd> temp;
-		mpfr_gamma_inc(temp._x, r1._x, r2._x, rnd);
+		real temp;
+		mpfr_gamma_inc(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto gamma_inc(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
+	inline auto gamma_inc(real&& r1, const real& r2)
 	{
-		mpfr_gamma_inc(r1._x, r1._x, r2._x, rnd);
+		mpfr_gamma_inc(r1._x, r1._x, r2._x, global_rnd);
 		return std::move(r1);
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto gamma_inc(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
+	inline auto gamma_inc(const real& r1, real&& r2)
 	{
-		mpfr_gamma_inc(r2._x, r1._x, r2._x, rnd);
+		mpfr_gamma_inc(r2._x, r1._x, r2._x, global_rnd);
 		return std::move(r2);
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto gamma_inc(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return gamma_inc(std::move(r1), r2);
-	}
+	inline auto gamma_inc(real&& r1, real&& r2) { return gamma_inc(std::move(r1), r2); }
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto fdim(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
+	inline auto fdim(const real& r1, const real& r2)
 	{
-		real<prec, rnd> temp;
-		mpfr_dim(temp._x, r1._x, r2._x, rnd);
+		real temp;
+		mpfr_dim(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto fmax(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
+	inline auto fmax(const real& r1, const real& r2)
 	{
-		real<prec, rnd> temp;
-		mpfr_max(temp._x, r1._x, r2._x, rnd);
+		real temp;
+		mpfr_max(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto fmin(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
+	inline auto fmin(const real& r1, const real& r2)
 	{
-		real<prec, rnd> temp;
-		mpfr_min(temp._x, r1._x, r2._x, rnd);
+		real temp;
+		mpfr_min(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
 
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto pow(const real<prec, rnd>& r1, const real<prec, rnd>& r2)
+	inline auto pow(const real& r1, const real& r2)
 	{
-		real<prec, rnd> temp;
-		mpfr_pow(temp._x, r1._x, r2._x, rnd);
+		real temp;
+		mpfr_pow(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto pow(real<prec, rnd>&& r1, const real<prec, rnd>& r2)
+	inline auto pow(real&& r1, const real& r2)
 	{
-		mpfr_pow(r1._x, r1._x, r2._x, rnd);
+		mpfr_pow(r1._x, r1._x, r2._x, global_rnd);
 		return std::move(r1);
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto pow(const real<prec, rnd>& r1, real<prec, rnd>&& r2)
+	inline auto pow(const real& r1, real&& r2)
 	{
-		mpfr_pow(r2._x, r1._x, r2._x, rnd);
+		mpfr_pow(r2._x, r1._x, r2._x, global_rnd);
 		return std::move(r2);
 	}
-	template <mpfr_prec_t prec, mpfr_rnd_t rnd>
-	inline auto pow(real<prec, rnd>&& r1, real<prec, rnd>&& r2)
-	{
-		return pow(std::move(r1), r2);
-	}
+	inline auto pow(real&& r1, real&& r2) { return pow(std::move(r1), r2); }
 
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(const real<_prec, _rnd>& op1, _ulong op2)
+	inline auto pow(const real& op1, _ulong op2)
 	{
-		real<_prec, _rnd> temp;
-		mpfr_pow_ui(temp._x, op1._x, op2, _rnd);
+		real temp;
+		mpfr_pow_ui(temp._x, op1._x, op2, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(real<_prec, _rnd>&& op1, _ulong op2)
+	inline auto pow(real&& op1, _ulong op2)
 	{
-		mpfr_pow_ui(op1._x, op1._x, op2, _rnd);
+		mpfr_pow_ui(op1._x, op1._x, op2, global_rnd);
 		return std::move(op1);
 	}
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(const real<_prec, _rnd>& op1, unsigned int op2)
-	{
-		return pow(op1, _ulong(op2));
-	}
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(real<_prec, _rnd>&& op1, unsigned int op2)
-	{
-		return pow(std::move(op1), _ulong(op2));
-	}
+	inline auto pow(const real& op1, unsigned int op2) { return pow(op1, _ulong(op2)); }
+	inline auto pow(real&& op1, unsigned int op2) { return pow(std::move(op1), _ulong(op2)); }
 
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(const real<_prec, _rnd>& op1, _long op2)
+	inline auto pow(const real& op1, _long op2)
 	{
-		real<_prec, _rnd> temp;
-		mpfr_pow_si(temp._x, op1._x, op2, _rnd);
+		real temp;
+		mpfr_pow_si(temp._x, op1._x, op2, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(real<_prec, _rnd>&& op1, _long op2)
+	inline auto pow(real&& op1, _long op2)
 	{
-		mpfr_pow_si(op1._x, op1._x, op2, _rnd);
+		mpfr_pow_si(op1._x, op1._x, op2, global_rnd);
 		return std::move(op1);
 	}
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(const real<_prec, _rnd>& op1, int op2)
-	{
-		return pow(op1, _long(op2));
-	}
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(real<_prec, _rnd>&& op1, int op2)
-	{
-		return pow(std::move(op1), _long(op2));
-	}
+	inline auto pow(const real& op1, int op2) { return pow(op1, _long(op2)); }
+	inline auto pow(real&& op1, int op2) { return pow(std::move(op1), _long(op2)); }
 
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(_ulong op1, const real<_prec, _rnd>& op2)
+	inline auto pow(_ulong op1, const real& op2)
 	{
-		real<_prec, _rnd> temp;
-		mpfr_ui_pow(temp._x, op1, op2._x, _rnd);
+		real temp;
+		mpfr_ui_pow(temp._x, op1, op2._x, global_rnd);
 		return temp;
 	}
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pow(_ulong op1, real<_prec, _rnd>&& op2)
+	inline auto pow(_ulong op1, real&& op2)
 	{
-		mpfr_ui_pow(op2._x, op1, op2._x, _rnd);
+		mpfr_ui_pow(op2._x, op1, op2._x, global_rnd);
 		return std::move(op2);
 	}
 
 	// returns (x)_(n) = x (x + 1) ... (x + n - 1)
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd>
-	inline auto pochhammer(const real<_prec, _rnd>& x, _ulong n)
+	inline auto pochhammer(const real& x, _ulong n)
 	{
-		real<_prec, _rnd> temp(1);
+		real temp(1);
 		for (_ulong i = 0; i < n; ++i) temp *= x + i;
 		return temp;
 	}
 	// do not need to define rvalue version because we cannot reuse x in the above algorithm
 
-	template <class Tp1, class Tp2, class = std::enable_if_t<is_mpfr_real_v<Tp1> && is_mpfr_real_v<Tp2>>>
-	inline int cmpabs(const Tp1& r1, const Tp2& r2)
-	{
-		return mpfr_cmpabs(r1._x, r2._x);
-	}
+	inline int cmpabs(const real& r1, const real& r2) { return mpfr_cmpabs(r1._x, r2._x); }
 }  // namespace mpfr
 
 // io functions
@@ -1350,7 +1162,7 @@ namespace mpfr
 			{
 				if (is_negative) mpfr_neg(x, x, rnd);
 				throw std::runtime_error(
-				    "in std::ostream& operator<<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
+				    "in std::ostream& operator<<(std::ostream& s, const real& r):\n  conversion failed");
 			}
 			mpfr_free_str(ch);
 			if (exp0 < 0) exp0 = 0;
@@ -1360,7 +1172,7 @@ namespace mpfr
 		if (is_negative) mpfr_neg(x, x, rnd);
 		if (ch == nullptr)
 			throw std::runtime_error(
-			    "in std::ostream& operator<<(std::ostream& s, const real<_prec, _rnd>& r):\n  conversion failed");
+			    "in std::ostream& operator<<(std::ostream& s, const real& r):\n  conversion failed");
 		std::string t(ch);
 		mpfr_free_str(ch);
 
@@ -1441,8 +1253,8 @@ namespace mpfr
 	// std::istream and std::ostream operators
 	/////////////////////////////////////////////////////////////////
 
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd, class Char, class Traits>
-	std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& in, real<_prec, _rnd>& r)
+	template <class Char, class Traits>
+	std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& in, real& r)
 	{
 		try
 		{
@@ -1452,12 +1264,12 @@ namespace mpfr
 				std::string num;
 				if (auto ok = helper_extract_float(in, &num); ok && !num.empty())
 				{
-					if (auto err = mpfr_set_str(r._x, num.c_str(), 0, _rnd); err == -1)
+					if (auto err = mpfr_set_str(r._x, num.c_str(), 0, global_rnd); err == -1)
 					{
 						in.setstate(std::ios_base::failbit);
 						mpfr_set_zero(r._x, +1);
 						throw std::runtime_error(
-						    "in std::istream& operator>>(std::istream& s, real<_prec, _rnd>& r):\n  invalid input "
+						    "in std::istream& operator>>(std::istream& s, real& r):\n  invalid input "
 						    "format " +
 						    num);
 					}
@@ -1475,12 +1287,6 @@ namespace mpfr
 			throw;
 		}
 		return in;
-	}
-
-	template <mpfr_prec_t _prec, mpfr_rnd_t _rnd, class Char, class Traits>
-	std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const real<_prec, _rnd>& r)
-	{
-		return helper_ostream(s, const_cast<mpfr_t&>(r._x), _rnd);  // NOLINT
 	}
 }  // namespace mpfr
 

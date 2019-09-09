@@ -26,8 +26,8 @@ namespace std  // NOLINT
 
 namespace qboot
 {
-	template <class OStr, class Real>
-	OStr& write_mat(OStr& out, const algebra::Matrix<Real>& v)
+	template <class OStr>
+	OStr& write_mat(OStr& out, const algebra::Matrix<mpfr::real>& v)
 	{
 		out << v.row() << " " << v.column() << "\n";
 		for (uint32_t r = 0; r < v.row(); ++r)
@@ -35,8 +35,8 @@ namespace qboot
 		return out;
 	}
 
-	template <class OStr, class Real>
-	OStr& write_vec(OStr& out, const algebra::Vector<Real>& v)
+	template <class OStr>
+	OStr& write_vec(OStr& out, const algebra::Vector<mpfr::real>& v)
 	{
 		out << v.size() << "\n";
 		for (uint32_t i = 0; i < v.size(); ++i) out << v.at(i) << "\n";
@@ -49,18 +49,17 @@ namespace qboot
 	//   Tr(A_p Y) + (B y)_p = c_p (B.row() = P, B.column() == N).
 	// p <-> (r, s, k) where 0 <= r <= s < dim, 0 <= k <= deg,
 	// and 0 <= p < P = schur_size().
-	template <class Real>
 	class DualConstraint
 	{
 		uint32_t dim_{}, deg_{};
-		algebra::Matrix<Real> constraint_B_{};
-		algebra::Vector<Real> constraint_c_{};
-		std::array<algebra::Matrix<Real>, 2> bilinear_{};
+		algebra::Matrix<mpfr::real> constraint_B_{};
+		algebra::Vector<mpfr::real> constraint_c_{};
+		std::array<algebra::Matrix<mpfr::real>, 2> bilinear_{};
 
 	public:
 		DualConstraint() = default;
-		DualConstraint(uint32_t dim, uint32_t deg, algebra::Matrix<Real>&& B, algebra::Vector<Real>&& c,
-		               std::array<algebra::Matrix<Real>, 2>&& bilinear)
+		DualConstraint(uint32_t dim, uint32_t deg, algebra::Matrix<mpfr::real>&& B, algebra::Vector<mpfr::real>&& c,
+		               std::array<algebra::Matrix<mpfr::real>, 2>&& bilinear)
 		    : dim_(dim),
 		      deg_(deg),
 		      constraint_B_(std::move(B)),
@@ -78,36 +77,35 @@ namespace qboot
 		[[nodiscard]] uint32_t dim() const { return dim_; }
 		[[nodiscard]] uint32_t degree() const { return deg_; }
 		[[nodiscard]] uint32_t schur_size() const { return (deg_ + 1) * dim_ * (dim_ + 1) / 2; }
-		[[nodiscard]] const std::array<algebra::Matrix<Real>, 2>& bilinear() const { return bilinear_; }
-		[[nodiscard]] const algebra::Matrix<Real>& obj_B() const { return constraint_B_; }
-		[[nodiscard]] const algebra::Vector<Real>& obj_c() const { return constraint_c_; }
+		[[nodiscard]] const std::array<algebra::Matrix<mpfr::real>, 2>& bilinear() const { return bilinear_; }
+		[[nodiscard]] const algebra::Matrix<mpfr::real>& obj_B() const { return constraint_B_; }
+		[[nodiscard]] const algebra::Vector<mpfr::real>& obj_c() const { return constraint_c_; }
 	};
 
 	// maximize b_0 + \sum_{n=1}^{N} b_n y_n over y_n such that all constraints are satisfied.
 	// constant_term_ = b_0, objectives_[n] = b_n
-	template <class Real>
 	class SDPBInput
 	{
-		Real constant_term_;
-		algebra::Vector<Real> objectives_;
-		std::unique_ptr<std::optional<DualConstraint<Real>>[]> constraints_;
+		mpfr::real constant_term_;
+		algebra::Vector<mpfr::real> objectives_;
+		std::unique_ptr<std::optional<DualConstraint>[]> constraints_;
 		uint32_t num_constraints_;
 		template <class OStr>
 		void set_manip(OStr& out) const
 		{
-			out << std::defaultfloat << std::setprecision(3 + int32_t(Real::prec * 0.302));
+			out << std::defaultfloat << std::setprecision(3 + int32_t(double(mpfr::global_prec) * 0.302));
 		}
 
 	public:
-		SDPBInput(const Real& constant, algebra::Vector<Real>&& obj, uint32_t num_constraints)
+		SDPBInput(const mpfr::real& constant, algebra::Vector<mpfr::real>&& obj, uint32_t num_constraints)
 		    : constant_term_(constant),
 		      objectives_(std::move(obj)),
-		      constraints_(std::make_unique<std::optional<DualConstraint<Real>>[]>(num_constraints)),
+		      constraints_(std::make_unique<std::optional<DualConstraint>[]>(num_constraints)),
 		      num_constraints_(num_constraints)
 		{
 		}
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
-		void register_constraint(uint32_t index, DualConstraint<Real>&& c) &
+		void register_constraint(uint32_t index, DualConstraint&& c) &
 		{
 			assert(!constraints_[index].has_value());
 			assert(objectives_.size() == c.obj_B().column());
@@ -151,7 +149,7 @@ namespace qboot
 			write_free_var_matrix(out, *constraints_[i]);
 		}
 		template <class OStr>
-		void write_free_var_matrix(OStr& out, const DualConstraint<Real>& cons) const
+		void write_free_var_matrix(OStr& out, const DualConstraint& cons) const
 		{
 			write_mat(out, cons.obj_B());
 		}
@@ -168,7 +166,7 @@ namespace qboot
 			write_primal_objective_c(out, *constraints_[i]);
 		}
 		template <class OStr>
-		void write_primal_objective_c(OStr& out, const DualConstraint<Real>& cons) const
+		void write_primal_objective_c(OStr& out, const DualConstraint& cons) const
 		{
 			write_vec(out, cons.obj_c());
 		}

@@ -5,7 +5,7 @@ file(GLOB HEADERS "include/*.hpp" "include/*.h")
 
 add_executable(${MY_TARGET} ${SOURCES} ${HEADERS})
 
-target_link_libraries(${MY_TARGET} qboot)
+target_link_libraries(${MY_TARGET} PRIVATE qboot)
 target_include_directories(${MY_TARGET} PUBLIC
     ../algebra/include
     ../qboot/include
