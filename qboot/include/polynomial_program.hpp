@@ -294,7 +294,7 @@ namespace qboot
 	//   \sum_{n = 0}^{N - 1} y[n] M_j[n](x) >= M_j[N](x) for all x >= 0
 	//   (each of M_j[n] can be a polynomial matrix of x)
 	template <class Real>
-	class PolynomialProgramming
+	class PolynomialProgram
 	{
 		// num of free variables
 		uint32_t N_;
@@ -316,7 +316,7 @@ namespace qboot
 		std::vector<std::unique_ptr<PolynomialInequality<Real>>> inequality_{};
 
 	public:
-		explicit PolynomialProgramming(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
+		explicit PolynomialProgram(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
 		{
 			for (uint32_t i = 0; i < N_; ++i) free_indices_.push_back(i);
 		}

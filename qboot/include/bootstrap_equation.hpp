@@ -14,7 +14,7 @@
 #include "context_variables.hpp"   // for Context
 #include "matrix.hpp"              // for Vector
 #include "pole_data.hpp"           // for ConformalScale
-#include "polynomial_program.hpp"  // for PolynomialProgramming
+#include "polynomial_program.hpp"  // for PolynomialProgram
 #include "primary_op.hpp"          // for Operator
 #include "real.hpp"                // for real
 
@@ -52,6 +52,8 @@ namespace qboot
 	// for example, in the mixed ising bootstrap, {"unit", "epsilon or sigma", "T", "even", "odd+", "odd-"}
 	// (you do not have to include spin in sector name).
 	// each term must tell its sector name and its position in the matrix.
+	// each section contains a discrete or continuous sprectrum.
+	// for discrete spectrum,
 	template <class Real>
 	class BootstrapEquation
 	{
@@ -68,7 +70,144 @@ namespace qboot
 		std::vector<std::vector<std::vector<Entry<Real>>>> eqs_{};
 		// syms_[i]: symmetry of the i-th equation
 		std::vector<algebra::FunctionSymmetry> syms_{};
+		std::vector<uint32_t> offsets_{};
+		std::vector<std::optional<algebra::Vector<Real>>> ope_{};
 		uint32_t N_ = 0, numax_;
+		[[nodiscard]] Real take_element(uint32_t id, const algebra::Matrix<Real>& m) const
+		{
+			if (ope_[id].has_value()) return m.inner_product(*ope_[id]);
+			return m.at(0, 0);
+		}
+		[[nodiscard]] algebra::Vector<algebra::Matrix<Real>> make_disc_mat(uint32_t id) const
+		{
+			auto sz = sz_[id];
+			algebra::Vector<algebra::Matrix<Real>> mat(N_);
+			for (uint32_t i = 0; i < N_; ++i) mat[i] = {sz, sz};
+			for (uint32_t i = 0; i < eqs_.size(); ++i)
+			{
+				if (eqs_[i][id].empty()) continue;
+				auto n = algebra::function_dimension(cont_.lambda(), syms_[i]);
+				algebra::Matrix<algebra::Vector<Real>> tmp(sz, sz);
+				for (uint32_t r = 0; r < sz; ++r)
+					for (uint32_t c = 0; c < sz; ++c) tmp.at(r, c) = algebra::Vector<Real>{n};
+				for (const auto& term : eqs_[i][id])
+				{
+					const auto& block = std::get<FixedBlock>(term.block());
+					uint32_t r = term.row(), c = term.column();
+					auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2), cont_.evaluate(block).flatten());
+					tmp.at(r, c) += val;
+					if (c != r) tmp.at(c, r) += val;
+				}
+				for (uint32_t j = 0; j < n; ++j)
+					for (uint32_t r = 0; r < sz; ++r)
+						for (uint32_t c = 0; c < sz; ++c) mat[j + offsets_[i]].at(r, c) = std::move(tmp.at(r, c)[j]);
+			}
+			return mat;
+		}
+		[[nodiscard]] std::unique_ptr<ConformalScale<Real>> common_scale(uint32_t id,
+		                                                                 const GeneralPrimaryOperator<Real>& op) const
+		{
+			auto include_odd = false;
+			for (uint32_t i = 0; !include_odd && i < eqs_.size(); ++i)
+				for (const auto& term : eqs_[i][id])
+					if (std::get<GeneralBlock>(term.block()).include_odd())
+					{
+						include_odd = true;
+						break;
+					}
+			auto ag = std::make_unique<ConformalScale<Real>>(op, cont_, include_odd);
+			ag->set_gap(op.lower_bound(), op.upper_bound_safe());
+			return ag;
+		}
+		[[nodiscard]] algebra::Vector<algebra::Vector<algebra::Matrix<Real>>> make_cont_mat(
+		    uint32_t id, const GeneralPrimaryOperator<Real>& op, std::unique_ptr<ConformalScale<Real>>& ag) const
+		{
+			auto sz = sz_[id];
+			auto sp = ag->sample_points();
+			algebra::Vector<algebra::Vector<algebra::Matrix<Real>>> mat(N_);
+			for (uint32_t i = 0; i < N_; ++i) mat[i] = algebra::Vector<algebra::Matrix<Real>>(sp.size(), {sz, sz});
+			for (uint32_t i = 0; i < eqs_.size(); ++i)
+			{
+				if (eqs_[i][id].empty()) continue;
+				auto n = algebra::function_dimension(cont_.lambda(), syms_[i]);
+				for (uint32_t k = 0; k < sp.size(); ++k)
+				{
+					algebra::Matrix<algebra::Vector<Real>> tmp(sz, sz);
+					for (uint32_t r = 0; r < sz; ++r)
+						for (uint32_t c = 0; c < sz; ++c) tmp.at(r, c) = algebra::Vector<Real>(n);
+					for (const auto& term : eqs_[i][id])
+					{
+						uint32_t r = term.row(), c = term.column();
+						const auto& block = std::get<GeneralBlock>(term.block()).fix_op(op);
+						auto delta = ag->get_delta(sp[k]);
+						auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2), cont_.evaluate(block, delta).flatten());
+						tmp.at(r, c) += val;
+						if (c != r) tmp.at(c, r) += val;
+					}
+					for (uint32_t j = 0; j < n; ++j)
+						for (uint32_t r = 0; r < sz; ++r)
+							for (uint32_t c = 0; c < sz; ++c)
+								mat[j + offsets_[i]][k].at(r, c) = std::move(tmp.at(r, c)[j]);
+				}
+			}
+			return mat;
+		}
+		// alpha maximizes alpha(norm)
+		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
+		[[nodiscard]] PolynomialProgram<Real> ope_maximize(const std::string& target, const std::string& norm, Real&& N,
+		                                                   bool verbose = false) const
+		{
+			PolynomialProgram<Real> prg(N_);
+			{
+				if (verbose) std::cout << "[" << norm << "]" << std::endl;
+				auto id = sectors_.at(norm);
+				assert(sz_[id] == 1 || ope_[id].has_value());
+				assert(ops_[id].empty());
+				auto mat = make_disc_mat(id);
+				algebra::Vector<Real> v(N_);
+				for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
+				prg.objective_constant() = Real(0);
+				prg.objectives(std::move(v));
+			}
+			{
+				if (verbose) std::cout << "[" << target << "]" << std::endl;
+				auto id = sectors_.at(target);
+				assert(sz_[id] == 1 || ope_[id].has_value());
+				assert(ops_[id].empty());
+				auto mat = make_disc_mat(id);
+				algebra::Vector<Real> v(N_);
+				for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
+				prg.add_equation(std::move(v), std::move(N));
+			}
+			for (const auto& [sec, id] : sectors_)
+			{
+				if (sec == norm || sec == target) continue;
+				if (verbose) std::cout << "[" << sec << "]" << std::endl;
+				auto sz = sz_[id];
+				if (ops_[id].empty())
+					if (ope_[id].has_value())
+					{
+						auto m = make_disc_mat(id);
+						algebra::Vector<Real> v(N_);
+						for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
+						prg.add_inequality(std::make_unique<Ineq>(N_, std::move(v), Real(0)));
+					}
+					else
+						prg.add_inequality(
+						    std::make_unique<Ineq>(N_, sz, make_disc_mat(id), algebra::Matrix<Real>(sz, sz)));
+				else
+					for (const auto& op : ops_[id])
+					{
+						if (verbose) std::cout << op.str() << std::endl;
+						auto ag = common_scale(id, op);
+						auto mat = make_cont_mat(id, op, ag);
+						prg.add_inequality(std::make_unique<Ineq>(
+						    N_, sz, std::move(ag), std::move(mat),
+						    algebra::Vector<algebra::Matrix<Real>>(ag->max_degree() + 1, {sz, sz})));
+					}
+			}
+			return prg;
+		}
 
 	public:
 		// seq is a sequence of tuples (operator, sector name, size)
@@ -90,11 +229,19 @@ namespace qboot
 				sectors_[sec] = id;
 				sz_.push_back(uint32_t(sz));
 				ops_.emplace_back();
+				ope_.emplace_back();
 			}
 		}
 		void register_operator(const std::string& sec, const GeneralPrimaryOperator<Real>& op) &
 		{
 			ops_[sectors_[sec]].push_back(op);
+		}
+		void register_ope(const std::string& sec, algebra::Vector<Real>&& ope) &
+		{
+			auto id = sectors_[sec];
+			assert(ope.size() == sz_[id]);
+			assert(!ope_[id].has_value());
+			ope_[id] = std::move(ope);
 		}
 		// sequence of tuples (sector name, entry)
 		template <class Container>
@@ -107,6 +254,7 @@ namespace qboot
 		{
 			syms_.push_back(sym);
 			std::vector<std::vector<Entry<Real>>> eq(sectors_.size());
+			offsets_.push_back(N_);
 			N_ += algebra::function_dimension(cont_.lambda(), sym);
 			for (; first != last; ++first)
 			{
@@ -123,121 +271,72 @@ namespace qboot
 		using FixedBlock = ConformalBlock<Real, PrimaryOperator<Real>>;
 		using GeneralBlock = GeneralConformalBlock<Real>;
 		using Ineq = PolynomialInequalityEvaluated<Real>;
-		// Func: spin |-> num of poles
-		// uint32_t -> uint32_t
-		template <class Func>
-		[[nodiscard]] PolynomialProgramming<Real> create_pmp(const std::string& norm, Func num_poles) const
+		// create a PolynomialProgram which finds a linear functional alpha
+		// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
+		// the size of matrices in norm sector must be 1
+		[[nodiscard]] PolynomialProgram<Real> find_contradiction(const std::string& norm, bool verbose = false) const
 		{
-			PolynomialProgramming<Real> prg(N_);
+			PolynomialProgram<Real> prg(N_);
 			prg.objective_constant() = Real(0);
 			prg.objectives(algebra::Vector(N_, Real(0)));
 			{
+				if (verbose) std::cout << "[" << norm << "]" << std::endl;
 				auto id = sectors_.at(norm);
-				assert(sz_[id] == 1);
+				assert(sz_[id] == 1 || ope_[id].has_value());
 				assert(ops_[id].empty());
+				auto mat = make_disc_mat(id);
 				algebra::Vector<Real> v(N_);
-				uint32_t p = 0;
-				for (uint32_t i = 0; i < eqs_.size(); ++i)
-				{
-					auto n = algebra::function_dimension(cont_.lambda(), syms_[i]);
-					if (!eqs_[i][id].empty())
-					{
-						algebra::Vector<Real> tmp(n);
-						for (const auto& term : eqs_[i][id])
-							tmp +=
-							    mul_scalar(term.coeff(), cont_.evaluate(std::get<FixedBlock>(term.block())).flatten());
-						for (uint32_t j = 0; j < n; ++j) v[j + p] = std::move(tmp[j]);
-					}
-					p += n;
-				}
+				for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
 				prg.add_equation(std::move(v), Real(1));
 			}
 			for (const auto& [sec, id] : sectors_)
 			{
 				if (sec == norm) continue;
+				if (verbose) std::cout << "[" << sec << "]" << std::endl;
 				auto sz = sz_[id];
 				if (ops_[id].empty())
-				{
-					// point-like
-					algebra::Vector<algebra::Matrix<Real>> mat(N_);
-					for (uint32_t i = 0; i < N_; ++i) mat[i] = {sz, sz};
-					uint32_t p = 0;
-					for (uint32_t i = 0; i < eqs_.size(); ++i)
+					if (ope_[id].has_value())
 					{
-						auto n = algebra::function_dimension(cont_.lambda(), syms_[i]);
-						if (!eqs_[i][id].empty())
-						{
-							algebra::Matrix<algebra::Vector<Real>> tmp(sz, sz);
-							for (uint32_t r = 0; r < sz; ++r)
-								for (uint32_t c = 0; c < sz; ++c) tmp.at(r, c) = algebra::Vector<Real>(n);
-							for (const auto& term : eqs_[i][id])
-							{
-								uint32_t r = term.row(), c = term.column();
-								auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2),
-								                      cont_.evaluate(std::get<FixedBlock>(term.block())).flatten());
-								tmp.at(r, c) += val;
-								if (c != r) tmp.at(c, r) += val;
-							}
-							for (uint32_t j = 0; j < n; ++j)
-								for (uint32_t r = 0; r < sz; ++r)
-									for (uint32_t c = 0; c < sz; ++c) mat[j + p].at(r, c) = std::move(tmp.at(r, c)[j]);
-						}
-						p += n;
+						auto m = make_disc_mat(id);
+						algebra::Vector<Real> v(N_);
+						for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
+						prg.add_inequality(std::make_unique<Ineq>(N_, std::move(v), Real(0)));
 					}
-					prg.add_inequality(std::make_unique<Ineq>(N_, sz, std::move(mat), algebra::Matrix<Real>(sz, sz)));
-				}
+					else
+						prg.add_inequality(
+						    std::make_unique<Ineq>(N_, sz, make_disc_mat(id), algebra::Matrix<Real>(sz, sz)));
 				else
 					for (const auto& op : ops_[id])
 					{
-						auto ag = std::make_unique<ConformalScale<Real>>(num_poles(op.spin()), op.spin(), cont_, false);
-						ag->set_gap(op.lower_bound(), op.upper_bound_safe());
-						for (uint32_t i = 0; !ag->odd_included() && i < eqs_.size(); ++i)
-							for (const auto& term : eqs_[i][id])
-								if (std::get<GeneralBlock>(term.block()).include_odd())
-								{
-									ag = std::make_unique<ConformalScale<Real>>(num_poles(op.spin()), op.spin(), cont_,
-									                                            true);
-									ag->set_gap(op.lower_bound(), op.upper_bound_safe());
-									break;
-								}
-						auto sp = ag->sample_points();
-						algebra::Vector<algebra::Vector<algebra::Matrix<Real>>> mat(N_);
-						for (uint32_t i = 0; i < N_; ++i)
-							mat[i] = algebra::Vector<algebra::Matrix<Real>>(sp.size(), {sz, sz});
-						uint32_t p = 0;
-						for (uint32_t i = 0; i < eqs_.size(); ++i)
-						{
-							auto n = algebra::function_dimension(cont_.lambda(), syms_[i]);
-							if (!eqs_[i][id].empty())
-							{
-								for (uint32_t k = 0; k < sp.size(); ++k)
-								{
-									algebra::Matrix<algebra::Vector<Real>> tmp(sz, sz);
-									for (uint32_t r = 0; r < sz; ++r)
-										for (uint32_t c = 0; c < sz; ++c) tmp.at(r, c) = algebra::Vector<Real>(n);
-									for (const auto& term : eqs_[i][id])
-									{
-										uint32_t r = term.row(), c = term.column();
-										auto block = std::get<GeneralBlock>(term.block()).fix_op(op);
-										auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2),
-										                      cont_.evaluate(block, ag->get_delta(sp[k])).flatten());
-										tmp.at(r, c) += val;
-										if (c != r) tmp.at(c, r) += val;
-									}
-									for (uint32_t j = 0; j < n; ++j)
-										for (uint32_t r = 0; r < sz; ++r)
-											for (uint32_t c = 0; c < sz; ++c)
-												mat[j + p][k].at(r, c) = std::move(tmp.at(r, c)[j]);
-								}
-							}
-							p += n;
-						}
-						prg.add_inequality(
-						    std::make_unique<Ineq>(N_, sz, std::move(ag), std::move(mat),
-						                           algebra::Vector<algebra::Matrix<Real>>(sp.size(), {sz, sz})));
+						if (verbose) std::cout << op.str() << std::endl;
+						auto ag = common_scale(id, op);
+						auto mat = make_cont_mat(id, op, ag);
+						prg.add_inequality(std::make_unique<Ineq>(
+						    N_, sz, std::move(ag), std::move(mat),
+						    algebra::Vector<algebra::Matrix<Real>>(ag->max_degree() + 1, {sz, sz})));
 					}
 			}
 			return prg;
+		}
+		// create a PolynomialProgram which finds a linear functional alpha
+		// s.t. alpha maximizes alpha(norm)
+		// and satisfies alpha(target) = 1 and alpha(sec) >= 0 for each sector sec (!= target, norm)
+		// the size of matrices in target, norm sector must be 1
+		// such a alpha gives an upper bound on lambda, lambda ^ 2 <= -alpha(norm)
+		[[nodiscard]] PolynomialProgram<Real> ope_maximize(const std::string& target, const std::string& norm,
+		                                                   bool verbose = false) const
+		{
+			return ope_maximize(target, norm, Real(1), verbose);
+		}
+		// create a PolynomialProgram which finds a linear functional alpha
+		// s.t. alpha maximizes alpha(norm)
+		// and satisfies alpha(target) = -1 and alpha(sec) >= 0 for each sector sec (!= target, norm)
+		// the size of matrices in target, norm sector must be 1
+		// such a alpha gives an lower bound on lambda, lambda ^ 2 >= alpha(norm)
+		[[nodiscard]] PolynomialProgram<Real> ope_minimize(const std::string& target, const std::string& norm,
+		                                                   bool verbose = false) const
+		{
+			return ope_maximize(target, norm, Real(-1), verbose);
 		}
 	};
 }  // namespace qboot

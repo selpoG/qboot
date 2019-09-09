@@ -147,6 +147,10 @@ namespace qboot
 		    : ConformalScale(cutoff, spin, context, include_odd(delta12, delta34))
 		{
 		}
+		ConformalScale(const GeneralPrimaryOperator<Real>& op, const Context<Real>& context, bool include_odd)
+		    : ConformalScale(op.num_poles(), op.spin(), context, include_odd)
+		{
+		}
 		ConformalScale(uint32_t cutoff, uint32_t spin, const Context<Real>& context, bool include_odd)
 		    : odd_included_(include_odd),
 		      spin_(spin),

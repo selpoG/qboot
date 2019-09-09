@@ -51,6 +51,7 @@ namespace qboot
 		// z - 1 / 2 = g1 + g2
 		return g1 + g2;
 	}
+	// controls n_Max, lambda and dim
 	template <class Real>
 	class Context
 	{
@@ -60,14 +61,18 @@ namespace qboot
 		algebra::RealConverter<Real> rho_to_z_;
 
 	public:
+		// cutoff of the power series expansion of conformal blocks at rho = 0
 		[[nodiscard]] uint32_t n_Max() const { return n_Max_; }
+		// passed to the constructor of ComplexFunction<Real>
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
+		// the dimension of the spacetime
 		[[nodiscard]] uint32_t dimension() const { return dim_; }
+		// (dim - 2) / 2
 		[[nodiscard]] const Real& epsilon() const { return epsilon_; }
+		// 3 - 2 sqrt(2)
 		[[nodiscard]] const Real& rho() const { return rho_; }
+		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		[[nodiscard]] const algebra::RealConverter<Real>& rho_to_z() const { return rho_to_z_; }
-		static constexpr mpfr_prec_t prec = Real::prec;
-		static constexpr mpfr_rnd_t rnd = Real::rnd;
 		[[nodiscard]] std::string str() const
 		{
 			std::ostringstream os;
@@ -89,11 +94,6 @@ namespace qboot
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 		~Context() = default;
-		template <class T>
-		Real operator()(const T& val) const
-		{
-			return Real(val);
-		}
 		[[nodiscard]] Real unitarity_bound(uint32_t spin) const { return qboot::unitarity_bound(epsilon_, spin); }
 		// calculate v ^ d gBlock and project to sym-symmetric part
 		// F-type corresponds to sym = Odd, H-type to Even

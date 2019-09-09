@@ -61,6 +61,11 @@ namespace qboot
 		{
 			return op_.fix_delta(delta);
 		}
+		template <class = std::enable_if<!is_primary_operator_v<Operator>>>
+		[[nodiscard]] ConformalBlock<Real, PrimaryOperator<Real>> fix_delta(const Real& delta) const
+		{
+			return ConformalBlock<Real, PrimaryOperator<Real>>(op_.fix_delta(delta), d12_, d34_, d23h_, sym_);
+		}
 		[[nodiscard]] std::string str() const
 		{
 			std::ostringstream os;

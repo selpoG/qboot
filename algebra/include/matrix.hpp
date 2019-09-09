@@ -418,6 +418,16 @@ namespace algebra
 			negate();
 			return std::move(*this);
 		}
+		// v^t M v
+		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
+		[[nodiscard]] Ring inner_product(const Vector<Ring>& v) const
+		{
+			assert(is_square() && row_ == v.size());
+			Ring s = {};
+			for (uint32_t r = 0; r < row_; ++r)
+				for (uint32_t c = 0; c < row_; ++c) s += mul(mul(v[r], v[c]), at(r, c));
+			return s;
+		}
 		friend Matrix operator+(const Matrix& x, const Matrix& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_);

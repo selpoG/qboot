@@ -68,20 +68,22 @@ namespace qboot
 	{
 		Real epsilon_, from_;
 		std::optional<Real> to_;
-		uint32_t spin_;
+		uint32_t spin_, num_poles_;
 
 	public:
 		// primary operator whose dimension runs over unitarity bound
-		GeneralPrimaryOperator(uint32_t spin, const Real& epsilon)
-		    : epsilon_(epsilon), from_(unitarity_bound(epsilon, spin)), to_{}, spin_(spin)
+		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const Real& epsilon)
+		    : epsilon_(epsilon), from_(unitarity_bound(epsilon, spin)), to_{}, spin_(spin), num_poles_(num_poles)
 		{
 		}
 		// primary operator whose dimension runs from lb to ub (empty ub means infinity)
-		GeneralPrimaryOperator(uint32_t spin, const Real& epsilon, const Real& lb, std::optional<Real> ub = {})
-		    : epsilon_(epsilon), from_(lb), to_(ub), spin_(spin)
+		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const Real& epsilon, const Real& lb,
+		                       std::optional<Real> ub = {})
+		    : epsilon_(epsilon), from_(lb), to_(ub), spin_(spin), num_poles_(num_poles)
 		{
 		}
 		[[nodiscard]] uint32_t spin() const { return spin_; }
+		[[nodiscard]] uint32_t num_poles() const { return num_poles_; }
 		[[nodiscard]] const Real& epsilon() const { return epsilon_; }
 		[[nodiscard]] const Real& lower_bound() const { return from_; }
 		[[nodiscard]] bool is_finite() const noexcept { return to_.has_value(); }
