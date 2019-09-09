@@ -19,7 +19,7 @@ namespace qboot
 		ScaleFactor& operator=(const ScaleFactor&) = default;
 		ScaleFactor(ScaleFactor&&) noexcept = default;
 		ScaleFactor& operator=(ScaleFactor&&) noexcept = default;
-		virtual ~ScaleFactor() = default;
+		virtual ~ScaleFactor();
 		// the max degree D among M[n](x) / chi(x)
 		[[nodiscard]] virtual uint32_t max_degree() const = 0;
 		// evaluate chi(x) at x = v
@@ -49,7 +49,7 @@ namespace qboot
 		TrivialScale& operator=(const TrivialScale&) = delete;
 		TrivialScale(TrivialScale&&) noexcept = default;
 		TrivialScale& operator=(TrivialScale&&) noexcept = default;
-		~TrivialScale() override = default;
+		~TrivialScale() override;
 		[[nodiscard]] uint32_t max_degree() const override { return 0; }
 		[[nodiscard]] mpfr::real eval([[maybe_unused]] const mpfr::real& v) const override { return mpfr::real(1); }
 		[[nodiscard]] algebra::Vector<mpfr::real> sample_scalings() override

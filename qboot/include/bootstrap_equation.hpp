@@ -1,8 +1,7 @@
 #ifndef QBOOT_BOOTSTRAP_EQUATION_HPP_
 #define QBOOT_BOOTSTRAP_EQUATION_HPP_
 
-#include <cstdint>  // for uint32_t
-#include <functional>
+#include <cstdint>      // for uint32_t
 #include <iterator>     // for begin, end
 #include <map>          // for map
 #include <string>       // for string
@@ -11,9 +10,9 @@
 #include <vector>       // for vector
 
 #include "complex_function.hpp"    // for FunctionSymmetry
+#include "conformal_scale.hpp"     // for ConformalScale
 #include "context_variables.hpp"   // for Context
 #include "matrix.hpp"              // for Vector
-#include "pole_data.hpp"           // for ConformalScale
 #include "polynomial_program.hpp"  // for PolynomialProgram
 #include "primary_op.hpp"          // for Operator
 #include "real.hpp"                // for real
@@ -71,141 +70,21 @@ namespace qboot
 		std::vector<uint32_t> offsets_{};
 		std::vector<std::optional<algebra::Vector<mpfr::real>>> ope_{};
 		uint32_t N_ = 0, numax_;
+
 		[[nodiscard]] mpfr::real take_element(uint32_t id, const algebra::Matrix<mpfr::real>& m) const
 		{
 			if (ope_[id].has_value()) return m.inner_product(*ope_[id]);
 			return m.at(0, 0);
 		}
-		[[nodiscard]] algebra::Vector<algebra::Matrix<mpfr::real>> make_disc_mat(uint32_t id) const
-		{
-			auto sz = sz_[id];
-			algebra::Vector<algebra::Matrix<mpfr::real>> mat(N_);
-			for (uint32_t i = 0; i < N_; ++i) mat[i] = {sz, sz};
-			for (uint32_t i = 0; i < eqs_.size(); ++i)
-			{
-				if (eqs_[i][id].empty()) continue;
-				auto n = algebra::function_dimension(cont_.lambda(), syms_[i]);
-				algebra::Matrix<algebra::Vector<mpfr::real>> tmp(sz, sz);
-				for (uint32_t r = 0; r < sz; ++r)
-					for (uint32_t c = 0; c < sz; ++c) tmp.at(r, c) = algebra::Vector<mpfr::real>{n};
-				for (const auto& term : eqs_[i][id])
-				{
-					const auto& block = std::get<FixedBlock>(term.block());
-					uint32_t r = term.row(), c = term.column();
-					auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2), cont_.evaluate(block).flatten());
-					tmp.at(r, c) += val;
-					if (c != r) tmp.at(c, r) += val;
-				}
-				for (uint32_t j = 0; j < n; ++j)
-					for (uint32_t r = 0; r < sz; ++r)
-						for (uint32_t c = 0; c < sz; ++c) mat[j + offsets_[i]].at(r, c) = std::move(tmp.at(r, c)[j]);
-			}
-			return mat;
-		}
-		[[nodiscard]] std::unique_ptr<ConformalScale> common_scale(uint32_t id, const GeneralPrimaryOperator& op) const
-		{
-			auto include_odd = false;
-			for (uint32_t i = 0; !include_odd && i < eqs_.size(); ++i)
-				for (const auto& term : eqs_[i][id])
-					if (std::get<GeneralBlock>(term.block()).include_odd())
-					{
-						include_odd = true;
-						break;
-					}
-			auto ag = std::make_unique<ConformalScale>(op, cont_, include_odd);
-			ag->set_gap(op.lower_bound(), op.upper_bound_safe());
-			return ag;
-		}
+		[[nodiscard]] algebra::Vector<algebra::Matrix<mpfr::real>> make_disc_mat(uint32_t id) const;
+		[[nodiscard]] std::unique_ptr<ConformalScale> common_scale(uint32_t id, const GeneralPrimaryOperator& op) const;
 		[[nodiscard]] algebra::Vector<algebra::Vector<algebra::Matrix<mpfr::real>>> make_cont_mat(
-		    uint32_t id, const GeneralPrimaryOperator& op, std::unique_ptr<ConformalScale>& ag) const
-		{
-			auto sz = sz_[id];
-			auto sp = ag->sample_points();
-			algebra::Vector<algebra::Vector<algebra::Matrix<mpfr::real>>> mat(N_);
-			for (uint32_t i = 0; i < N_; ++i)
-				mat[i] = algebra::Vector<algebra::Matrix<mpfr::real>>(sp.size(), {sz, sz});
-			for (uint32_t i = 0; i < eqs_.size(); ++i)
-			{
-				if (eqs_[i][id].empty()) continue;
-				auto n = algebra::function_dimension(cont_.lambda(), syms_[i]);
-				for (uint32_t k = 0; k < sp.size(); ++k)
-				{
-					algebra::Matrix<algebra::Vector<mpfr::real>> tmp(sz, sz);
-					for (uint32_t r = 0; r < sz; ++r)
-						for (uint32_t c = 0; c < sz; ++c) tmp.at(r, c) = algebra::Vector<mpfr::real>(n);
-					for (const auto& term : eqs_[i][id])
-					{
-						uint32_t r = term.row(), c = term.column();
-						const auto& block = std::get<GeneralBlock>(term.block()).fix_op(op);
-						auto delta = ag->get_delta(sp[k]);
-						auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2), cont_.evaluate(block, delta).flatten());
-						tmp.at(r, c) += val;
-						if (c != r) tmp.at(c, r) += val;
-					}
-					for (uint32_t j = 0; j < n; ++j)
-						for (uint32_t r = 0; r < sz; ++r)
-							for (uint32_t c = 0; c < sz; ++c)
-								mat[j + offsets_[i]][k].at(r, c) = std::move(tmp.at(r, c)[j]);
-				}
-			}
-			return mat;
-		}
+		    uint32_t id, const GeneralPrimaryOperator& op, std::unique_ptr<ConformalScale>& ag) const;
+
 		// alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
 		[[nodiscard]] PolynomialProgram ope_maximize(const std::string& target, const std::string& norm, mpfr::real&& N,
-		                                             bool verbose = false) const
-		{
-			PolynomialProgram prg(N_);
-			{
-				if (verbose) std::cout << "[" << norm << "]" << std::endl;
-				auto id = sectors_.at(norm);
-				assert(sz_[id] == 1 || ope_[id].has_value());
-				assert(ops_[id].empty());
-				auto mat = make_disc_mat(id);
-				algebra::Vector<mpfr::real> v(N_);
-				for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
-				prg.objective_constant() = mpfr::real(0);
-				prg.objectives(std::move(v));
-			}
-			{
-				if (verbose) std::cout << "[" << target << "]" << std::endl;
-				auto id = sectors_.at(target);
-				assert(sz_[id] == 1 || ope_[id].has_value());
-				assert(ops_[id].empty());
-				auto mat = make_disc_mat(id);
-				algebra::Vector<mpfr::real> v(N_);
-				for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
-				prg.add_equation(std::move(v), std::move(N));
-			}
-			for (const auto& [sec, id] : sectors_)
-			{
-				if (sec == norm || sec == target) continue;
-				if (verbose) std::cout << "[" << sec << "]" << std::endl;
-				auto sz = sz_[id];
-				if (ops_[id].empty())
-					if (ope_[id].has_value())
-					{
-						auto m = make_disc_mat(id);
-						algebra::Vector<mpfr::real> v(N_);
-						for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
-						prg.add_inequality(std::make_unique<Ineq>(N_, std::move(v), mpfr::real(0)));
-					}
-					else
-						prg.add_inequality(
-						    std::make_unique<Ineq>(N_, sz, make_disc_mat(id), algebra::Matrix<mpfr::real>(sz, sz)));
-				else
-					for (const auto& op : ops_[id])
-					{
-						if (verbose) std::cout << op.str() << std::endl;
-						auto ag = common_scale(id, op);
-						auto mat = make_cont_mat(id, op, ag);
-						prg.add_inequality(std::make_unique<Ineq>(
-						    N_, sz, std::move(ag), std::move(mat),
-						    algebra::Vector<algebra::Matrix<mpfr::real>>(ag->max_degree() + 1, {sz, sz})));
-					}
-			}
-			return prg;
-		}
+		                                             bool verbose = false) const;
 
 	public:
 		// seq is a sequence of tuples (operator, sector name, size)
@@ -266,56 +145,12 @@ namespace qboot
 			}
 			eqs_.push_back(std::move(eq));
 		}
-		using FixedBlock = ConformalBlock<PrimaryOperator>;
-		using GeneralBlock = GeneralConformalBlock;
-		using Ineq = PolynomialInequalityEvaluated;
+
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
 		// the size of matrices in norm sector must be 1
-		[[nodiscard]] PolynomialProgram find_contradiction(const std::string& norm, bool verbose = false) const
-		{
-			PolynomialProgram prg(N_);
-			prg.objective_constant() = mpfr::real(0);
-			prg.objectives(algebra::Vector(N_, mpfr::real(0)));
-			{
-				if (verbose) std::cout << "[" << norm << "]" << std::endl;
-				auto id = sectors_.at(norm);
-				assert(sz_[id] == 1 || ope_[id].has_value());
-				assert(ops_[id].empty());
-				auto mat = make_disc_mat(id);
-				algebra::Vector<mpfr::real> v(N_);
-				for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
-				prg.add_equation(std::move(v), mpfr::real(1));
-			}
-			for (const auto& [sec, id] : sectors_)
-			{
-				if (sec == norm) continue;
-				if (verbose) std::cout << "[" << sec << "]" << std::endl;
-				auto sz = sz_[id];
-				if (ops_[id].empty())
-					if (ope_[id].has_value())
-					{
-						auto m = make_disc_mat(id);
-						algebra::Vector<mpfr::real> v(N_);
-						for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
-						prg.add_inequality(std::make_unique<Ineq>(N_, std::move(v), mpfr::real(0)));
-					}
-					else
-						prg.add_inequality(
-						    std::make_unique<Ineq>(N_, sz, make_disc_mat(id), algebra::Matrix<mpfr::real>(sz, sz)));
-				else
-					for (const auto& op : ops_[id])
-					{
-						if (verbose) std::cout << op.str() << std::endl;
-						auto ag = common_scale(id, op);
-						auto mat = make_cont_mat(id, op, ag);
-						prg.add_inequality(std::make_unique<Ineq>(
-						    N_, sz, std::move(ag), std::move(mat),
-						    algebra::Vector<algebra::Matrix<mpfr::real>>(ag->max_degree() + 1, {sz, sz})));
-					}
-			}
-			return prg;
-		}
+		[[nodiscard]] PolynomialProgram find_contradiction(const std::string& norm, bool verbose = false) const;
+
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = 1 and alpha(sec) >= 0 for each sector sec (!= target, norm)
@@ -326,6 +161,7 @@ namespace qboot
 		{
 			return ope_maximize(target, norm, mpfr::real(1), verbose);
 		}
+
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = -1 and alpha(sec) >= 0 for each sector sec (!= target, norm)

@@ -1,5 +1,5 @@
-#ifndef QBOOT_POLE_DATA_HPP_
-#define QBOOT_POLE_DATA_HPP_
+#ifndef QBOOT_CONFORMAL_SCALE_HPP_
+#define QBOOT_CONFORMAL_SCALE_HPP_
 
 #include <cassert>   // for assert
 #include <cstdint>   // for uint32_t, int32_t
@@ -8,11 +8,8 @@
 #include <utility>   // for move
 
 #include "block.hpp"              // for ConformalBlock
-#include "chol_and_inverse.hpp"   // for anti_band_to_inverse
 #include "context_variables.hpp"  // for Context
-#include "integral_decomp.hpp"    // for simple_pole_integral
 #include "matrix.hpp"             // for Vector
-#include "partial_fraction.hpp"   // for fast_partial_fraction
 #include "polynomial.hpp"         // for Polynomial
 #include "real.hpp"               // for real, pow, log
 #include "scale_factor.hpp"       // for ScaleFactor
@@ -93,36 +90,7 @@ namespace qboot
 		// 1 / (Delta - poles_[i])
 		algebra::Vector<mpfr::real> poles_;
 		std::optional<algebra::Vector<algebra::Polynomial>> bilinear_bases_{};
-		void _set_bilinear_bases() &
-		{
-			if (bilinear_bases_.has_value()) return;
-			if (end_.has_value())
-			{
-				bilinear_bases_ = algebra::Vector<algebra::Polynomial>{max_degree() / 2 + 1};
-				for (uint32_t i = 0; i < bilinear_bases_->size(); ++i) bilinear_bases_->at(i) = algebra::Polynomial(i);
-			}
-			else
-			{
-				// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
-				algebra::Vector<mpfr::real> shifted_poles(poles_.size());
-				for (uint32_t i = 0; i < poles_.size(); ++i) shifted_poles[i] = poles_[i] - gap_;
-				auto weight = fast_partial_fraction(shifted_poles);
-				auto deg = max_degree() / 2;
-				// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
-				algebra::Vector<mpfr::real> inner_prods(2 * deg + 1);
-				for (uint32_t i = 0; i < poles_.size(); ++i)
-					inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho_, shifted_poles[i]));
-				inner_prods *= mpfr::pow(4 * rho_, gap_);
-				auto mat = anti_band_to_inverse(inner_prods);
-				bilinear_bases_ = algebra::Vector<algebra::Polynomial>{deg + 1};
-				for (uint32_t i = 0; i <= deg; ++i)
-				{
-					algebra::Vector<mpfr::real> v(i + 1);
-					for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
-					bilinear_bases_->at(i) = algebra::Polynomial(std::move(v));
-				}
-			}
-		}
+		void _set_bilinear_bases() &;
 
 	public:
 		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, const mpfr::real& d1,
@@ -139,26 +107,7 @@ namespace qboot
 		    : ConformalScale(op.num_poles(), op.spin(), context, include_odd)
 		{
 		}
-		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, bool include_odd)
-		    : odd_included_(include_odd),
-		      spin_(spin),
-		      lambda_(context.lambda()),
-		      epsilon_(context.epsilon()),
-		      rho_(context.rho()),
-		      poles_(cutoff)
-		{
-			// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
-			auto get_pols = [this, include_odd](uint32_t type) {
-				return PoleSequence(type, this->spin_, this->epsilon_, include_odd);
-			};
-			auto pole_seq = Merged(Merged(get_pols(1), get_pols(2)), get_pols(3));
-			uint32_t pos = 0;
-			while (pos < cutoff)
-			{
-				poles_[pos++] = pole_seq.get();
-				pole_seq.next();
-			}
-		}
+		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, bool include_odd);
 		ConformalScale(const ConformalScale&) = delete;
 		ConformalScale& operator=(const ConformalScale&) = delete;
 		ConformalScale(ConformalScale&&) noexcept = default;
@@ -236,4 +185,4 @@ namespace qboot
 	}
 }  // namespace qboot
 
-#endif  // QBOOT_CONTEXT_VARIABLES_HPP_
+#endif  // QBOOT_CONFORMAL_SCALE_HPP_
