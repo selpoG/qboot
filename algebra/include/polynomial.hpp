@@ -280,31 +280,31 @@ namespace algebra
 	template <class T>
 	using polynomialize_t = substitute_t<T, Polynomial>;
 	// schematically, to_pol(Vector<Ring>{a, b, c, ...}) = a + b x + c x ^ 2 + ...
-	inline auto to_pol(Vector<mpfr::real>& coeffs) { return Polynomial(coeffs.clone()); }
+	inline auto to_pol(Vector<mpfr::real>* coeffs) { return Polynomial(coeffs->clone()); }
 	template <class Ring>
-	Matrix<polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>& coeffs)
+	Matrix<polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>* coeffs)
 	{
-		uint32_t row = coeffs[0].row(), column = coeffs[0].column(), len = coeffs.size();
+		uint32_t row = coeffs->at(0).row(), column = coeffs->at(0).column(), len = coeffs->size();
 		Matrix<polynomialize_t<Ring>> ans(row, column);
 		Vector<Ring> v(len);
 		for (uint32_t r = 0; r < row; ++r)
 			for (uint32_t c = 0; c < column; ++c)
 			{
-				for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(r, c));
-				ans.at(r, c) = to_pol(v);
+				for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs->at(i).at(r, c));
+				ans.at(r, c) = to_pol(&v);
 			}
 		return ans;
 	}
 	template <class Ring>
-	Vector<polynomialize_t<Ring>> to_pol(Vector<Vector<Ring>>& coeffs)
+	Vector<polynomialize_t<Ring>> to_pol(Vector<Vector<Ring>>* coeffs)
 	{
-		uint32_t sz = coeffs[0].size(), len = coeffs.size();
+		uint32_t sz = coeffs->at(0).size(), len = coeffs->size();
 		Vector<polynomialize_t<Ring>> ans(sz);
 		Vector<Ring> v(len);
 		for (uint32_t r = 0; r < sz; ++r)
 		{
-			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(r));
-			ans.at(r) = to_pol(v);
+			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs->at(i).at(r));
+			ans.at(r) = to_pol(&v);
 		}
 		return ans;
 	}
@@ -323,7 +323,7 @@ namespace algebra
 			for (uint32_t j = 1; j <= deg; ++j) mat.at(i, j) = points[i] * mat.at(i, j - 1);
 		}
 		auto coeffs = dot(mat.inverse(), vals);
-		return to_pol(coeffs);
+		return to_pol(&coeffs);
 	}
 	template <class Ring, class Real>
 	Vector<evaluated_t<Ring>> evals(const Ring& v, const Vector<Real>& xs)

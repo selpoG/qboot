@@ -22,8 +22,8 @@ namespace qboot
 	// controls n_Max, lambda and dim
 	class Context
 	{
-		const uint32_t n_Max_, lambda_, dim_;
-		const mpfr::real epsilon_, rho_;
+		uint32_t n_Max_, lambda_, dim_;
+		mpfr::real epsilon_, rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter<mpfr::real> rho_to_z_;
 

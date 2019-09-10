@@ -57,10 +57,10 @@ namespace qboot
 	}
 	[[nodiscard]] Vector<Vector<Matrix<real>>> BootstrapEquation::make_cont_mat(uint32_t id,
 	                                                                            const GeneralPrimaryOperator& op,
-	                                                                            unique_ptr<ConformalScale>& ag) const
+	                                                                            unique_ptr<ConformalScale>* ag) const
 	{
 		auto sz = sz_[id];
-		auto sp = ag->sample_points();
+		auto sp = (*ag)->sample_points();
 		Vector<Vector<Matrix<real>>> mat(N_);
 		for (uint32_t i = 0; i < N_; ++i) mat[i] = Vector<Matrix<real>>(sp.size(), {sz, sz});
 		for (uint32_t i = 0; i < eqs_.size(); ++i)
@@ -76,7 +76,7 @@ namespace qboot
 				{
 					uint32_t r = term.row(), c = term.column();
 					const auto& block = std::get<GeneralBlock>(term.block()).fix_op(op);
-					auto delta = ag->get_delta(sp[k]);
+					auto delta = (*ag)->get_delta(sp[k]);
 					auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2), cont_.evaluate(block, delta).flatten());
 					tmp.at(r, c) += val;
 					if (c != r) tmp.at(c, r) += val;
@@ -134,7 +134,7 @@ namespace qboot
 				{
 					if (verbose) cout << op.str() << endl;
 					auto ag = common_scale(id, op);
-					auto mat = make_cont_mat(id, op, ag);
+					auto mat = make_cont_mat(id, op, &ag);
 					prg.add_inequality(make_unique<Ineq>(N_, sz, move(ag), move(mat),
 					                                     Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz})));
 				}
@@ -177,7 +177,7 @@ namespace qboot
 				{
 					if (verbose) cout << op.str() << endl;
 					auto ag = common_scale(id, op);
-					auto mat = make_cont_mat(id, op, ag);
+					auto mat = make_cont_mat(id, op, &ag);
 					prg.add_inequality(make_unique<Ineq>(N_, sz, move(ag), move(mat),
 					                                     Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz})));
 				}

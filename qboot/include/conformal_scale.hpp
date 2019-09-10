@@ -83,7 +83,7 @@ namespace qboot
 	{
 		bool odd_included_;
 		uint32_t spin_, lambda_;
-		const mpfr::real &epsilon_, &rho_;
+		const mpfr::real *epsilon_, *rho_;
 		mpfr::real unitarity_bound_{}, gap_{};
 		std::optional<mpfr::real> end_{};
 		// pole at Delta = poles_[i]
@@ -112,7 +112,7 @@ namespace qboot
 		ConformalScale& operator=(const ConformalScale&) = delete;
 		ConformalScale(ConformalScale&&) noexcept = default;
 		ConformalScale& operator=(ConformalScale&&) noexcept = default;
-		~ConformalScale() override = default;
+		~ConformalScale() override;
 		[[nodiscard]] bool odd_included() const { return odd_included_; }
 		[[nodiscard]] uint32_t max_degree() const override { return poles_.size() + lambda_; }
 		[[nodiscard]] const algebra::Vector<mpfr::real>& get_poles() const& { return poles_; }
@@ -120,9 +120,9 @@ namespace qboot
 		// evaluate at delta
 		[[nodiscard]] mpfr::real eval_d(const mpfr::real& delta) const
 		{
-			mpfr::real ans = mpfr::pow(4 * rho_, delta);
+			mpfr::real ans = mpfr::pow(4 * *rho_, delta);
 			if (end_.has_value()) ans *= mpfr::pow(get_x(delta) + *end_, -int32_t(max_degree()));
-			for (uint32_t i = 0; i < poles_.size(); ++i) ans /= delta - poles_[i];
+			for (const auto& p : poles_) ans /= delta - p;
 			return ans;
 		}
 		// convert x (in [0, \infty)) to delta
@@ -142,12 +142,12 @@ namespace qboot
 		[[nodiscard]] algebra::Vector<mpfr::real> sample_scalings() override
 		{
 			auto xs = sample_points();
-			for (uint32_t i = 0; i < xs.size(); ++i) xs[i] = eval(xs[i]);
+			for (auto& x : xs) x = eval(x);
 			return xs;
 		}
 		// constrain delta to be in the range gap <= delta < end
 		// if end is nullopt (corresponds to infinity), gap <= delta
-		void set_gap(const mpfr::real& gap, std::optional<mpfr::real> end = {}) &
+		void set_gap(const mpfr::real& gap, const std::optional<mpfr::real>& end = {}) &
 		{
 			bilinear_bases_ = {};  // reset cache
 			gap_ = gap;

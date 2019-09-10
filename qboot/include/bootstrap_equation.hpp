@@ -28,13 +28,13 @@ namespace qboot
 		Block block_;
 
 	public:
-		Entry(uint32_t r, uint32_t c, const mpfr::real& coeff, const Block block)
+		Entry(uint32_t r, uint32_t c, const mpfr::real& coeff, const Block& block)
 		    : r_(r), c_(c), coeff_(coeff), block_(block)
 		{
 		}
-		Entry(const mpfr::real& coeff, const Block block) : Entry(0, 0, coeff, block) {}
-		Entry(uint32_t r, uint32_t c, const Block block) : Entry(r, c, mpfr::real(1), block) {}
-		explicit Entry(const Block block) : Entry(0, 0, mpfr::real(1), block) {}
+		Entry(const mpfr::real& coeff, const Block& block) : Entry(0, 0, coeff, block) {}
+		Entry(uint32_t r, uint32_t c, const Block& block) : Entry(r, c, mpfr::real(1), block) {}
+		explicit Entry(const Block& block) : Entry(0, 0, mpfr::real(1), block) {}
 		[[nodiscard]] const Block& block() const { return block_; }
 		[[nodiscard]] uint32_t row() const { return r_; }
 		[[nodiscard]] uint32_t column() const { return c_; }
@@ -69,7 +69,7 @@ namespace qboot
 		std::vector<algebra::FunctionSymmetry> syms_{};
 		std::vector<uint32_t> offsets_{};
 		std::vector<std::optional<algebra::Vector<mpfr::real>>> ope_{};
-		uint32_t N_ = 0, numax_;
+		uint32_t N_ = 0;
 
 		[[nodiscard]] mpfr::real take_element(uint32_t id, const algebra::Matrix<mpfr::real>& m) const
 		{
@@ -79,7 +79,7 @@ namespace qboot
 		[[nodiscard]] algebra::Vector<algebra::Matrix<mpfr::real>> make_disc_mat(uint32_t id) const;
 		[[nodiscard]] std::unique_ptr<ConformalScale> common_scale(uint32_t id, const GeneralPrimaryOperator& op) const;
 		[[nodiscard]] algebra::Vector<algebra::Vector<algebra::Matrix<mpfr::real>>> make_cont_mat(
-		    uint32_t id, const GeneralPrimaryOperator& op, std::unique_ptr<ConformalScale>& ag) const;
+		    uint32_t id, const GeneralPrimaryOperator& op, std::unique_ptr<ConformalScale>* ag) const;
 
 		// alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
@@ -89,13 +89,12 @@ namespace qboot
 	public:
 		// seq is a sequence of tuples (operator, sector name, size)
 		template <class Container>
-		explicit BootstrapEquation(const Context& cont, uint32_t numax, const Container& seq)
-		    : BootstrapEquation(cont, numax, std::begin(seq), std::end(seq))
+		explicit BootstrapEquation(const Context& cont, const Container& seq)
+		    : BootstrapEquation(cont, std::begin(seq), std::end(seq))
 		{
 		}
 		template <class InputIterator>
-		BootstrapEquation(const Context& cont, uint32_t numax, InputIterator first, InputIterator last)
-		    : cont_(cont), numax_(numax)
+		BootstrapEquation(const Context& cont, InputIterator first, InputIterator last) : cont_(cont)
 		{
 			for (; first != last; ++first)
 			{

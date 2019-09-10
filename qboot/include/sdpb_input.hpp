@@ -39,7 +39,7 @@ namespace qboot
 	OStr& write_vec(OStr& out, const algebra::Vector<mpfr::real>& v)
 	{
 		out << v.size() << "\n";
-		for (uint32_t i = 0; i < v.size(); ++i) out << v.at(i) << "\n";
+		for (const auto& x : v) out << x << "\n";
 		return out;
 	}
 
@@ -97,8 +97,8 @@ namespace qboot
 		}
 
 	public:
-		SDPBInput(const mpfr::real& constant, algebra::Vector<mpfr::real>&& obj, uint32_t num_constraints)
-		    : constant_term_(constant),
+		SDPBInput(mpfr::real&& constant, algebra::Vector<mpfr::real>&& obj, uint32_t num_constraints)
+		    : constant_term_(std::move(constant)),
 		      objectives_(std::move(obj)),
 		      constraints_(std::make_unique<std::optional<DualConstraint>[]>(num_constraints)),
 		      num_constraints_(num_constraints)

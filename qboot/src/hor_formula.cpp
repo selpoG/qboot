@@ -333,7 +333,7 @@ namespace qboot
 		return ps;
 	}
 
-	Vector<Polynomial> _get_nonzero_spin_rec_coeffs(const PrimaryOperator& op, const real& S, const real& P)
+	Vector<Polynomial> _get_nonzero_spin_rec_coeffs(const PrimaryOperator& op, const real& S, const real& P)  // NOLINT
 	{
 		const auto& epsilon = op.epsilon();
 		const auto& Delta = op.delta();

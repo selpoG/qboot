@@ -49,7 +49,7 @@ namespace qboot
 			f_at_0.derivate();
 			f_of_rho.at(k) = f_at_0.approximate(rho) / tmp;
 		}
-		return context.rho_to_z().convert(move(f_of_rho));
+		return context.rho_to_z().convert(f_of_rho);
 	}
 	RealFunction<real> gBlock_real(const PrimaryOperator& op, const real& S, const real& P, const Context& context)
 	{

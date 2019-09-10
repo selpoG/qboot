@@ -87,7 +87,7 @@ namespace qboot
 		// mat[n][k]: M[n] evaluated at x = x[k]
 		algebra::Vector<algebra::Vector<algebra::Matrix<mpfr::real>>> mat_;
 		// M[N]
-		algebra::Vector<algebra::Matrix<mpfr::real>> target_;
+		algebra::Vector<algebra::Matrix<mpfr::real>> target_{};
 
 		// get M[n] / chi or M[N] / chi as a polynomial matrix
 		[[nodiscard]] algebra::Matrix<algebra::Polynomial> as_polynomial(
@@ -139,9 +139,9 @@ namespace qboot
 	class PolynomialInequalityWithCoeffs : public PolynomialInequality
 	{
 		// M[n] / chi
-		algebra::Vector<algebra::Matrix<algebra::Polynomial>> mat_;
+		algebra::Vector<algebra::Matrix<algebra::Polynomial>> mat_{};
 		// M[N] / chi
-		algebra::Matrix<algebra::Polynomial> target_;
+		algebra::Matrix<algebra::Polynomial> target_{};
 
 	public:
 		PolynomialInequalityWithCoeffs(uint32_t N, std::unique_ptr<ScaleFactor>&& scale,
@@ -153,7 +153,7 @@ namespace qboot
 		PolynomialInequalityWithCoeffs& operator=(const PolynomialInequalityWithCoeffs&) = delete;
 		PolynomialInequalityWithCoeffs(PolynomialInequalityWithCoeffs&&) noexcept = default;
 		PolynomialInequalityWithCoeffs& operator=(PolynomialInequalityWithCoeffs&&) noexcept = default;
-		~PolynomialInequalityWithCoeffs() override = default;
+		~PolynomialInequalityWithCoeffs() override;
 		[[nodiscard]] algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n) override
 		{
 			return mat_[n].clone();

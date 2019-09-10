@@ -19,12 +19,12 @@ namespace qboot
 	// primary operator whose dimension is delta and spin is spin
 	class PrimaryOperator
 	{
-		mpfr::real delta_, epsilon_;
+		mpfr::real delta_{}, epsilon_;
 		uint32_t spin_;
 
 	public:
 		// unit operator
-		explicit PrimaryOperator(const mpfr::real& epsilon) : delta_{}, epsilon_(epsilon), spin_(0) {}
+		explicit PrimaryOperator(const mpfr::real& epsilon) : epsilon_(epsilon), spin_(0) {}
 		// on the unitarity bound
 		PrimaryOperator(uint32_t spin, const mpfr::real& epsilon)
 		    : delta_(unitarity_bound(epsilon, spin)), epsilon_(epsilon), spin_(spin)
@@ -64,18 +64,18 @@ namespace qboot
 	class GeneralPrimaryOperator
 	{
 		mpfr::real epsilon_, from_;
-		std::optional<mpfr::real> to_;
+		std::optional<mpfr::real> to_{};
 		uint32_t spin_, num_poles_;
 
 	public:
 		// primary operator whose dimension runs over unitarity bound
 		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const mpfr::real& epsilon)
-		    : epsilon_(epsilon), from_(unitarity_bound(epsilon, spin)), to_{}, spin_(spin), num_poles_(num_poles)
+		    : epsilon_(epsilon), from_(unitarity_bound(epsilon, spin)), spin_(spin), num_poles_(num_poles)
 		{
 		}
 		// primary operator whose dimension runs from lb to ub (empty ub means infinity)
 		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const mpfr::real& epsilon, const mpfr::real& lb,
-		                       std::optional<mpfr::real> ub = {})
+		                       const std::optional<mpfr::real>& ub = {})
 		    : epsilon_(epsilon), from_(lb), to_(ub), spin_(spin), num_poles_(num_poles)
 		{
 		}

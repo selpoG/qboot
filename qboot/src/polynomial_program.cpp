@@ -11,6 +11,7 @@ namespace qboot
 {
 	PolynomialInequality::~PolynomialInequality() = default;
 	PolynomialInequalityEvaluated::~PolynomialInequalityEvaluated() = default;
+	PolynomialInequalityWithCoeffs::~PolynomialInequalityWithCoeffs() = default;
 
 	[[nodiscard]] Matrix<Polynomial> PolynomialInequalityEvaluated::as_polynomial(const Vector<Matrix<real>>& vals)
 	{
@@ -24,7 +25,7 @@ namespace qboot
 
 	PolynomialInequalityEvaluated::PolynomialInequalityEvaluated(uint32_t N, unique_ptr<ScaleFactor>&& scale,
 	                                                             Vector<Vector<real>>&& mat, Vector<real>&& target)
-	    : PolynomialInequality(N, 1, move(scale)), mat_(N), target_{}
+	    : PolynomialInequality(N, 1, move(scale)), mat_(N)
 	{
 		uint32_t deg = PolynomialInequality::get_scale()->max_degree();
 		for (uint32_t i = 0; i < N; ++i)
@@ -98,7 +99,7 @@ namespace qboot
 
 	PolynomialInequalityWithCoeffs::PolynomialInequalityWithCoeffs(uint32_t N, unique_ptr<ScaleFactor>&& scale,
 	                                                               Vector<Polynomial>&& mat, Polynomial&& target)
-	    : PolynomialInequality(N, 1, move(scale)), mat_{}, target_{}
+	    : PolynomialInequality(N, 1, move(scale))
 	{
 		auto deg = int32_t(PolynomialInequality::get_scale()->max_degree());
 		assert(mat.size() == N);
@@ -113,7 +114,6 @@ namespace qboot
 		assert(target.degree() <= deg);
 		target_.at(0, 0) = move(target);
 	}
-
 
 	PolynomialInequalityWithCoeffs::PolynomialInequalityWithCoeffs(uint32_t N, uint32_t sz,
 	                                                               unique_ptr<ScaleFactor>&& scale,

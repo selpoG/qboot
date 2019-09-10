@@ -142,15 +142,15 @@ namespace algebra
 		}
 	};
 	template <class Ring>
-	RealFunction<polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>& coeffs)
+	RealFunction<polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>* coeffs)
 	{
-		uint32_t lambda = coeffs[0].lambda(), len = coeffs.size();
+		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();
 		RealFunction<polynomialize_t<Ring>> ans(lambda);
 		Vector<Ring> v(len);
 		for (uint32_t r = 0; r <= lambda; ++r)
 		{
-			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(r));
-			ans.at(r) = to_pol(v);
+			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs->at(i).at(r));
+			ans.at(r) = to_pol(&v);
 		}
 		return ans;
 	}

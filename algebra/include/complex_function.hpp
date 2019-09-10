@@ -260,18 +260,18 @@ namespace algebra
 		}
 	};
 	template <class Ring>
-	ComplexFunction<polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>& coeffs)
+	ComplexFunction<polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>* coeffs)
 	{
-		uint32_t lambda = coeffs[0].lambda(), len = coeffs.size();
-		auto sym = coeffs[0].symmetry();
+		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();
+		auto sym = coeffs->at(0).symmetry();
 		ComplexFunction<polynomialize_t<Ring>> ans(lambda, sym);
 		Vector<Ring> v(len);
 		for (uint32_t dy = 0; dy <= lambda / 2; ++dy)
 			for (uint32_t dx = 0; dx + 2 * dy <= lambda; ++dx)
 				if (matches(sym, dx))
 				{
-					for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs[i].at(dx, dy));
-					ans.at(dx, dy) = to_pol(v);
+					for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs->at(i).at(dx, dy));
+					ans.at(dx, dy) = to_pol(&v);
 				}
 		return ans;
 	}

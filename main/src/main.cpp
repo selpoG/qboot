@@ -49,10 +49,9 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 	using E = qboot::Entry;
 	using B = Block;
 	using G = GGBlock;
-	qboot::BootstrapEquation boot(c, numax,
-	                              array{pair{"unit", 1u}, pair{"scalar", 2u}, pair{"e1", 2u}, pair{"T", 2u},
-	                                    pair{"even", 2u}, pair{"odd+", 1u}, pair{"odd-", 1u}});
-	auto num_poles = [numax](uint32_t spin) { return numax; };
+	qboot::BootstrapEquation boot(c, array{pair{"unit", 1u}, pair{"scalar", 2u}, pair{"e1", 2u}, pair{"T", 2u},
+	                                       pair{"even", 2u}, pair{"odd+", 1u}, pair{"odd-", 1u}});
+	auto num_poles = [numax]([[maybe_unused]] uint32_t spin) { return numax; };
 	// spectrum
 	Op u{c.epsilon()}, T{2, c.epsilon()};  // do not register point-like spectrums ("unit", "scalar", "T")
 	boot.register_ope("T", {R(s.delta()), R(e.delta())});  // from Ward identity
@@ -100,7 +99,7 @@ void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax = 2
 	using E = qboot::Entry;
 	using B = Block;
 	using G = GGBlock;
-	qboot::BootstrapEquation boot(c, numax, array{pair{"unit", 1u}, pair{"e", 1u}, pair{"T", 1u}, pair{"even", 1u}});
+	qboot::BootstrapEquation boot(c, array{pair{"unit", 1u}, pair{"e", 1u}, pair{"T", 1u}, pair{"even", 1u}});
 	auto num_poles = [numax](uint32_t spin) { return numax + std::min(numax, spin) / 2; };
 	Op u{c.epsilon()}, T{2, c.epsilon()};
 	boot.register_operator("even", {0, num_poles(0), c.epsilon(), R("1.409"), R("1.4135")});

@@ -460,7 +460,10 @@ namespace mpfr
 				else
 					mpfr_set_uj(_x, o, global_rnd);
 			}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 			return *this;
+#pragma GCC diagnostic pop
 		}
 
 		/////////////////////////////////////////////////////////////////
