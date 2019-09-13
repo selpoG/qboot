@@ -10,6 +10,7 @@
 #include "real.hpp"          // for real
 #include "scale_factor.hpp"  // for ScaleFactor
 #include "sdpb_input.hpp"    // for SDPBInput
+#include "xml_input.hpp"     // for XMLInput
 
 namespace qboot
 {
@@ -238,6 +239,7 @@ namespace qboot
 			inequality_.push_back(std::move(ineq));
 		}
 		SDPBInput create_input() &&;
+		XMLInput create_xml() &&;
 	};
 }  // namespace qboot
 

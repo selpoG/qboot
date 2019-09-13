@@ -12,7 +12,7 @@ inline static Matrix<real> anti_band_to_inverse(const Vector<real>& ab)
 	Matrix<real> A(dim, dim);
 	for (uint32_t i = 0; i < dim; ++i)
 		for (uint32_t j = 0; j < dim; ++j) A.at(i, j) = ab[i + j];
-	return move(A).cholesky_decomposition().lower_triangular_inverse();
+	return algebra::lower_triangular_inverse(algebra::cholesky_decomposition(A));
 }
 
 // let pole_position = -p, base = exp(-k)

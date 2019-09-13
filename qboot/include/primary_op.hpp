@@ -1,6 +1,7 @@
 #ifndef QBOOT_PRIMARY_OP_HPP_
 #define QBOOT_PRIMARY_OP_HPP_
 
+#include <cassert>      // for assert
 #include <cstdint>      // for uint32_t
 #include <optional>     // for optional
 #include <sstream>      // for ostringstream
@@ -52,14 +53,9 @@ namespace qboot
 		[[nodiscard]] bool is_divergent_hor() const
 		{
 			if (spin_ > 0) return delta_ == spin_ + 2 * epsilon_ || (mpfr::isinteger(delta_) && delta_ <= 1);
-			return delta_.iszero() || delta_ == epsilon_ || delta_ == epsilon_ + mpfr::real(0.5);
+			return delta_ == epsilon_ || delta_ == epsilon_ + mpfr::real(0.5);
 		}
-		[[nodiscard]] std::string str() const
-		{
-			std::ostringstream os;
-			os << "PrimaryOperator(delta=" << delta_ << ", spin=" << spin_ << ", epsilon=" << epsilon_ << ")";
-			return os.str();
-		}
+		[[nodiscard]] std::string str() const;
 	};
 	class GeneralPrimaryOperator
 	{
@@ -93,13 +89,7 @@ namespace qboot
 			assert(from_ <= delta && (!to_.has_value() || delta < *to_));
 			return PrimaryOperator(delta, spin_, epsilon_);
 		}
-		[[nodiscard]] std::string str() const
-		{
-			std::ostringstream os;
-			os << "GeneralPrimaryOperator(spin=" << spin_ << ", epsilon=" << epsilon_ << ", delta in [" << from_ << ", "
-			   << (to_.has_value() ? to_->str() : "infty") << "))";
-			return os.str();
-		}
+		[[nodiscard]] std::string str() const;
 	};
 }  // namespace qboot
 

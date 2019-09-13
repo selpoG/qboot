@@ -9,7 +9,7 @@
 #include <type_traits>       // for true_type, false_type, is_same_v, enable_if, void_t
 #include <utility>           // for move, swap
 
-#include "real.hpp"  // for real, abs, mpfr_prec_t, mpfr_rnd_t
+#include "real.hpp"  // for real
 
 namespace algebra
 {
@@ -63,11 +63,7 @@ namespace algebra
 	{
 		using type = Vec<substitute_t<R, S>>;
 	};
-	template <class Real>
-	mpfr::real eval(const mpfr::real& v, [[maybe_unused]] const Real& x)
-	{
-		return v;
-	}
+	inline mpfr::real eval(const mpfr::real& v, [[maybe_unused]] const mpfr::real& x) { return v; }
 	// interface Swappable<T> {
 	//	void swap(T&);
 	// };
@@ -246,8 +242,7 @@ namespace algebra
 			for (uint32_t i = 1; i < x.sz_; ++i) s += mul(x.arr_[i], y.arr_[i]);
 			return s;
 		}
-		template <class Real>
-		[[nodiscard]] Vector<evaluated_t<Ring>> eval(const Real& x) const
+		[[nodiscard]] Vector<evaluated_t<Ring>> eval(const mpfr::real& x) const
 		{
 			Vector<evaluated_t<Ring>> ans(sz_);
 			for (uint32_t i = 0; i < sz_; ++i) ans[i] = at(i).eval(x);
@@ -319,96 +314,11 @@ namespace algebra
 			for (uint32_t i = 0; i < row_; ++i)
 				for (uint32_t j = 0; j < i; ++j) at(i, j).swap(at(j, i));
 		}
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		[[nodiscard]] Matrix inverse() const&
-		{
-			return clone().inverse();
-		}
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		[[nodiscard]] Matrix inverse() &&
-		{
-			assert(row_ == col_);
-			Matrix inv = Matrix::constant(Ring(1), row_);
-			for (uint32_t j = 0; j < row_; ++j)
-			{
-				uint32_t p = j;
-				for (uint32_t i = j + 1; i < row_; ++i)
-					if (mpfr::cmpabs(at(p, j), at(i, j)) < 0) p = i;
-				inv._swap_row(p, j);
-				_swap_row(p, j, j);
-				auto t = 1 / at(j, j);
-				inv._multiply_row(j, t);
-				_multiply_row(j, t, j);
-				for (uint32_t i = j + 1; i < row_; ++i)
-				{
-					inv._add_row(j, i, -at(i, j));
-					_add_row(j, i, -at(i, j), j);
-				}
-			}
-			for (uint32_t j = row_ - 1; j < row_; --j)
-				for (uint32_t r = j - 1; r < j; --r) inv._add_row(j, r, -at(r, j));
-			return inv;
-		}
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		void _add_row(uint32_t f, uint32_t t, const Ring& x, uint32_t c0 = 0)
-		{
-			for (uint32_t c = c0; c < col_; ++c) at(t, c) += mul_scalar(x, at(f, c));
-		}
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		void _multiply_row(uint32_t r, const Ring& x, uint32_t c0 = 0)
-		{
-			for (uint32_t c = c0; c < col_; ++c) at(r, c) *= x;
-		}
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		void _swap_row(uint32_t r1, uint32_t r2, uint32_t c0 = 0)
-		{
-			for (uint32_t c = c0; c < col_; ++c) at(r1, c).swap(at(r2, c));
-		}
 		static Matrix constant(const Ring& c, uint32_t n)
 		{
 			Matrix m(n, n);
 			for (uint32_t i = 0; i < n; ++i) m.at(i, i) = c.clone();
 			return m;
-		}
-		// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
-		// this = L L^t and L is lower triangular.
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		[[nodiscard]] Matrix cholesky_decomposition() const
-		{
-			assert(is_square());
-			Matrix L(row_, row_);
-			Ring s;
-			for (uint32_t i = 0; i < row_; ++i)
-			{
-				for (uint32_t j = 0; j <= i; ++j)
-				{
-					s = {};
-					for (uint32_t k = 0; k < j; ++k) s += L.at(i, k) * L.at(j, k);
-					s = at(i, j) - s;
-					L.at(i, j) = i == j ? mpfr::sqrt(s) : s / L.at(j, j);
-				}
-			}
-			return L;
-		}
-		// calculate the inverse matrix of lower triangular matrix
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
-		[[nodiscard]] Matrix lower_triangular_inverse() const
-		{
-			// this must be lower triangular, i.e., at(i, j) = 0 for i < j
-			assert(is_square());
-			Matrix res(row_, row_);
-			Ring s;
-			for (uint32_t i = 0; i < row_; ++i)
-			{
-				res.at(i, i) = 1 / at(i, i);
-				for (uint32_t j = 0; j < i; ++j)
-				{
-					s = {};
-					for (uint32_t k = j; k < i; ++k) s += at(i, k) * res.at(k, j);
-					res.at(i, j) = -s / at(i, i);
-				}
-			}
-			return res;
 		}
 		Matrix operator+() const& { return clone(); }
 		Matrix operator+() && { return std::move(*this); }
@@ -419,7 +329,7 @@ namespace algebra
 			return std::move(*this);
 		}
 		// v^t M v
-		template <class = std::enable_if<mpfr::is_mpfr_real_v<Ring>>>
+		template <class = std::enable_if<std::is_same_v<Ring, mpfr::real>>>
 		[[nodiscard]] Ring inner_product(const Vector<Ring>& v) const
 		{
 			assert(is_square() && row_ == v.size());
@@ -514,12 +424,19 @@ namespace algebra
 				}
 			return z;
 		}
-		template <class Real>
-		[[nodiscard]] Matrix<evaluated_t<Ring>> eval(const Real& x) const
+		[[nodiscard]] Matrix<evaluated_t<Ring>> eval(const mpfr::real& x) const
 		{
 			return Matrix<evaluated_t<Ring>>(arr_.eval(x), row_, col_);
 		}
 	};
+
+	Matrix<mpfr::real> inverse(Matrix<mpfr::real>&& mat);
+	inline Matrix<mpfr::real> inverse(const Matrix<mpfr::real>& mat) { return inverse(mat.clone()); }
+	// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
+	// this = L L^t and L is lower triangular.
+	[[nodiscard]] Matrix<mpfr::real> cholesky_decomposition(const Matrix<mpfr::real>& mat);
+	// calculate the inverse matrix of lower triangular matrix
+	[[nodiscard]] Matrix<mpfr::real> lower_triangular_inverse(const Matrix<mpfr::real>& mat);
 
 	template <class Ring>
 	std::ostream& operator<<(std::ostream& out, const Vector<Ring>& v)

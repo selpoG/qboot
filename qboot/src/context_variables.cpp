@@ -9,7 +9,7 @@ namespace qboot
 	{
 		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqt(2) + r') ^ {-2}
 		// f = (4 - 2sqt(2) + r') ^ {-2}
-		auto f = algebra::power_function<real>(4 - mpfr::sqrt(8), real(1), real(-2), lambda);
+		auto f = algebra::power_function(4 - mpfr::sqrt(8), real(1), real(-2), lambda);
 		// g1 = 2 sqrt(2) r' f
 		auto g1 = f.clone();
 		g1.shift(1);
@@ -27,7 +27,7 @@ namespace qboot
 	      dim_(dim),
 	      epsilon_(real(dim) / 2 - 1),
 	      rho_(3 - mpfr::sqrt(8)),
-	      rho_to_z_(RealConverter<real>(z_as_func_rho(lambda)).inverse())
+	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse())
 	{
 		assert(dim >= 3 && dim % 2 == 1);
 	}

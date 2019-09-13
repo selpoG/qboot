@@ -237,4 +237,43 @@ namespace qboot
 		}
 		return sdpb;
 	}
+	XMLInput PolynomialProgram::create_xml() &&
+	{
+		uint32_t eq_sz = uint32_t(equation_.size()), M = N_ - eq_sz;
+		Vector<real> obj_new(M);
+		for (uint32_t m = 0; m < M; ++m) obj_new[m] = move(obj_[free_indices_[m]]);
+		for (uint32_t e = 0; e < eq_sz; ++e)
+		{
+			const auto& t = obj_[leading_indices_[e]];
+			for (uint32_t m = 0; m < M; ++m) obj_new[m] -= equation_[e][free_indices_[m]] * t;
+			obj_const_ += equation_targets_[e] * t;
+		}
+		XMLInput sdpb(move(obj_const_), move(obj_new), uint32_t(inequality_.size()));
+		for (uint32_t j = 0; j < inequality_.size(); ++j)
+		{
+			auto&& ineq = inequality_[j];
+			uint32_t sz = ineq->size();
+			Matrix<Vector<Polynomial>> mat(sz, sz);
+			for (uint32_t r = 0; r < sz; ++r)
+				for (uint32_t c = 0; c < sz; ++c) mat.at(r, c) = Vector<Polynomial>(M + 1);
+			auto target = -ineq->target_polynomial();
+			Vector<Matrix<Polynomial>> new_mat(M);
+			for (uint32_t m = 0; m < M; ++m) new_mat[m] = ineq->matrix_polynomial(free_indices_[m]);
+			for (uint32_t e = 0; e < eq_sz; ++e)
+			{
+				auto t = ineq->matrix_polynomial(leading_indices_[e]);
+				for (uint32_t m = 0; m < M; ++m) new_mat[m] -= mul_scalar(equation_[e][free_indices_[m]], t);
+				target += mul_scalar(equation_targets_[e], t);
+			}
+			for (uint32_t r = 0; r < sz; ++r)
+				for (uint32_t c = 0; c < sz; ++c)
+				{
+					mat.at(r, c).at(0) = move(target.at(r, c));
+					for (uint32_t m = 0; m < M; ++m) mat.at(r, c).at(m + 1) = move(new_mat[m].at(r, c));
+				}
+			sdpb.register_constraint(
+			    j, PVM(move(mat), ineq->sample_points(), ineq->sample_scalings(), ineq->bilinear_bases()));
+		}
+		return sdpb;
+	}
 }  // namespace qboot

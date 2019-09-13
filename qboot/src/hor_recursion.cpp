@@ -2,7 +2,8 @@
 
 #include <utility>  // for move
 
-#include "context_variables.hpp"
+#include "context_variables.hpp"  // for Context
+#include "hor_formula.hpp"        // for _get_rec_coeffs
 
 using algebra::RealFunction, algebra::RealFunctionWithPower, algebra::ComplexFunction;
 using mpfr::real;
@@ -13,6 +14,10 @@ namespace qboot
 	RealFunction<real> hBlock_shifted(const PrimaryOperator& op, const real& S, const real& P, uint32_t n_Max)
 	{
 		RealFunction<real> b(n_Max);
+		b.at(0) = mpfr::pochhammer(op.epsilon() * 2, op.spin()) /
+		          (mpfr::pow(2, op.spin()) * mpfr::pochhammer(op.epsilon(), op.spin()));
+		if (op.spin() % 2 == 1) b.at(0).negate();
+		if (op.delta().iszero()) return b;
 		if (op.is_divergent_hor())
 		{
 			real small(1ul, -(3 * mpfr::global_prec) / 8 + 15);
@@ -23,7 +28,6 @@ namespace qboot
 		}
 		real sum;
 		auto p = _get_rec_coeffs(op, S, P);
-		b.at(0) = 1;
 		for (uint32_t n = 1; n <= n_Max; ++n)
 		{
 			sum = 0;
@@ -33,13 +37,12 @@ namespace qboot
 		}
 		return b;
 	}
-	RealFunction<real> hBlock_powered(const real& exp, const PrimaryOperator& op, const real& S, const real& P,
-	                                  const Context& context)
+	RealFunction<real> gBlock_real(const PrimaryOperator& op, const real& S, const real& P, const Context& context)
 	{
 		auto h_at_0 = hBlock_shifted(op, S, P, context.n_Max());
-		h_at_0 *= mpfr::pow(4, exp);
+		h_at_0 *= mpfr::pow(4, op.delta());
 		const auto& rho = context.rho();
-		RealFunctionWithPower<real> f_at_0(move(h_at_0), exp);
+		RealFunctionWithPower f_at_0(move(h_at_0), op.delta());
 		RealFunction<real> f_of_rho(context.lambda());
 		f_of_rho.at(0) = f_at_0.approximate(rho);
 		real tmp(1);
@@ -51,10 +54,6 @@ namespace qboot
 		}
 		return context.rho_to_z().convert(f_of_rho);
 	}
-	RealFunction<real> gBlock_real(const PrimaryOperator& op, const real& S, const real& P, const Context& context)
-	{
-		return hBlock_powered(op.delta(), op, S, P, context);
-	}
 	ComplexFunction<real> gBlock(const PrimaryOperator& op, const real& S, const real& P, const Context& context)
 	{
 		return context.expand_off_diagonal(gBlock_real(op, S, P, context), op, S, P);
@@ -64,14 +63,5 @@ namespace qboot
 	{
 		real d12 = d1 - d2, d34 = d3 - d4;
 		return gBlock(op, (d34 - d12) / 2, -d12 * d34 / 2, context);
-	}
-	RealFunction<real> h_asymptotic(const real& S, const Context& context)
-	{
-		// calculate (1 + sgn r) ^ {-epsilon - 1 + 2 sgn S} as a function of r - rho
-		auto getFactor = [&context, &S](int sign) {
-			return algebra::power_function(real(1) + sign * context.rho(), real(sign),
-			                               (2 * sign) * S - 1 - context.epsilon(), context.lambda());
-		};
-		return context.rho_to_z().convert(mul(getFactor(1), getFactor(-1)));
 	}
 }  // namespace qboot

@@ -8,7 +8,7 @@
 
 #include "matrix.hpp"      // for Vector
 #include "polynomial.hpp"  // for polynomialize_t, to_pol
-#include "real.hpp"        // for real, pow
+#include "real.hpp"        // for real
 
 namespace algebra
 {
@@ -57,6 +57,7 @@ namespace algebra
 	//   \sum_{n = 0}^{lambda / 2} \sum_{m = 0}^{lambda - 2 n} this->at(n, m) (x - x0) ^ m (y - y0) ^ n + ...
 	// we take (x0, y0) = (1 / 2, 0)
 	// if a nontrivial symmetry even (resp. odd) is given, m runs over even (resp. odd) number only.
+	// Ring must be mpfr::real or Polynomial
 	template <class Ring>
 	class ComplexFunction
 	{
@@ -108,43 +109,11 @@ namespace algebra
 		[[nodiscard]] const Ring& at(uint32_t dx, uint32_t dy) const& { return coeffs_[index(dx, dy)]; }
 		[[nodiscard]] Vector<Ring> flatten() && { return std::move(coeffs_); }
 
-		// z -> 1 - z
-		void flip() &
-		{
-			switch (sym_)
-			{
-			case FunctionSymmetry::Even: break;
-			case FunctionSymmetry::Odd: coeffs_.negate(); break;
-			case FunctionSymmetry::Mixed:
-			default:
-				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
-					for (uint32_t dx = 1; dx + 2 * dy <= lambda_; dx += 2) at(dx, dy).negate();
-				break;
-			}
-		}
 		[[nodiscard]] auto abs() const { return coeffs_.abs(); }
 		[[nodiscard]] auto norm() const { return coeffs_.norm(); }
 
 		// project this function to sym-symmetric part
-		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) &&
-		{
-			if (sym_ == sym) return std::move(*this);
-			ComplexFunction z(lambda_, sym);
-			if (sym_ == FunctionSymmetry::Mixed)
-			{
-				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
-					for (uint32_t dx = 0; dx + 2 * dy <= lambda_; ++dx)
-						if (matches(sym, dx)) z.at(dx, dy).swap(at(dx, dy));
-			}
-			if (sym == FunctionSymmetry::Mixed)
-			{
-				for (uint32_t dy = 0; dy <= lambda_ / 2; ++dy)
-					for (uint32_t dx = 0; dx + 2 * dy <= lambda_; ++dx)
-						if (matches(sym_, dx)) z.at(dx, dy).swap(at(dx, dy));
-			}
-			// otherwise (even to odd or odd to even), proj is vanishing
-			return z;
-		}
+		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) &&;
 		// project this function to sym-symmetric part
 		[[nodiscard]] ComplexFunction proj(FunctionSymmetry sym) const& { return clone().proj(sym); }
 		ComplexFunction operator+() const& { return clone(); }
@@ -253,12 +222,15 @@ namespace algebra
 			return x.lambda_ == y.lambda_ && x.sym_ == y.sym_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
-		template <class Real>
-		[[nodiscard]] ComplexFunction<evaluated_t<Ring>> eval(const Real& x) const
+		[[nodiscard]] ComplexFunction<evaluated_t<Ring>> eval(const mpfr::real& x) const
 		{
 			return ComplexFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
 		}
 	};
+	template <>
+	ComplexFunction<mpfr::real> ComplexFunction<mpfr::real>::proj(FunctionSymmetry sym) &&;
+	template <>
+	ComplexFunction<Polynomial> ComplexFunction<Polynomial>::proj(FunctionSymmetry sym) &&;
 	template <class Ring>
 	ComplexFunction<polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>* coeffs)
 	{
@@ -300,21 +272,7 @@ namespace algebra
 		return out << "]";
 	}
 	// v ^ d = ((1 - z) (1 - z_bar)) ^ d as a function of x, y
-	inline ComplexFunction<mpfr::real> v_to_d(const mpfr::real& d, uint32_t lambda)
-	{
-		// f.at(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
-		//            = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
-		// where lf(x, n) = x (x - 1) ... (x - (n - 1)) (falling factorial)
-		ComplexFunction<mpfr::real> f(lambda);
-		f.at(0, 0) = mpfr::pow(4, -d);
-		for (uint32_t n = 0; n <= lambda / 2; ++n)
-		{
-			if (n > 0) f.at(0u, n) = f.at(0u, n - 1) * 4 * (-d + (n - 1)) / n;
-			for (uint32_t m = 1; m + 2 * n <= lambda; ++m)
-				f.at(m, n) = f.at(m - 1, n) * (-4 * d + 2 * (m + 2 * n - 1)) / m;
-		}
-		return f;
-	}
+	ComplexFunction<mpfr::real> v_to_d(const mpfr::real& d, uint32_t lambda);
 }  // namespace algebra
 
 #endif  // QBOOT_COMPLEX_FUNCTION_HPP_

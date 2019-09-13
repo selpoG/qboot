@@ -8,10 +8,15 @@
 #include <utility>           // for move
 
 #include "matrix.hpp"  // for Vector, Matrix
-#include "real.hpp"    // for real, pow, sgn
+#include "real.hpp"    // for real
 
 namespace algebra
 {
+	class Polynomial;
+	Polynomial mul(const Polynomial& p, const Polynomial& q);
+	Polynomial operator+(const Polynomial& p, const Polynomial& q);
+	Polynomial operator-(const Polynomial& p, const Polynomial& q);
+	std::ostream& operator<<(std::ostream& out, const Polynomial& v);
 	// \sum_{i} coeff_[i] x ^ i
 	// the last value of coeff_ must be non-zero
 	// zero polynomial is represented by empty coeff_ (coeff_.size() = 0)
@@ -42,25 +47,15 @@ namespace algebra
 			assert(!c.iszero());
 			coeff_[degree] = c.clone();
 		}
-		explicit Polynomial(Vector<mpfr::real>&& coeffs) : coeff_(0)
-		{
-			if (coeffs.size() > 0 && !coeffs[coeffs.size() - 1].iszero())
-			{
-				coeff_ = std::move(coeffs);
-				return;
-			}
-			int32_t deg = int32_t(coeffs.size()) - 1;
-			while (deg >= 0 && coeffs[uint32_t(deg)].iszero()) deg--;
-			if (deg < 0) return;
-			coeff_ = Vector<mpfr::real>{uint32_t(deg + 1)};
-			for (uint32_t i = 0; i <= uint32_t(deg); ++i) coeff_[i].swap(coeffs[i]);
-		}
+		explicit Polynomial(Vector<mpfr::real>&& coeffs);
 		Polynomial(std::initializer_list<mpfr::real> coeffs) : coeff_(uint32_t(coeffs.size()))
 		{
 			uint32_t i = 0;
 			for (auto& v : coeffs) coeff_[i++] = v.clone();
 			assert(coeff_.size() == 0 || !coeff_[coeff_.size() - 1].iszero());
 		}
+		[[nodiscard]] const mpfr::real* begin() const& noexcept { return coeff_.begin(); }
+		[[nodiscard]] const mpfr::real* end() const& noexcept { return coeff_.end(); }
 		[[nodiscard]] mpfr::real abs() const { return mpfr::sqrt(norm()); }
 		[[nodiscard]] mpfr::real norm() const { return coeff_.norm(); }
 		[[nodiscard]] bool iszero() const noexcept { return coeff_.size() == 0; }
@@ -86,42 +81,8 @@ namespace algebra
 		}
 		void swap(Polynomial& other) & { coeff_.swap(other.coeff_); }
 		void negate() & { coeff_.negate(); }
-		Polynomial& operator+=(const Polynomial& p) &
-		{
-			if (p.iszero()) return *this;
-			if (iszero())
-			{
-				coeff_ = p.coeff_.clone();
-				return *this;
-			}
-			auto pd = uint32_t(p.degree());
-			auto d = uint32_t(degree());
-			if (pd < d || (pd == d && !(coeff_[d] + p.coeff_[d]).iszero()))
-			{
-				for (uint32_t i = 0; i <= pd; ++i) coeff_[i] += p.coeff_[i];
-				return *this;
-			}
-			return *this = *this + p;
-		}
-		Polynomial& operator-=(const Polynomial& p) &
-		{
-			if (p.iszero()) return *this;
-			if (iszero())
-			{
-				coeff_ = p.coeff_.clone();
-				negate();
-				return *this;
-			}
-			auto pd = uint32_t(p.degree());
-			auto d = uint32_t(degree());
-			if (pd < d || (pd == d && coeff_[d] != p.coeff_[d]))
-			{
-				for (uint32_t i = 0; i <= pd; ++i) coeff_[i] -= p.coeff_[i];
-				return *this;
-			}
-			*this = *this - p;
-			return *this;
-		}
+		Polynomial& operator+=(const Polynomial& p) &;
+		Polynomial& operator-=(const Polynomial& p) &;
 		template <class R>
 		Polynomial& operator*=(const R& c) &
 		{
@@ -152,17 +113,7 @@ namespace algebra
 			negate();
 			return std::move(*this);
 		}
-		friend Polynomial mul(const Polynomial& p, const Polynomial& q)
-		{
-			if (p.iszero() || q.iszero()) return Polynomial{};
-			auto dp = uint32_t(p.degree());
-			auto dq = uint32_t(q.degree());
-			Polynomial r(dp + dq);
-			r.coeff_[dp + dq] = {};
-			for (uint32_t i = 0; i <= dp; ++i)
-				for (uint32_t j = 0; j <= dq; ++j) r.coeff_[i + j] += mul(p[i], q[j]);
-			return r;
-		}
+		friend Polynomial mul(const Polynomial& p, const Polynomial& q);
 		template <class R>
 		friend Polynomial mul_scalar(const R& c, const Polynomial& p)
 		{
@@ -172,54 +123,8 @@ namespace algebra
 			r.coeff_ *= c;
 			return r;
 		}
-		friend Polynomial operator+(const Polynomial& p, const Polynomial& q)
-		{
-			if (p.iszero()) return +q;
-			if (q.iszero()) return +p;
-			auto dp = uint32_t(p.degree());
-			auto dq = uint32_t(q.degree());
-			if (dp > dq)
-			{
-				Polynomial r = +p;
-				for (uint32_t i = 0; i <= dq; ++i) r.coeff_[i] += q.coeff_[i];
-				return r;
-			}
-			if (dp < dq)
-			{
-				Polynomial r = +q;
-				for (uint32_t i = 0; i <= dp; ++i) r.coeff_[i] += p.coeff_[i];
-				return r;
-			}
-			while (dp <= dq && (p.coeff_[dp] + q.coeff_[dp]).iszero()) --dp;
-			if (dp > dq) return Polynomial{};
-			Polynomial r(dp);
-			for (uint32_t i = 0; i <= dp; ++i) r.coeff_[i] = p.coeff_[i] + q.coeff_[i];
-			return r;
-		}
-		friend Polynomial operator-(const Polynomial& p, const Polynomial& q)
-		{
-			if (p.iszero()) return -q;
-			if (q.iszero()) return +p;
-			auto dp = uint32_t(p.degree());
-			auto dq = uint32_t(q.degree());
-			if (dp > dq)
-			{
-				Polynomial r = +p;
-				for (uint32_t i = 0; i <= dq; ++i) r.coeff_[i] -= q.coeff_[i];
-				return r;
-			}
-			if (dp < dq)
-			{
-				Polynomial r = -q;
-				for (uint32_t i = 0; i <= dp; ++i) r.coeff_[i] += p.coeff_[i];
-				return r;
-			}
-			while (dp <= dq && (p.coeff_[dp] - q.coeff_[dp]).iszero()) --dp;
-			if (dp > dq) return Polynomial{};
-			Polynomial r(dp);
-			for (uint32_t i = 0; i <= dp; ++i) r.coeff_[i] = p.coeff_[i] - q.coeff_[i];
-			return r;
-		}
+		friend Polynomial operator+(const Polynomial& p, const Polynomial& q);
+		friend Polynomial operator-(const Polynomial& p, const Polynomial& q);
 		template <class R>
 		friend Polynomial operator/(const Polynomial& p, const R& c)
 		{
@@ -231,47 +136,9 @@ namespace algebra
 		}
 		friend bool operator==(const Polynomial& p, const Polynomial& q) { return p.coeff_ == q.coeff_; }
 		friend bool operator!=(const Polynomial& p, const Polynomial& q) { return !(p == q); }
+		friend std::ostream& operator<<(std::ostream& out, const Polynomial& v);
 	};
 
-	inline std::ostream& operator<<(std::ostream& out, const Polynomial& v)
-	{
-		if (v.iszero()) return out << "0";
-		auto f = false;
-		{
-			auto& val = v[0];
-			if (!val.iszero())
-			{
-				out << val;
-				f = true;
-			}
-		}
-		auto d = uint32_t(v.degree());
-		for (uint32_t i = 1; i <= d; ++i)
-		{
-			auto& val = v[i];
-			auto sgn = mpfr::sgn(val);
-			if (sgn == 0) continue;
-			if (f)
-			{
-				if (val == 1)
-					out << " + ";
-				else if (val == -1)
-					out << " - ";
-				else if (sgn > 0)
-					out << " + " << val << " * ";
-				else
-					out << " - " << -val << " * ";
-			}
-			else if (val == -1)
-				out << "-";
-			else if (val != -1)
-				out << val << " * ";
-			out << "x";
-			if (i > 1) out << "^" << i;
-			f = true;
-		}
-		return out;
-	}
 	template <>
 	struct evaluated<Polynomial>
 	{
@@ -311,22 +178,22 @@ namespace algebra
 	// calculate coefficients c of polynomial f(x) s.t. for each i, f(points[i]) = vals[i]
 	// vals[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
 	// evals(polynomial_interpolate(vals, points), points) == vals (up to rounding errors)
-	template <class Ring, class Real>
-	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<Real>& points)
+	template <class Ring>
+	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<mpfr::real>& points)
 	{
 		assert(vals.size() == points.size() && points.size() > 0);
 		auto deg = points.size() - 1;
-		Matrix<Real> mat(deg + 1, deg + 1);
+		Matrix<mpfr::real> mat(deg + 1, deg + 1);
 		for (uint32_t i = 0; i <= deg; ++i)
 		{
 			mat.at(i, 0) = 1;
 			for (uint32_t j = 1; j <= deg; ++j) mat.at(i, j) = points[i] * mat.at(i, j - 1);
 		}
-		auto coeffs = dot(mat.inverse(), vals);
+		auto coeffs = dot(inverse(mat), vals);
 		return to_pol(&coeffs);
 	}
-	template <class Ring, class Real>
-	Vector<evaluated_t<Ring>> evals(const Ring& v, const Vector<Real>& xs)
+	template <class Ring>
+	Vector<evaluated_t<Ring>> evals(const Ring& v, const Vector<mpfr::real>& xs)
 	{
 		Vector<evaluated_t<Ring>> ans(xs.size());
 		for (uint32_t i = 0; i < xs.size(); ++i) ans[i] = v.eval(xs[i]);

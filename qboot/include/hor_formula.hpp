@@ -7,7 +7,7 @@
 #include "matrix.hpp"      // for Vector
 #include "polynomial.hpp"  // for Polynomial
 #include "primary_op.hpp"  // for PrimaryOperator
-#include "real.hpp"        // for real, mpfr_t, mpfr_prec_t, mpfr_rnd_t
+#include "real.hpp"        // for real
 
 // Hogervorst-Osborn-Rycykov recursion relation (derived from eq (4.9) in arXiv:1305.1321) takes the form
 //

@@ -2,9 +2,9 @@
 #define QBOOT_BLOCK_HPP_
 
 #include <cstdint>      // for uint32_t
-#include <sstream>      // for ostringstream
 #include <string>       // for string
-#include <type_traits>  // enable_if
+#include <type_traits>  // enable_if, is_same_v
+#include <variant>      // for varinat
 
 #include "complex_function.hpp"  // for FunctionSymmetry
 #include "primary_op.hpp"        // for PrimaryOperator
@@ -66,13 +66,7 @@ namespace qboot
 		{
 			return ConformalBlock<PrimaryOperator>(op_.fix_delta(delta), d12_, d34_, d23h_, sym_);
 		}
-		[[nodiscard]] std::string str() const
-		{
-			std::ostringstream os;
-			os << "ConformalBlock(op=" << op_.str() << ", d12=" << d12_ << ", d34=" << d34_ << ", d23h=" << d23h_
-			   << ", type=" << (sym_ == algebra::FunctionSymmetry::Odd ? 'F' : 'H') << ")";
-			return os.str();
-		}
+		[[nodiscard]] std::string str() const;
 	};
 	class GeneralConformalBlock
 	{
@@ -112,13 +106,7 @@ namespace qboot
 		{
 			return ConformalBlock<Operator>(op, d12_, d34_, d23h_, sym_);
 		}
-		[[nodiscard]] std::string str() const
-		{
-			std::ostringstream os;
-			os << "ConformalBlock(d12=" << d12_ << ", d34=" << d34_ << ", d23h=" << d23h_
-			   << ", type=" << (sym_ == algebra::FunctionSymmetry::Odd ? 'F' : 'H') << ")";
-			return os.str();
-		}
+		[[nodiscard]] std::string str() const;
 	};
 	using Block = std::variant<ConformalBlock<PrimaryOperator>, GeneralConformalBlock>;
 }  // namespace qboot

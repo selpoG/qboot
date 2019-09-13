@@ -21,8 +21,8 @@
 #include "sdpb_input.hpp"
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
-using qboot::h_asymptotic, qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunction,
-    qboot::ConformalScale, qboot::PolynomialProgram;
+using qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunction, qboot::ConformalScale,
+    qboot::PolynomialProgram;
 using FunctionSymmetry = algebra::FunctionSymmetry;
 using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move,
     std::pair;
@@ -89,8 +89,9 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 	                        pair{"odd-", E(G{e, s, s, e, Ev})}, pair{"even", E(0, 1, G{e, e, s, s, Ev})}});
 	auto root =
 	    fs::current_path() / ("mixed-ising-" + s.delta().str(8) + "-" + e.delta().str(8) + "-" + e1.delta().str(8));
-	auto pmp = boot.ope_minimize("T", "unit", true);
-	move(pmp).create_input().write_all(root);
+	// auto pmp = boot.ope_minimize("T", "unit", true);
+	auto pmp = boot.find_contradiction("unit", true);
+	move(pmp).create_xml().write(root += ".xml");
 }
 
 void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax = 20, uint32_t maxspin = 24)
@@ -111,7 +112,7 @@ void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax = 2
 	                            pair{"T", E(B{T, s, s, s, s, Od})}, pair{"even", E(G{s, s, s, s, Od})}});
 	auto root = fs::current_path() / ("single-ising-" + s.delta().str(8) + "-" + e.delta().str(8));
 	auto pmp = boot.find_contradiction("unit");
-	move(pmp).create_input().write_all(root);
+	move(pmp).create_input().write(root);
 }
 
 class TestScale : public qboot::ScaleFactor
@@ -169,7 +170,7 @@ void test_sdpb()
 
 	auto sdpb = move(prg).create_input();
 	auto root = fs::current_path() / "test";
-	sdpb.write_all(root);
+	sdpb.write(root);
 }
 
 int main(int argc, char* argv[])

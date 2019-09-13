@@ -10,7 +10,7 @@
 #include "complex_function.hpp"  // for ComplexFunction, FunctionSymmetry
 #include "hor_recursion.hpp"     // for gBlock
 #include "primary_op.hpp"        // for PrimaryOperator
-#include "real.hpp"              // for mpfr_prec_t, mpfr_rnd_t, mpfr_t, real, sqrt
+#include "real.hpp"              // for real, sqrt
 #include "real_function.hpp"     // for RealFunction, RealConverter
 
 namespace qboot
@@ -25,12 +25,12 @@ namespace qboot
 		uint32_t n_Max_, lambda_, dim_;
 		mpfr::real epsilon_, rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
-		algebra::RealConverter<mpfr::real> rho_to_z_;
+		algebra::RealConverter rho_to_z_;
 
 	public:
 		// cutoff of the power series expansion of conformal blocks at rho = 0
 		[[nodiscard]] uint32_t n_Max() const { return n_Max_; }
-		// passed to the constructor of ComplexFunction<Real>
+		// passed to the constructor of ComplexFunction<Ring>
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		// the dimension of the spacetime
 		[[nodiscard]] uint32_t dimension() const { return dim_; }
@@ -39,7 +39,7 @@ namespace qboot
 		// 3 - 2 sqrt(2)
 		[[nodiscard]] const mpfr::real& rho() const { return rho_; }
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
-		[[nodiscard]] const algebra::RealConverter<mpfr::real>& rho_to_z() const { return rho_to_z_; }
+		[[nodiscard]] const algebra::RealConverter& rho_to_z() const { return rho_to_z_; }
 		[[nodiscard]] std::string str() const
 		{
 			std::ostringstream os;
@@ -63,11 +63,13 @@ namespace qboot
 		}
 		[[nodiscard]] algebra::ComplexFunction<mpfr::real> evaluate(const ConformalBlock<PrimaryOperator>& block) const
 		{
+			assert(block.symmetry() != algebra::FunctionSymmetry::Mixed);
 			return F_block(block.delta_half(), gBlock(block.get_op(), block.S(), block.P(), *this), block.symmetry());
 		}
 		[[nodiscard]] algebra::ComplexFunction<mpfr::real> evaluate(const ConformalBlock<GeneralPrimaryOperator>& block,
 		                                                            const mpfr::real& delta) const
 		{
+			assert(block.symmetry() != algebra::FunctionSymmetry::Mixed);
 			return F_block(block.delta_half(), gBlock(block.get_op(delta), block.S(), block.P(), *this),
 			               block.symmetry());
 		}
