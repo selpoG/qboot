@@ -30,12 +30,8 @@ namespace fs = std::filesystem;
 
 using R = mpfr::real;
 using Op = qboot::PrimaryOperator;
-using GOp = qboot::GeneralPrimaryOperator;
-using Block = qboot::ConformalBlock<Op>;
-using GBlock = qboot::ConformalBlock<GOp>;
-using GGBlock = qboot::GeneralConformalBlock;
+using Eq = qboot::Equation;
 using PolIneq = qboot::PolynomialInequalityWithCoeffs;
-using EvalIneq = qboot::PolynomialInequalityEvaluated;
 
 [[maybe_unused]] static void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax, uint32_t maxspin);
 [[maybe_unused]] static void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint32_t numax,
@@ -44,17 +40,12 @@ using EvalIneq = qboot::PolynomialInequalityEvaluated;
 
 void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint32_t numax = 20, uint32_t maxspin = 24)
 {
-	constexpr FunctionSymmetry Od = FunctionSymmetry::Odd;
-	constexpr FunctionSymmetry Ev = FunctionSymmetry::Even;
-	using E = qboot::Entry;
-	using B = Block;
-	using G = GGBlock;
-	qboot::BootstrapEquation boot(c, array{pair{"unit", 1u}, pair{"scalar", 2u}, pair{"e1", 2u}, pair{"T", 2u},
-	                                       pair{"even", 2u}, pair{"odd+", 1u}, pair{"odd-", 1u}});
+	qboot::BootstrapEquation boot(
+	    c, {{"unit", 1u}, {"scalar", 2u}, {"e1", 2u}, {"T", 2u}, {"even", 2u}, {"odd+", 1u}, {"odd-", 1u}});
 	auto num_poles = [numax]([[maybe_unused]] uint32_t spin) { return numax; };
 	// spectrum
-	Op u{c.epsilon()}, T{2, c.epsilon()};  // do not register point-like spectrums ("unit", "scalar", "T")
-	boot.register_ope("T", {R(s.delta()), R(e.delta())});  // from Ward identity
+	Op u{c.epsilon()}, T{2, c.epsilon()};            // do not register point-like spectrums ("unit", "scalar", "T")
+	boot.register_ope("T", {s.delta(), e.delta()});  // from Ward identity
 	// boot.register_operator("even", {0, num_poles(0), c.epsilon(), R("3.815"), R("3.845")});
 	boot.register_operator("even", {0, num_poles(0), c.epsilon(), R("6")});
 	// boot.register_operator("odd+", {0, num_poles(0), c.epsilon(), R("5.25"), R("5.33")});
@@ -69,24 +60,55 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 		else
 			boot.register_operator("odd-", {spin, num_poles(spin), c.epsilon()});
 	// equations
-	boot.add_equation(Od, array{pair{"unit", E(B{u, s, s, s, s, Od})}, pair{"scalar", E(0, 0, B{e, s, s, s, s, Od})},
-	                            pair{"e1", E(0, 0, B{e1, s, s, s, s, Od})}, pair{"T", E(0, 0, B{T, s, s, s, s, Od})},
-	                            pair{"even", E(0, 0, G{s, s, s, s, Od})}});
-	boot.add_equation(Od, array{pair{"unit", E(B{u, e, e, e, e, Od})}, pair{"scalar", E(1, 1, B{e, e, e, e, e, Od})},
-	                            pair{"e1", E(1, 1, B{e1, e, e, e, e, Od})}, pair{"T", E(1, 1, B{T, e, e, e, e, Od})},
-	                            pair{"even", E(1, 1, G{e, e, e, e, Od})}});
-	boot.add_equation(Od, array{pair{"scalar", E(1, 1, B{s, e, s, e, s, Od})}, pair{"odd+", E(G{e, s, e, s, Od})},
-	                            pair{"odd-", E(G{e, s, e, s, Od})}});
-	boot.add_equation(Od,
-	                  array{pair{"unit", E(B{u, e, e, s, s, Od})}, pair{"scalar", E(0, 0, B{s, e, s, s, e, Od})},
-	                        pair{"scalar", E(0, 1, B{e, e, e, s, s, Od})}, pair{"e1", E(0, 1, B{e1, e, e, s, s, Od})},
-	                        pair{"T", E(0, 1, B{T, e, e, s, s, Od})}, pair{"odd+", E(G{e, s, s, e, Od})},
-	                        pair{"odd-", E(R(-1), G{e, s, s, e, Od})}, pair{"even", E(0, 1, G{e, e, s, s, Od})}});
-	boot.add_equation(Ev,
-	                  array{pair{"unit", E(B{u, e, e, s, s, Ev})}, pair{"scalar", E(0, 0, R(-1), B{s, e, s, s, e, Ev})},
-	                        pair{"scalar", E(0, 1, B{e, e, e, s, s, Ev})}, pair{"e1", E(0, 1, B{e1, e, e, s, s, Ev})},
-	                        pair{"T", E(0, 1, B{T, e, e, s, s, Ev})}, pair{"odd+", E(R(-1), G{e, s, s, e, Ev})},
-	                        pair{"odd-", E(G{e, s, s, e, Ev})}, pair{"even", E(0, 1, G{e, e, s, s, Ev})}});
+	{
+		Eq eq(boot, FunctionSymmetry::Odd);
+		eq.add_term("unit", u, s, s, s, s);
+		eq.add_term("scalar", 0, 0, e, s, s, s, s);
+		eq.add_term("e1", 0, 0, e1, s, s, s, s);
+		eq.add_term("T", 0, 0, T, s, s, s, s);
+		eq.add_term("even", 0, 0, s, s, s, s);
+		boot.add_equation(move(eq));
+	}
+	{
+		Eq eq(boot, FunctionSymmetry::Odd);
+		eq.add_term("unit", u, e, e, e, e);
+		eq.add_term("scalar", 1, 1, e, e, e, e, e);
+		eq.add_term("e1", 1, 1, e1, e, e, e, e);
+		eq.add_term("T", 1, 1, T, e, e, e, e);
+		eq.add_term("even", 1, 1, e, e, e, e);
+		boot.add_equation(move(eq));
+	}
+	{
+		Eq eq(boot, FunctionSymmetry::Odd);
+		eq.add_term("scalar", 0, 0, s, e, s, e, s);
+		eq.add_term("odd+", e, s, e, s);
+		eq.add_term("odd-", e, s, e, s);
+		boot.add_equation(move(eq));
+	}
+	{
+		Eq eq(boot, FunctionSymmetry::Odd);
+		eq.add_term("unit", u, e, e, s, s);
+		eq.add_term("scalar", 0, 0, s, e, s, s, e);
+		eq.add_term("scalar", 0, 1, e, e, e, s, s);
+		eq.add_term("e1", 0, 1, e1, e, e, s, s);
+		eq.add_term("T", 0, 1, T, e, e, s, s);
+		eq.add_term("odd+", e, s, s, e);
+		eq.add_term("odd-", R(-1), e, s, s, e);
+		eq.add_term("even", 0, 1, e, e, s, s);
+		boot.add_equation(move(eq));
+	}
+	{
+		Eq eq(boot, FunctionSymmetry::Even);
+		eq.add_term("unit", u, e, e, s, s);
+		eq.add_term("scalar", 0, 0, R(-1), s, e, s, s, e);
+		eq.add_term("scalar", 0, 1, e, e, e, s, s);
+		eq.add_term("e1", 0, 1, e1, e, e, s, s);
+		eq.add_term("T", 0, 1, T, e, e, s, s);
+		eq.add_term("odd+", R(-1), e, s, s, e);
+		eq.add_term("odd-", e, s, s, e);
+		eq.add_term("even", 0, 1, e, e, s, s);
+		boot.add_equation(move(eq));
+	}
 	auto root =
 	    fs::current_path() / ("mixed-ising-" + s.delta().str(8) + "-" + e.delta().str(8) + "-" + e1.delta().str(8));
 	// auto pmp = boot.ope_minimize("T", "unit", true);
@@ -96,11 +118,7 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 
 void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax = 20, uint32_t maxspin = 24)
 {
-	constexpr FunctionSymmetry Od = FunctionSymmetry::Odd;
-	using E = qboot::Entry;
-	using B = Block;
-	using G = GGBlock;
-	qboot::BootstrapEquation boot(c, array{pair{"unit", 1u}, pair{"e", 1u}, pair{"T", 1u}, pair{"even", 1u}});
+	qboot::BootstrapEquation boot(c, {{"unit", 1u}, {"e", 1u}, {"T", 1u}, {"even", 1u}});
 	auto num_poles = [numax](uint32_t spin) { return numax + std::min(numax, spin) / 2; };
 	Op u{c.epsilon()}, T{2, c.epsilon()};
 	boot.register_operator("even", {0, num_poles(0), c.epsilon(), R("1.409"), R("1.4135")});
@@ -108,8 +126,12 @@ void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax = 2
 	boot.register_operator("even", {2, num_poles(2), c.epsilon(), R(5)});
 	for (uint32_t spin = 4; spin <= maxspin; spin += 2)
 		boot.register_operator("even", {spin, num_poles(spin), c.epsilon()});
-	boot.add_equation(Od, array{pair{"unit", E(B{u, s, s, s, s, Od})}, pair{"e", E(B{e, s, s, s, s, Od})},
-	                            pair{"T", E(B{T, s, s, s, s, Od})}, pair{"even", E(G{s, s, s, s, Od})}});
+	Eq eq(boot, FunctionSymmetry::Odd);
+	eq.add_term("unit", u, s, s, s, s);
+	eq.add_term("e", e, s, s, s, s);
+	eq.add_term("T", T, s, s, s, s);
+	eq.add_term("even", s, s, s, s);
+	boot.add_equation(move(eq));
 	auto root = fs::current_path() / ("single-ising-" + s.delta().str(8) + "-" + e.delta().str(8));
 	auto pmp = boot.find_contradiction("unit");
 	move(pmp).create_input().write(root);

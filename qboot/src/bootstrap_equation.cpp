@@ -7,7 +7,7 @@
 
 using algebra::Vector, algebra::Matrix;
 using mpfr::real;
-using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string;
+using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view;
 
 namespace qboot
 {
@@ -89,13 +89,13 @@ namespace qboot
 		return mat;
 	}
 
-	[[nodiscard]] PolynomialProgram BootstrapEquation::ope_maximize(const string& target, const string& norm, real&& N,
+	[[nodiscard]] PolynomialProgram BootstrapEquation::ope_maximize(string_view target, string_view norm, real&& N,
 	                                                                bool verbose) const
 	{
 		PolynomialProgram prg(N_);
 		{
 			if (verbose) cout << "[" << norm << "]" << endl;
-			auto id = sectors_.at(norm);
+			auto id = sectors_.find(norm)->second;
 			assert(sz_[id] == 1 || ope_[id].has_value());
 			assert(ops_[id].empty());
 			auto mat = make_disc_mat(id);
@@ -106,7 +106,7 @@ namespace qboot
 		}
 		{
 			if (verbose) cout << "[" << target << "]" << endl;
-			auto id = sectors_.at(target);
+			auto id = sectors_.find(target)->second;
 			assert(sz_[id] == 1 || ope_[id].has_value());
 			assert(ops_[id].empty());
 			auto mat = make_disc_mat(id);
@@ -142,14 +142,14 @@ namespace qboot
 		return prg;
 	}
 
-	[[nodiscard]] PolynomialProgram BootstrapEquation::find_contradiction(const string& norm, bool verbose) const
+	[[nodiscard]] PolynomialProgram BootstrapEquation::find_contradiction(string_view norm, bool verbose) const
 	{
 		PolynomialProgram prg(N_);
 		prg.objective_constant() = real(0);
 		prg.objectives(Vector(N_, real(0)));
 		{
 			if (verbose) cout << "[" << norm << "]" << endl;
-			auto id = sectors_.at(norm);
+			auto id = sectors_.find(norm)->second;
 			assert(sz_[id] == 1 || ope_[id].has_value());
 			assert(ops_[id].empty());
 			auto mat = make_disc_mat(id);
