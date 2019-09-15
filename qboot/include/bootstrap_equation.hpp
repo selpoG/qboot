@@ -1,22 +1,40 @@
 #ifndef QBOOT_BOOTSTRAP_EQUATION_HPP_
 #define QBOOT_BOOTSTRAP_EQUATION_HPP_
 
+#include <algorithm>    // for min
+#include <array>        // for array
 #include <cstdint>      // for uint32_t
+#include <functional>   // for function
 #include <map>          // for map
+#include <memory>       // for unique_ptr
+#include <optional>     // for optional
 #include <string>       // for string
 #include <string_view>  // for string_view
+#include <tuple>        // for tuple
+#include <utility>      // for move
 #include <vector>       // for vector
 
-#include "complex_function.hpp"    // for FunctionSymmetry
+#include "block.hpp"               // for ConformalBlock
+#include "complex_function.hpp"    // for FunctionSymmetry, function_dimension
 #include "conformal_scale.hpp"     // for ConformalScale
 #include "context_variables.hpp"   // for Context
 #include "matrix.hpp"              // for Vector, Matrix
 #include "polynomial_program.hpp"  // for PolynomialProgram
-#include "primary_op.hpp"          // for GeneralPrimaryOperator
+#include "primary_op.hpp"          // for GeneralPrimaryOperator, PrimaryOperator
 #include "real.hpp"                // for real
 
 namespace qboot
 {
+	// function object
+	class PoleSelector
+	{
+		uint32_t numax_;
+
+	public:
+		explicit PoleSelector(uint32_t numax) : numax_(numax) {}
+		// num of poles to pick
+		uint32_t operator()(uint32_t spin) const { return numax_ + std::min(numax_, spin) / 2; }
+	};
 	// an element in bootstrap equation
 	// coeff ope[r] ope[c] block
 	class Entry
@@ -38,9 +56,90 @@ namespace qboot
 		[[nodiscard]] uint32_t column() const { return c_; }
 		[[nodiscard]] const mpfr::real& coeff() const { return coeff_; }
 	};
+	enum class SectorType : bool
+	{
+		Continuous = false,
+		Discrete = true
+	};
+	class Sector
+	{
+		friend class BootstrapEquation;
+		std::string name_;
+		uint32_t sz_;
+		SectorType type_;
+		// tuple(spin, lower bound of delta, upper bound of delta)
+		std::vector<std::tuple<uint32_t, std::optional<mpfr::real>, std::optional<mpfr::real>>> op_args_{};
+		std::vector<GeneralPrimaryOperator> ops_{};
+		std::optional<algebra::Vector<mpfr::real>> ope_{};
+		static std::optional<algebra::Vector<mpfr::real>> clone(const std::optional<algebra::Vector<mpfr::real>>& ope)
+		{
+			if (ope.has_value()) return ope->clone();
+			return {};
+		}
+		void set_operators(const mpfr::real& epsilon, const std::function<uint32_t(uint32_t)>& num_poles) &
+		{
+			assert(type_ == SectorType::Continuous);
+			ops_ = {};
+			for (const auto& [sp, lb, ub] : op_args_)
+			{
+				if (ub.has_value())
+					ops_.emplace_back(sp, num_poles(sp), epsilon, *lb, *ub);
+				else if (lb.has_value())
+					ops_.emplace_back(sp, num_poles(sp), epsilon, *lb);
+				else
+					ops_.emplace_back(sp, num_poles(sp), epsilon);
+			}
+		}
+
+	public:
+		Sector(std::string_view name, uint32_t size, SectorType type = SectorType::Discrete)
+		    : name_(name), sz_(size), type_(type)
+		{
+			assert(sz_ > 0);
+		}
+		Sector(std::string_view name, uint32_t size, algebra::Vector<mpfr::real>&& ope)
+		    : name_(name), sz_(size), type_(SectorType::Discrete), ope_{std::move(ope)}
+		{
+			assert(ope_->size() == sz_);
+			assert(sz_ > 0);
+		}
+		~Sector() = default;
+		Sector(const Sector& s)
+		    : name_(s.name_), sz_(s.sz_), type_(s.type_), op_args_(s.op_args_), ops_(s.ops_), ope_(clone(s.ope_))
+		{
+		}
+		Sector(Sector&&) = default;
+		Sector& operator=(const Sector& s)
+		{
+			if (this != &s) *this = Sector(s);
+			return *this;
+		}
+		Sector& operator=(Sector&&) = default;
+		[[nodiscard]] const std::string& name() const { return name_; }
+		[[nodiscard]] uint32_t size() const { return sz_; }
+		[[nodiscard]] SectorType type() const { return type_; }
+		[[nodiscard]] bool is_matrix() const { return sz_ > 1 && !ope_.has_value(); }
+		[[nodiscard]] const std::optional<algebra::Vector<mpfr::real>>& ope() const { return ope_; }
+		// delta in [unitarity bound, inf)
+		void add_op(uint32_t spin) &
+		{
+			assert(type_ == SectorType::Continuous);
+			op_args_.emplace_back(spin, std::optional<mpfr::real>{}, std::optional<mpfr::real>{});
+		}
+		// delta in [lb, inf)
+		void add_op(uint32_t spin, const mpfr::real& lb) &
+		{
+			assert(type_ == SectorType::Continuous);
+			op_args_.emplace_back(spin, lb, std::optional<mpfr::real>{});
+		}
+		// delta in [lb, ub)
+		void add_op(uint32_t spin, const mpfr::real& lb, const mpfr::real& ub) &
+		{
+			assert(type_ == SectorType::Continuous);
+			ub.isinf() ? add_op(spin, lb) : void(op_args_.emplace_back(spin, lb, ub));
+		}
+	};
 	class Equation;
-	// key: sector name, value: size of matrices (or the number of OPEs in the sector)
-	using SectorInformation = std::map<std::string, uint32_t, std::less<>>;
 	// one bootrap equation contains
 	// - constant terms (from the unit operator)
 	// - two OPE coefficients times conformal block (from discrete or continuous spectrum)
@@ -55,28 +154,18 @@ namespace qboot
 	// for discrete spectrum,
 	class BootstrapEquation
 	{
-		friend class Equation;
 		const Context& cont_;
+		std::vector<Sector> sectors_{};
 		// maps from sector name to its unique id
-		std::map<std::string, uint32_t, std::less<>> sectors_{};
-		// sz_[id] is the size of matrix of id-th sector
-		std::vector<uint32_t> sz_{};
-		// ops_[id] is empty if operators in id-th sector are fixed
-		// otherwise, ops_[id] is a list of operators
-		std::vector<std::vector<GeneralPrimaryOperator>> ops_{};
-		// eqs_[i]: i-th equation
-		// eqs_[i][id]: terms in id-th sector in i-th equation
-		// std::vector<std::vector<std::vector<Entry>>> eqs_{};
+		std::map<std::string, uint32_t, std::less<>> sector_id_{};
 		std::vector<Equation> eqs_{};
-		// syms_[i]: symmetry of the i-th equation
-		std::vector<algebra::FunctionSymmetry> syms_{};
-		std::vector<uint32_t> offsets_{};
-		std::vector<std::optional<algebra::Vector<mpfr::real>>> ope_{};
+		// total dimension (index of equations, index of derivatives)
 		uint32_t N_ = 0;
 
 		[[nodiscard]] mpfr::real take_element(uint32_t id, const algebra::Matrix<mpfr::real>& m) const
 		{
-			if (ope_[id].has_value()) return m.inner_product(*ope_[id]);
+			const auto& ope = sector(id).ope();
+			if (ope) return m.inner_product(*ope);
 			return m.at(0, 0);
 		}
 		[[nodiscard]] algebra::Vector<algebra::Matrix<mpfr::real>> make_disc_mat(uint32_t id) const;
@@ -90,29 +179,36 @@ namespace qboot
 		                                             bool verbose = false) const;
 
 	public:
-		BootstrapEquation(const Context& cont, const SectorInformation& sectors) : cont_(cont)
+		BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors, uint32_t numax)
+		    : BootstrapEquation(cont, std::move(sectors), PoleSelector(numax))
 		{
-			for (const auto& [sec, sz] : sectors)
+		}
+		// num_poles: spin -> num of poles
+		BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors,
+		                  const std::function<uint32_t(uint32_t)>& num_poles)
+		    : cont_(cont), sectors_(std::move(sectors))
+		{
+			for (uint32_t id = 0; id < sectors_.size(); ++id)
 			{
-				auto id = uint32_t(sectors_.size());
-				sectors_[sec] = id;
-				sz_.push_back(uint32_t(sz));
-				ops_.emplace_back();
-				ope_.emplace_back();
+				sector_id_[sectors_[id].name()] = id;
+				if (sectors_[id].type() == SectorType::Continuous)
+					sectors_[id].set_operators(cont.epsilon(), num_poles);
 			}
 		}
-		void register_operator(std::string_view sec, const GeneralPrimaryOperator& op) &
+		void add_equation(Equation&& eq) &
 		{
-			ops_[sectors_.find(sec)->second].push_back(op);
+			assert(N_ == 0);
+			eqs_.push_back(std::move(eq));
 		}
-		void register_ope(std::string_view sec, algebra::Vector<mpfr::real>&& ope) &
+		// call this to finish add_equation
+		void finish() &;
+		[[nodiscard]] uint32_t lambda() const { return cont_.lambda(); }
+		[[nodiscard]] uint32_t num_sectors() const { return uint32_t(sectors_.size()); }
+		[[nodiscard]] uint32_t get_id(std::string_view sector_name) const
 		{
-			auto id = sectors_.find(sec)->second;
-			assert(ope.size() == sz_[id]);
-			assert(!ope_[id].has_value());
-			ope_[id] = std::move(ope);
+			return sector_id_.find(sector_name)->second;
 		}
-		void add_equation(Equation&& eq) { eqs_.push_back(std::move(eq)); }
+		[[nodiscard]] const Sector& sector(uint32_t id) const { return sectors_[id]; }
 
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
@@ -141,72 +237,51 @@ namespace qboot
 			return ope_maximize(target, norm, mpfr::real(-1), verbose);
 		}
 	};
+	using Externals = std::array<PrimaryOperator, 4>;
 	class Equation
 	{
-		const BootstrapEquation& eq_;
+		const BootstrapEquation& boot_;
 		algebra::FunctionSymmetry sym_;
+		uint32_t dim_;
+		// terms_[id]: terms in id-th sector
 		std::vector<std::vector<Entry>> terms_{};
 
 	public:
-		Equation(const BootstrapEquation& eq, algebra::FunctionSymmetry sym)
-		    : eq_(eq), sym_(sym), terms_(eq_.sectors_.size())
+		Equation(const BootstrapEquation& boot, algebra::FunctionSymmetry sym)
+		    : boot_(boot), sym_(sym), dim_(algebra::function_dimension(boot.lambda(), sym)), terms_(boot_.num_sectors())
 		{
 		}
+		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
+		[[nodiscard]] uint32_t dimension() const { return dim_; }
 		const std::vector<Entry>& operator[](uint32_t id) const { return terms_[id]; }
-		void add_term(std::string_view sec, uint32_t r, uint32_t c, const mpfr::real& coeff, const PrimaryOperator& o,
-		              const PrimaryOperator& o1, const PrimaryOperator& o2, const PrimaryOperator& o3,
-		              const PrimaryOperator& o4)
+		void add(std::string_view sec, uint32_t r, uint32_t c, const mpfr::real& coeff, const PrimaryOperator& o,
+		         const Externals& os)
 		{
-			auto id = eq_.sectors_.find(sec)->second;
-			assert(r < eq_.sz_[id] && c < eq_.sz_[id]);
-			terms_[id].emplace_back(r, c, coeff, ConformalBlock<PrimaryOperator>(o, o1, o2, o3, o4, sym_));
+			auto id = boot_.get_id(sec);
+			assert(r < boot_.sector(id).size() && c < boot_.sector(id).size());
+			terms_[id].emplace_back(r, c, coeff, ConformalBlock<PrimaryOperator>(o, os[0], os[1], os[2], os[3], sym_));
 		}
-		void add_term(std::string_view sec, const mpfr::real& coeff, const PrimaryOperator& o,
-		              const PrimaryOperator& o1, const PrimaryOperator& o2, const PrimaryOperator& o3,
-		              const PrimaryOperator& o4)
+		void add(std::string_view sec, const mpfr::real& coeff, const PrimaryOperator& o, const Externals& os)
 		{
-			auto id = eq_.sectors_.find(sec)->second;
-			terms_[id].emplace_back(coeff, ConformalBlock<PrimaryOperator>(o, o1, o2, o3, o4, sym_));
+			add(sec, 0, 0, coeff, o, os);
 		}
-		void add_term(std::string_view sec, uint32_t r, uint32_t c, const PrimaryOperator& o, const PrimaryOperator& o1,
-		              const PrimaryOperator& o2, const PrimaryOperator& o3, const PrimaryOperator& o4)
+		void add(std::string_view sec, uint32_t r, uint32_t c, const PrimaryOperator& o, const Externals& os)
 		{
-			auto id = eq_.sectors_.find(sec)->second;
-			assert(r < eq_.sz_[id] && c < eq_.sz_[id]);
-			terms_[id].emplace_back(r, c, ConformalBlock<PrimaryOperator>(o, o1, o2, o3, o4, sym_));
+			add(sec, r, c, mpfr::real(1), o, os);
 		}
-		void add_term(std::string_view sec, const PrimaryOperator& o, const PrimaryOperator& o1,
-		              const PrimaryOperator& o2, const PrimaryOperator& o3, const PrimaryOperator& o4)
+		void add(std::string_view sec, const PrimaryOperator& o, const Externals& os) { add(sec, 0, 0, o, os); }
+		void add(std::string_view sec, uint32_t r, uint32_t c, const mpfr::real& coeff, const Externals& os)
 		{
-			auto id = eq_.sectors_.find(sec)->second;
-			terms_[id].emplace_back(ConformalBlock<PrimaryOperator>(o, o1, o2, o3, o4, sym_));
+			auto id = boot_.get_id(sec);
+			assert(r < boot_.sector(id).size() && c < boot_.sector(id).size());
+			terms_[id].emplace_back(r, c, coeff, GeneralConformalBlock(os[0], os[1], os[2], os[3], sym_));
 		}
-		void add_term(std::string_view sec, uint32_t r, uint32_t c, const mpfr::real& coeff, const PrimaryOperator& o1,
-		              const PrimaryOperator& o2, const PrimaryOperator& o3, const PrimaryOperator& o4)
+		void add(std::string_view sec, const mpfr::real& coeff, const Externals& os) { add(sec, 0, 0, coeff, os); }
+		void add(std::string_view sec, uint32_t r, uint32_t c, const Externals& os)
 		{
-			auto id = eq_.sectors_.find(sec)->second;
-			assert(r < eq_.sz_[id] && c < eq_.sz_[id]);
-			terms_[id].emplace_back(r, c, coeff, GeneralConformalBlock(o1, o2, o3, o4, sym_));
+			add(sec, r, c, mpfr::real(1), os);
 		}
-		void add_term(std::string_view sec, const mpfr::real& coeff, const PrimaryOperator& o1,
-		              const PrimaryOperator& o2, const PrimaryOperator& o3, const PrimaryOperator& o4)
-		{
-			auto id = eq_.sectors_.find(sec)->second;
-			terms_[id].emplace_back(coeff, GeneralConformalBlock(o1, o2, o3, o4, sym_));
-		}
-		void add_term(std::string_view sec, uint32_t r, uint32_t c, const PrimaryOperator& o1,
-		              const PrimaryOperator& o2, const PrimaryOperator& o3, const PrimaryOperator& o4)
-		{
-			auto id = eq_.sectors_.find(sec)->second;
-			assert(r < eq_.sz_[id] && c < eq_.sz_[id]);
-			terms_[id].emplace_back(r, c, GeneralConformalBlock(o1, o2, o3, o4, sym_));
-		}
-		void add_term(std::string_view sec, const PrimaryOperator& o1, const PrimaryOperator& o2,
-		              const PrimaryOperator& o3, const PrimaryOperator& o4)
-		{
-			auto id = eq_.sectors_.find(sec)->second;
-			terms_[id].emplace_back(GeneralConformalBlock(o1, o2, o3, o4, sym_));
-		}
+		void add(std::string_view sec, const Externals& os) { add(sec, 0, 0, os); }
 	};
 }  // namespace qboot
 

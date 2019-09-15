@@ -307,6 +307,8 @@ namespace mpfr
 		[[nodiscard]] real clone() const { return *this; }
 
 		[[nodiscard]] bool iszero() const { return _is_zero(_x); }
+		[[nodiscard]] bool isinf() const { return _is_inf(_x); }
+		[[nodiscard]] bool isnan() const { return _is_nan(_x); }
 
 		void negate() & { mpfr_mul_si(_x, _x, -1, global_rnd); }
 
