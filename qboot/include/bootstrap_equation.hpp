@@ -17,7 +17,7 @@
 #include "block.hpp"               // for ConformalBlock
 #include "complex_function.hpp"    // for FunctionSymmetry, function_dimension
 #include "conformal_scale.hpp"     // for ConformalScale
-#include "context_variables.hpp"   // for Context
+#include "context.hpp"             // for Context
 #include "matrix.hpp"              // for Vector, Matrix
 #include "polynomial_program.hpp"  // for PolynomialProgram
 #include "primary_op.hpp"          // for GeneralPrimaryOperator, PrimaryOperator
@@ -179,8 +179,17 @@ namespace qboot
 		                                             bool verbose = false) const;
 
 	public:
+		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
+		    : BootstrapEquation(cont, sectors, PoleSelector(numax))
+		{
+		}
 		BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors, uint32_t numax)
 		    : BootstrapEquation(cont, std::move(sectors), PoleSelector(numax))
+		{
+		}
+		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors,
+		                  const std::function<uint32_t(uint32_t)>& num_poles)
+		    : BootstrapEquation(cont, std::vector(sectors), num_poles)
 		{
 		}
 		// num_poles: spin -> num of poles
@@ -194,6 +203,11 @@ namespace qboot
 				if (sectors_[id].type() == SectorType::Continuous)
 					sectors_[id].set_operators(cont.epsilon(), num_poles);
 			}
+		}
+		void add_equation(const Equation& eq) &
+		{
+			assert(N_ == 0);
+			eqs_.push_back(eq);
 		}
 		void add_equation(Equation&& eq) &
 		{

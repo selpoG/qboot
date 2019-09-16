@@ -2,8 +2,8 @@
 
 #include <utility>  // for move
 
-#include "context_variables.hpp"  // for Context
-#include "hor_formula.hpp"        // for _get_rec_coeffs
+#include "context.hpp"      // for Context
+#include "hor_formula.hpp"  // for _get_rec_coeffs
 
 using algebra::RealFunction, algebra::RealFunctionWithPower, algebra::ComplexFunction;
 using mpfr::real;

@@ -1,4 +1,4 @@
-#include "context_variables.hpp"
+#include "context.hpp"
 
 using algebra::RealFunction, algebra::ComplexFunction, algebra::RealConverter;
 using mpfr::real;

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -9,7 +10,7 @@
 #include "bootstrap_equation.hpp"
 #include "complex_function.hpp"
 #include "conformal_scale.hpp"
-#include "context_variables.hpp"
+#include "context.hpp"
 #include "hor_formula.hpp"
 #include "hor_recursion.hpp"
 #include "matrix.hpp"
@@ -22,8 +23,7 @@
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
 using qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunction, qboot::ConformalScale,
-    qboot::PolynomialProgram;
-using FunctionSymmetry = algebra::FunctionSymmetry;
+    qboot::PolynomialProgram, qboot::Sector;
 using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move,
     std::pair, std::vector;
 namespace fs = std::filesystem;
@@ -32,10 +32,9 @@ using R = mpfr::real;
 using Op = qboot::PrimaryOperator;
 using Eq = qboot::Equation;
 using PolIneq = qboot::PolynomialInequalityWithCoeffs;
-using Sector = qboot::Sector;
-constexpr qboot::SectorType ContinuousType = qboot::SectorType::Continuous;
-constexpr FunctionSymmetry Odd = FunctionSymmetry::Odd;
-constexpr FunctionSymmetry Even = FunctionSymmetry::Even;
+constexpr auto ContinuousType = qboot::SectorType::Continuous;
+constexpr auto Odd = algebra::FunctionSymmetry::Odd;
+constexpr auto Even = algebra::FunctionSymmetry::Even;
 
 [[maybe_unused]] static void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax, uint32_t maxspin);
 [[maybe_unused]] static void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint32_t numax,
@@ -44,7 +43,7 @@ constexpr FunctionSymmetry Even = FunctionSymmetry::Even;
 
 void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint32_t numax = 20, uint32_t maxspin = 24)
 {
-	Op u{c.epsilon()}, T{2, c.epsilon()};
+	Op u{c}, T{2, c};
 	vector<Sector> secs{{"unit", 1, {R(1)}}, {"scalar", 2}, {"e1", 2}, {"T", 2, {s.delta(), e.delta()}}};
 	{
 		Sector even("even", 2, ContinuousType);
@@ -52,17 +51,17 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 		even.add_op(0, R(6));
 		even.add_op(2, R(5));
 		for (uint32_t spin = 4; spin <= maxspin; spin += 2) even.add_op(spin);
-		secs.push_back(move(even));
-		Sector oddp("odd+", 2, ContinuousType);
+		secs.push_back(even);
+		Sector oddp("odd+", 1, ContinuousType);
 		oddp.add_op(0, R(3));
 		// oddp.add_op(0, R("5.25"), R("5.33"));
 		for (uint32_t spin = 2; spin <= maxspin; spin += 2) oddp.add_op(spin);
-		secs.push_back(move(oddp));
-		Sector oddm("odd-", 2, ContinuousType);
+		secs.push_back(oddp);
+		Sector oddm("odd-", 1, ContinuousType);
 		for (uint32_t spin = 1; spin <= maxspin; spin += 2) oddm.add_op(spin);
-		secs.push_back(move(oddm));
+		secs.push_back(oddm);
 	}
-	qboot::BootstrapEquation boot(c, move(secs), numax);
+	qboot::BootstrapEquation boot(c, secs, numax);
 	{
 		Eq eq(boot, Odd);
 		eq.add("unit", u, {s, s, s, s});
@@ -70,7 +69,7 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 		eq.add("e1", 0, 0, e1, {s, s, s, s});
 		eq.add("T", 0, 0, T, {s, s, s, s});
 		eq.add("even", 0, 0, {s, s, s, s});
-		boot.add_equation(move(eq));
+		boot.add_equation(eq);
 	}
 	{
 		Eq eq(boot, Odd);
@@ -79,14 +78,14 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 		eq.add("e1", 1, 1, e1, {e, e, e, e});
 		eq.add("T", 1, 1, T, {e, e, e, e});
 		eq.add("even", 1, 1, {e, e, e, e});
-		boot.add_equation(move(eq));
+		boot.add_equation(eq);
 	}
 	{
 		Eq eq(boot, Odd);
 		eq.add("scalar", 0, 0, s, {e, s, e, s});
 		eq.add("odd+", {e, s, e, s});
 		eq.add("odd-", {e, s, e, s});
-		boot.add_equation(move(eq));
+		boot.add_equation(eq);
 	}
 	{
 		Eq eq(boot, Odd);
@@ -98,7 +97,7 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 		eq.add("odd+", {e, s, s, e});
 		eq.add("odd-", R(-1), {e, s, s, e});
 		eq.add("even", 0, 1, {e, e, s, s});
-		boot.add_equation(move(eq));
+		boot.add_equation(eq);
 	}
 	{
 		Eq eq(boot, Even);
@@ -110,19 +109,19 @@ void mixed_ising(const Context& c, const Op& s, const Op& e, const Op& e1, uint3
 		eq.add("odd+", R(-1), {e, s, s, e});
 		eq.add("odd-", {e, s, s, e});
 		eq.add("even", 0, 1, {e, e, s, s});
-		boot.add_equation(move(eq));
+		boot.add_equation(eq);
 	}
 	boot.finish();
 	auto root =
 	    fs::current_path() / ("mixed-ising-" + s.delta().str(8) + "-" + e.delta().str(8) + "-" + e1.delta().str(8));
-	auto pmp = boot.ope_minimize("T", "unit", true);
+	auto pmp = boot.ope_maximize("T", "unit", true);
 	// auto pmp = boot.find_contradiction("unit", true);
 	move(pmp).create_input().write(root);
 }
 
 void single_ising(const Context& c, const Op& s, const Op& e, uint32_t numax = 20, uint32_t maxspin = 24)
 {
-	Op u{c.epsilon()}, T{2, c.epsilon()};
+	Op u{c}, T{2, c};
 	vector<Sector> secs{{"unit", 1, {R(1)}}, {"e", 1}, {"T", 1}};
 	{
 		Sector even("even", 1, ContinuousType);
@@ -215,9 +214,9 @@ int main(int argc, char* argv[])
 	auto d_e = R(args[2]);
 	auto d_e1 = R(args[3]);
 	Context c(n_Max, lambda, dim_);
-	Op sigma(d_s, 0, c.epsilon());
-	Op epsilon(d_e, 0, c.epsilon());
-	Op e1(d_e1, 0, c.epsilon());
+	Op sigma(d_s, 0, c);
+	Op epsilon(d_e, 0, c);
+	Op e1(d_e1, 0, c);
 	mixed_ising(c, sigma, epsilon, e1, numax, maxspin);
 	args.release();
 	return 0;

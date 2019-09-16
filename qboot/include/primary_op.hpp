@@ -17,6 +17,7 @@ namespace qboot
 	{
 		return spin == 0 ? epsilon : spin + 2 * epsilon;
 	}
+	class Context;
 	// primary operator whose dimension is delta and spin is spin
 	class PrimaryOperator
 	{
@@ -25,12 +26,17 @@ namespace qboot
 
 	public:
 		// unit operator
+		explicit PrimaryOperator(const Context& c);
+		// unit operator
 		explicit PrimaryOperator(const mpfr::real& epsilon) : epsilon_(epsilon), spin_(0) {}
+		// on the unitarity bound
+		PrimaryOperator(uint32_t spin, const Context& c);
 		// on the unitarity bound
 		PrimaryOperator(uint32_t spin, const mpfr::real& epsilon)
 		    : delta_(unitarity_bound(epsilon, spin)), epsilon_(epsilon), spin_(spin)
 		{
 		}
+		PrimaryOperator(const mpfr::real& delta, uint32_t spin, const Context& c);
 		PrimaryOperator(const mpfr::real& delta, uint32_t spin, const mpfr::real& epsilon)
 		    : delta_(delta), epsilon_(epsilon), spin_(spin)
 		{

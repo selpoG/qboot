@@ -833,6 +833,74 @@ namespace mpfr
 		return std::move(r);
 	}
 
+	inline auto sin(const real& r)
+	{
+		real temp;
+		mpfr_sin(temp._x, r._x, global_rnd);
+		return temp;
+	}
+	inline auto sin(real&& r)
+	{
+		mpfr_sin(r._x, r._x, global_rnd);
+		return std::move(r);
+	}
+	inline auto cos(const real& r)
+	{
+		real temp;
+		mpfr_cos(temp._x, r._x, global_rnd);
+		return temp;
+	}
+	inline auto cos(real&& r)
+	{
+		mpfr_cos(r._x, r._x, global_rnd);
+		return std::move(r);
+	}
+	inline auto tan(const real& r)
+	{
+		real temp;
+		mpfr_tan(temp._x, r._x, global_rnd);
+		return temp;
+	}
+	inline auto tan(real&& r)
+	{
+		mpfr_tan(r._x, r._x, global_rnd);
+		return std::move(r);
+	}
+
+	inline auto sec(const real& r)
+	{
+		real temp;
+		mpfr_sec(temp._x, r._x, global_rnd);
+		return temp;
+	}
+	inline auto sec(real&& r)
+	{
+		mpfr_sec(r._x, r._x, global_rnd);
+		return std::move(r);
+	}
+	inline auto csc(const real& r)
+	{
+		real temp;
+		mpfr_csc(temp._x, r._x, global_rnd);
+		return temp;
+	}
+	inline auto csc(real&& r)
+	{
+		mpfr_csc(r._x, r._x, global_rnd);
+		return std::move(r);
+	}
+	inline auto cot(const real& r)
+	{
+		real temp;
+		mpfr_cot(temp._x, r._x, global_rnd);
+		return temp;
+	}
+	inline auto cot(real&& r)
+	{
+		mpfr_cot(r._x, r._x, global_rnd);
+		return std::move(r);
+	}
+
 	inline auto log(const real& r)
 	{
 		real temp;
@@ -842,18 +910,6 @@ namespace mpfr
 	inline auto log(real&& r)
 	{
 		mpfr_log(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
-
-	inline auto log2(const real& r)
-	{
-		real temp;
-		mpfr_log2(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline auto log2(real&& r)
-	{
-		mpfr_log2(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 

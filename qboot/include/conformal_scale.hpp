@@ -7,12 +7,12 @@
 #include <optional>  // for optional
 #include <utility>   // for move
 
-#include "block.hpp"              // for ConformalBlock
-#include "context_variables.hpp"  // for Context
-#include "matrix.hpp"             // for Vector
-#include "polynomial.hpp"         // for Polynomial
-#include "real.hpp"               // for real, pow, log
-#include "scale_factor.hpp"       // for ScaleFactor
+#include "block.hpp"         // for ConformalBlock
+#include "context.hpp"       // for Context
+#include "matrix.hpp"        // for Vector
+#include "polynomial.hpp"    // for Polynomial
+#include "real.hpp"          // for real, pow, log
+#include "scale_factor.hpp"  // for ScaleFactor
 
 namespace qboot
 {

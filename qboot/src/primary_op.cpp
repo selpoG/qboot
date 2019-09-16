@@ -1,9 +1,16 @@
 #include "primary_op.hpp"
+#include "context.hpp"
 
 using std::string, std::ostringstream;
 
 namespace qboot
 {
+	PrimaryOperator::PrimaryOperator(const Context& c) : PrimaryOperator(c.epsilon()) {}
+	PrimaryOperator::PrimaryOperator(uint32_t spin, const Context& c) : PrimaryOperator(spin, c.epsilon()) {}
+	PrimaryOperator::PrimaryOperator(const mpfr::real& delta, uint32_t spin, const Context& c)
+	    : PrimaryOperator(delta, spin, c.epsilon())
+	{
+	}
 	[[nodiscard]] string PrimaryOperator::str() const
 	{
 		ostringstream os;
