@@ -65,7 +65,7 @@ namespace mpfr
 		inline static void add(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
 		{
 			if (rop != op1) mpq_set(rop, op1);
-			mpz_addmul(mpq_numref(rop), mpq_denref(op1), _take(op2));
+			addmul(mpq_numref(rop), mpq_denref(op1), op2);
 		}
 		inline static void add(mpfr_ptr rop, mpfr_srcptr op1, const integer& op2, mpfr_rnd_t rnd)
 		{
@@ -74,7 +74,7 @@ namespace mpfr
 		inline static void sub_a(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
 		{
 			if (rop != op1) mpq_set(rop, op1);
-			mpz_submul(mpq_numref(rop), mpq_denref(op1), _take(op2));
+			submul(mpq_numref(rop), mpq_denref(op1), op2);
 		}
 		inline static void sub_a(mpfr_ptr rop, mpfr_srcptr op1, const integer& op2, mpfr_rnd_t rnd)
 		{
@@ -101,7 +101,7 @@ namespace mpfr
 		inline static void div_a(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
 		{
 			if (rop != op1) mpz_set(mpq_numref(rop), mpq_numref(op1));
-			mpz_addmul(mpq_denref(rop), mpq_denref(op1), _take(op2));
+			mpz_mul(mpq_denref(rop), mpq_denref(op1), _take(op2));
 		}
 		inline static void div_a(mpfr_ptr rop, mpfr_srcptr op1, const integer& op2, mpfr_rnd_t rnd)
 		{
@@ -117,6 +117,8 @@ namespace mpfr
 			mpfr_ui_div(rop, 1, op2, rnd);
 			mul(rop, rop, op1, rnd);
 		}
+		inline static void addmul(mpz_ptr rop, mpz_srcptr op1, const integer& op2) { mpz_addmul(rop, op1, _take(op2)); }
+		inline static void submul(mpz_ptr rop, mpz_srcptr op1, const integer& op2) { mpz_submul(rop, op1, _take(op2)); }
 		inline static int cmp(mpq_srcptr op1, const integer& op2) { return mpq_cmp_z(op1, _take(op2)); }
 		inline static int cmp(mpfr_srcptr op1, const integer& op2) { return mpfr_cmp_z(op1, _take(op2)); }
 	};
@@ -166,28 +168,58 @@ namespace mpfr
 		inline static _ulong get(mpq_srcptr op);
 		inline static _ulong get(mpfr_srcptr op, mpfr_rnd_t rnd) { return mpfr_get_ui(op, rnd); }
 		inline static void add(mpz_ptr rop, mpz_srcptr op1, _ulong op2) { mpz_add_ui(rop, op1, op2); }
+		inline static void add(mpq_ptr rop, mpq_srcptr op1, _ulong op2)
+		{
+			if (rop != op1) mpq_set(rop, op1);
+			addmul(mpq_numref(rop), mpq_denref(op1), op2);
+		}
 		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_ui(rop, op1, op2, rnd);
 		}
 		inline static void sub_a(mpz_ptr rop, mpz_srcptr op1, _ulong op2) { mpz_sub_ui(rop, op1, op2); }
+		inline static void sub_a(mpq_ptr rop, mpq_srcptr op1, _ulong op2)
+		{
+			if (rop != op1) mpq_set(rop, op1);
+			submul(mpq_numref(rop), mpq_denref(op1), op2);
+		}
 		inline static int sub_a(mpfr_ptr rop, mpfr_srcptr op1, _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_sub_ui(rop, op1, op2, rnd);
 		}
 		inline static void sub_b(mpz_ptr rop, _ulong op1, mpz_srcptr op2) { mpz_ui_sub(rop, op1, op2); }
+		inline static void sub_b(mpq_ptr rop, _ulong op1, mpq_srcptr op2)
+		{
+			sub_a(rop, op2, op1);
+			mpq_neg(rop, rop);
+		}
 		inline static int sub_b(mpfr_ptr rop, _ulong op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_ui_sub(rop, op1, op2, rnd);
 		}
 		inline static void mul(mpz_ptr rop, mpz_srcptr op1, _ulong op2) { mpz_mul_ui(rop, op1, op2); }
+		inline static void mul(mpq_ptr rop, mpq_srcptr op1, _ulong op2)
+		{
+			if (rop != op1) mpz_set(mpq_denref(rop), mpq_denref(op1));
+			mul(mpq_numref(rop), mpq_numref(op1), op2);
+		}
 		inline static int mul(mpfr_ptr rop, mpfr_srcptr op1, _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_mul_ui(rop, op1, op2, rnd);
 		}
+		inline static void div_a(mpq_ptr rop, mpq_srcptr op1, _ulong op2)
+		{
+			if (rop != op1) mpz_set(mpq_numref(rop), mpq_numref(op1));
+			mul(mpq_denref(rop), mpq_denref(op1), op2);
+		}
 		inline static int div_a(mpfr_ptr rop, mpfr_srcptr op1, _ulong op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_div_ui(rop, op1, op2, rnd);
+		}
+		inline static void div_b(mpq_ptr rop, _ulong op1, mpq_srcptr op2)
+		{
+			div_a(rop, op2, op1);
+			mpq_inv(rop, rop);
 		}
 		inline static int div_b(mpfr_ptr rop, _ulong op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
@@ -218,6 +250,11 @@ namespace mpfr
 			else
 				mpz_sub_ui(rop, op1, _ulong(-op2));
 		}
+		inline static void add(mpq_ptr rop, mpq_srcptr op1, _long op2)
+		{
+			if (rop != op1) mpq_set(rop, op1);
+			addmul(mpq_numref(rop), mpq_denref(op1), op2);
+		}
 		inline static int add(mpfr_ptr rop, mpfr_srcptr op1, _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_add_si(rop, op1, op2, rnd);
@@ -229,32 +266,52 @@ namespace mpfr
 			else
 				mpz_add_ui(rop, op1, _ulong(-op2));
 		}
+		inline static void sub_a(mpq_ptr rop, mpq_srcptr op1, _long op2)
+		{
+			if (rop != op1) mpq_set(rop, op1);
+			submul(mpq_numref(rop), mpq_denref(op1), op2);
+		}
 		inline static int sub_a(mpfr_ptr rop, mpfr_srcptr op1, _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_sub_si(rop, op1, op2, rnd);
 		}
 		inline static void sub_b(mpz_ptr rop, _long op1, mpz_srcptr op2)
 		{
-			if (op1 >= 0)
-				mpz_ui_sub(rop, _ulong(op1), op2);
-			else
-			{
-				mpz_add_ui(rop, op2, _ulong(-op1));
-				mpz_neg(rop, rop);
-			}
+			sub_a(rop, op2, op1);
+			mpz_neg(rop, rop);
+		}
+		inline static void sub_b(mpq_ptr rop, _long op1, mpq_srcptr op2)
+		{
+			sub_a(rop, op2, op1);
+			mpq_neg(rop, rop);
 		}
 		inline static int sub_b(mpfr_ptr rop, _long op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_si_sub(rop, op1, op2, rnd);
 		}
 		inline static void mul(mpz_ptr rop, mpz_srcptr op1, _long op2) { mpz_mul_si(rop, op1, op2); }
+		inline static void mul(mpq_ptr rop, mpq_srcptr op1, _long op2)
+		{
+			if (rop != op1) mpz_set(mpq_denref(rop), mpq_denref(op1));
+			mul(mpq_numref(rop), mpq_numref(op1), op2);
+		}
 		inline static int mul(mpfr_ptr rop, mpfr_srcptr op1, _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_mul_si(rop, op1, op2, rnd);
 		}
+		inline static void div_a(mpq_ptr rop, mpq_srcptr op1, _long op2)
+		{
+			if (rop != op1) mpz_set(mpq_numref(rop), mpq_numref(op1));
+			mul(mpq_denref(rop), mpq_denref(op1), op2);
+		}
 		inline static int div_a(mpfr_ptr rop, mpfr_srcptr op1, _long op2, mpfr_rnd_t rnd)
 		{
 			return mpfr_div_si(rop, op1, op2, rnd);
+		}
+		inline static void div_b(mpq_ptr rop, _long op1, mpq_srcptr op2)
+		{
+			div_a(rop, op2, op1);
+			mpq_inv(rop, rop);
 		}
 		inline static int div_b(mpfr_ptr rop, _long op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
