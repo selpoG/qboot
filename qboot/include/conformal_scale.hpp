@@ -32,21 +32,21 @@ namespace qboot
 	{
 		bool include_odd;
 		uint32_t type, k, spin;
-		mpfr::real epsilon;
+		mpfr::rational epsilon;
 
 	public:
-		PoleSequence(uint32_t type, uint32_t spin, const mpfr::real& epsilon, bool include_odd = true)
+		PoleSequence(uint32_t type, uint32_t spin, const mpfr::rational& epsilon, bool include_odd = true)
 		    : include_odd(include_odd), type(type), k(1), spin(spin), epsilon(epsilon)
 		{
 			assert(1 <= type && type <= 3);
 			if (type != 2 && !include_odd) k = 2;
 		}
 		[[nodiscard]] bool valid() const { return type != 3 || k <= spin; }
-		[[nodiscard]] mpfr::real get() const
+		[[nodiscard]] mpfr::rational get() const
 		{
 			switch (type)
 			{
-			case 1: return mpfr::real(-int32_t(spin + k - 1));
+			case 1: return mpfr::rational(-int32_t(spin + k - 1));
 			case 2: return epsilon - (k - 1);
 			default: return 2 * epsilon + (1 + spin - k);  // note: k <= spin -> 1 + spin - k >= 1
 			}
@@ -72,7 +72,7 @@ namespace qboot
 			update();
 		}
 		[[nodiscard]] bool valid() const { return seql.valid() || seqr.valid(); }
-		[[nodiscard]] mpfr::real get() const { return next_l ? seql.get() : seqr.get(); }
+		[[nodiscard]] mpfr::rational get() const { return next_l ? seql.get() : seqr.get(); }
 	};
 	inline bool include_odd(const mpfr::real& d1, const mpfr::real& d2, const mpfr::real& d3, const mpfr::real& d4)
 	{
@@ -83,7 +83,8 @@ namespace qboot
 	{
 		bool odd_included_;
 		uint32_t spin_, lambda_;
-		const mpfr::real *epsilon_, *rho_;
+		const mpfr::rational* epsilon_;
+		const mpfr::real* rho_;
 		mpfr::real unitarity_bound_{}, gap_{};
 		std::optional<mpfr::real> end_{};
 		// pole at Delta = poles_[i]

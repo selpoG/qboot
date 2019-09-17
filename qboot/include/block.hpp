@@ -49,7 +49,7 @@ namespace qboot
 			return op_.delta();
 		}
 		[[nodiscard]] uint32_t spin() const { return op_.spin(); }
-		[[nodiscard]] const mpfr::real& epsilon() const { return op_.epsilon(); }
+		[[nodiscard]] const mpfr::rational& epsilon() const { return op_.epsilon(); }
 		[[nodiscard]] const mpfr::real& delta_half() const { return d23h_; }
 		[[nodiscard]] const mpfr::real& S() const { return S_; }
 		[[nodiscard]] const mpfr::real& P() const { return P_; }

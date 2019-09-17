@@ -10,6 +10,7 @@
 #include "complex_function.hpp"  // for ComplexFunction, FunctionSymmetry
 #include "hor_recursion.hpp"     // for gBlock
 #include "primary_op.hpp"        // for PrimaryOperator
+#include "rational.hpp"          // for rational
 #include "real.hpp"              // for real, sqrt
 #include "real_function.hpp"     // for RealFunction, RealConverter
 
@@ -23,7 +24,8 @@ namespace qboot
 	class Context
 	{
 		uint32_t n_Max_, lambda_, dim_;
-		mpfr::real epsilon_, rho_;
+		mpfr::rational epsilon_;
+		mpfr::real rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter rho_to_z_;
 
@@ -35,7 +37,7 @@ namespace qboot
 		// the dimension of the spacetime
 		[[nodiscard]] uint32_t dimension() const { return dim_; }
 		// (dim - 2) / 2
-		[[nodiscard]] const mpfr::real& epsilon() const { return epsilon_; }
+		[[nodiscard]] const mpfr::rational& epsilon() const { return epsilon_; }
 		// 3 - 2 sqrt(2)
 		[[nodiscard]] const mpfr::real& rho() const { return rho_; }
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
@@ -52,7 +54,10 @@ namespace qboot
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 		~Context() = default;
-		[[nodiscard]] mpfr::real unitarity_bound(uint32_t spin) const { return qboot::unitarity_bound(epsilon_, spin); }
+		[[nodiscard]] mpfr::rational unitarity_bound(uint32_t spin) const
+		{
+			return qboot::unitarity_bound(epsilon_, spin);
+		}
 		// calculate v ^ d gBlock and project to sym-symmetric part
 		// F-type corresponds to sym = Odd, H-type to Even
 		[[nodiscard]] algebra::ComplexFunction<mpfr::real> F_block(const mpfr::real& d,

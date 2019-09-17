@@ -670,10 +670,17 @@ namespace mpfr
 		{
 			return s >> z._x;
 		}
+		friend integer pow(_ulong op1, _ulong op2);
 	};
 	inline _ulong mpfr::_mp_ops<_ulong>::get(mpq_srcptr op) { return _ulong(_mp_ops<integer>::get(op)); }
 	inline _long mpfr::_mp_ops<_long>::get(mpq_srcptr op) { return _long(_mp_ops<integer>::get(op)); }
 	inline integer mpfr::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd)
+	inline integer pow(_ulong op1, _ulong op2)
+	{
+		integer temp;
+		mpz_ui_pow_ui(temp._x, op1, op2);
+		return temp;
+	}
 	{
 		integer z;
 		mpfr_get_z(z._x, rop, rnd);

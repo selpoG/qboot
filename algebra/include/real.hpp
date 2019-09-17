@@ -495,7 +495,6 @@ namespace mpfr
 		friend real const_pi() noexcept;
 		friend real factorial(const _ulong n);
 		friend real sqrt(_ulong r);
-		friend real pow(_ulong op1, _ulong op2);
 		friend bool iszero(const real& r);
 		friend int sgn(const real& r);
 		friend real ceil(const real& r);
@@ -603,13 +602,6 @@ namespace mpfr
 	{
 		real temp;
 		mpfr_sqrt_ui(temp._x, r, global_rnd);
-		return temp;
-	}
-
-	inline real pow(_ulong op1, _ulong op2)
-	{
-		real temp;
-		mpfr_ui_pow_ui(temp._x, op1, op2, global_rnd);
 		return temp;
 	}
 

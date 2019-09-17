@@ -21,6 +21,7 @@
 #include "matrix.hpp"              // for Vector, Matrix
 #include "polynomial_program.hpp"  // for PolynomialProgram
 #include "primary_op.hpp"          // for GeneralPrimaryOperator, PrimaryOperator
+#include "rational.hpp"            // for rational
 #include "real.hpp"                // for real
 
 namespace qboot
@@ -76,7 +77,7 @@ namespace qboot
 			if (ope.has_value()) return ope->clone();
 			return {};
 		}
-		void set_operators(const mpfr::real& epsilon, const std::function<uint32_t(uint32_t)>& num_poles) &
+		void set_operators(const mpfr::rational& epsilon, const std::function<uint32_t(uint32_t)>& num_poles) &
 		{
 			assert(type_ == SectorType::Continuous);
 			ops_ = {};

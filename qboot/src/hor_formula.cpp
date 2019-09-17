@@ -383,6 +383,7 @@ namespace qboot
 		b[3] = t0 + 4;
 		// a[0, 4] = -1;
 		b[4] = -1;
+		// sum(a[0, i] * n^i) = -n (n + 2 Delta - 2 epsilon - 2) (n + Delta - 2 epsilon - spin - 1) (n + Delta + spin - 1);
 		ps[0] = {b[0], b[1], b[2], b[3], b[4]};
 		t0 = Delta * (-4);
 		t0 *= Delta;

@@ -1,7 +1,7 @@
 #include "context.hpp"
 
 using algebra::RealFunction, algebra::ComplexFunction, algebra::RealConverter;
-using mpfr::real;
+using mpfr::real, mpfr::rational;
 
 namespace qboot
 {
@@ -25,7 +25,7 @@ namespace qboot
 	    : n_Max_(n_Max),
 	      lambda_(lambda),
 	      dim_(dim),
-	      epsilon_(real(dim) / 2 - 1),
+	      epsilon_(dim - 2, 2u),
 	      rho_(3 - mpfr::sqrt(8)),
 	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse())
 	{
@@ -43,7 +43,7 @@ namespace qboot
 		for (int32_t n = 1; uint32_t(n) <= lambda_ / 2; ++n)
 		{
 			// multiply n (4 epsilon + 4 n - 2) and divide
-			real common_factor = (4 * n) * epsilon_ + (4 * n - 2) * n;
+			auto common_factor = (4 * n) * epsilon_ + (4 * n - 2) * n;
 			for (int32_t m = 0; uint32_t(m + 2 * n) <= lambda_; ++m)
 			{
 				// h[m + 2, n - 1]

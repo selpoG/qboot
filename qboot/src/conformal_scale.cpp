@@ -117,7 +117,7 @@ namespace qboot
 		uint32_t pos = 0;
 		while (pos < cutoff)
 		{
-			poles_[pos++] = pole_seq.get();
+			poles_[pos++] = real(pole_seq.get());
 			pole_seq.next();
 		}
 	}

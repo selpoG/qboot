@@ -147,7 +147,7 @@ namespace mpfr
 				mpq_mul(_x, _x, o._x);
 			else
 			{
-				_mp_ops<Tp>::mul(mpq_numref(_x), mpq_numref(_x), o);
+				_mp_ops<Tp>::mul(_x, _x, o);
 				mpq_canonicalize(_x);
 			}
 			return *this;
@@ -160,7 +160,7 @@ namespace mpfr
 				mpq_div(_x, _x, o._x);
 			else
 			{
-				_mp_ops<Tp>::mul(mpq_denref(_x), mpq_denref(_x), o);
+				_mp_ops<Tp>::mul(_x, _x, o);
 				mpq_canonicalize(_x);
 			}
 			return *this;
@@ -339,6 +339,7 @@ namespace mpfr
 			return std::move(*this);
 		}
 
+		friend rational pochhammer(const rational& x, _ulong n);
 		friend integer floor(const rational& q) { return _mp_ops<integer>::get(q._x); }
 		friend inline rational mpfr::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
@@ -366,6 +367,12 @@ namespace mpfr
 		rational q;
 		mpfr_get_q(q._x, rop);
 		return q;
+	}
+	inline rational pochhammer(const rational& x, _ulong n)
+	{
+		rational temp(1);
+		for (_ulong i = 0; i < n; ++i) temp *= x + i;
+		return temp;
 	}
 }  // namespace mpfr
 
