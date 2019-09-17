@@ -1,6 +1,6 @@
 #include "sdpb_input.hpp"
 
-namespace fs = std::filesystem;
+namespace fs = qboot::fs;
 
 using algebra::Vector, algebra::Matrix;
 using mpfr::real;

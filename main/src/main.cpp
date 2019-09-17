@@ -14,6 +14,7 @@
 #include "hor_formula.hpp"
 #include "hor_recursion.hpp"
 #include "matrix.hpp"
+#include "my_filesystem.hpp"
 #include "polynomial.hpp"
 #include "polynomial_program.hpp"
 #include "primary_op.hpp"
@@ -26,7 +27,7 @@ using qboot::gBlock, qboot::Context, algebra::ComplexFunction, algebra::RealFunc
     qboot::PolynomialProgram, qboot::Sector;
 using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move,
     std::pair, std::vector;
-namespace fs = std::filesystem;
+namespace fs = qboot::fs;
 
 using R = mpfr::real;
 using Op = qboot::PrimaryOperator;

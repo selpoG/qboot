@@ -4,20 +4,10 @@
 #include <memory>    // for unique_ptr
 #include <optional>  // for optional
 
-#include "matrix.hpp"      // for Vector, Matrix
-#include "polynomial.hpp"  // for Polynomial
-#include "real.hpp"        // for real
-
-#if __has_include(<filesystem>)
-#include <filesystem>  // for path, create_directory
-#else
-#include <experimental/filesystem>
-namespace std  // NOLINT
-{
-	// contamination of namespace std might be an undefined behavior
-	namespace filesystem = experimental::filesystem;
-}  // namespace std
-#endif
+#include "matrix.hpp"         // for Vector, Matrix
+#include "my_filesystem.hpp"  // for path
+#include "polynomial.hpp"     // for Polynomial
+#include "real.hpp"           // for real
 
 namespace qboot
 {
@@ -50,7 +40,7 @@ namespace qboot
 		XMLInput(mpfr::real&& constant, algebra::Vector<mpfr::real>&& obj, uint32_t num_constraints);
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
 		void register_constraint(uint32_t index, PVM&& c) &;
-		void write(const std::filesystem::path& path) const;
+		void write(const fs::path& path) const;
 	};
 }  // namespace qboot
 

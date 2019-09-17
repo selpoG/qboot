@@ -10,19 +10,9 @@
 #include <memory>    // for unique_ptr
 #include <optional>  // for optional
 
-#if __has_include(<filesystem>)
-#include <filesystem>  // for path, create_directory
-#else
-#include <experimental/filesystem>
-namespace std  // NOLINT
-{
-	// contamination of namespace std might be an undefined behavior
-	namespace filesystem = experimental::filesystem;
-}  // namespace std
-#endif
-
-#include "matrix.hpp"  // for Matrix, Vector
-#include "real.hpp"    // for real
+#include "matrix.hpp"         // for Matrix, Vector
+#include "my_filesystem.hpp"  // for path, create_directory
+#include "real.hpp"           // for real
 
 namespace qboot
 {
@@ -59,15 +49,15 @@ namespace qboot
 		algebra::Vector<mpfr::real> objectives_;
 		std::unique_ptr<std::optional<DualConstraint>[]> constraints_;
 		uint32_t num_constraints_;
-		void write_objectives(const std::filesystem::path& root) const;
+		void write_objectives(const fs::path& root) const;
 		void write_objectives(std::ostream& out) const;
-		void write_bilinear_bases(const std::filesystem::path& root) const;
+		void write_bilinear_bases(const fs::path& root) const;
 		void write_bilinear_bases(std::ostream& out) const;
-		void write_free_var_matrix(const std::filesystem::path& root, uint32_t i) const;
+		void write_free_var_matrix(const fs::path& root, uint32_t i) const;
 		void write_free_var_matrix(std::ostream& out, const DualConstraint& cons) const;
-		void write_primal_objective_c(const std::filesystem::path& root, uint32_t i) const;
+		void write_primal_objective_c(const fs::path& root, uint32_t i) const;
 		void write_primal_objective_c(std::ostream& out, const DualConstraint& cons) const;
-		void write_blocks(const std::filesystem::path& root) const;
+		void write_blocks(const fs::path& root) const;
 		void write_blocks(std::ostream& out) const;
 
 	public:
@@ -75,7 +65,7 @@ namespace qboot
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
 		// call this for index = 0, ..., num_constraints() - 1 before call of write
 		void register_constraint(uint32_t index, DualConstraint&& c) &;
-		void write(const std::filesystem::path& root_) const;
+		void write(const fs::path& root_) const;
 	};
 }  // namespace qboot
 
