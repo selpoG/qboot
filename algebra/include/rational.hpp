@@ -27,10 +27,9 @@ namespace mpfr
 		friend class integer;
 		friend class real;
 		friend mpq_srcptr _take(const rational& x) { return x._x; }
+		mpq_t _x;
 
 	public:
-		mpq_t _x;  // NOLINT
-
 		rational() { mpq_init(_x); }
 		rational(const rational& o) : rational() { mpq_set(_x, o._x); }
 		rational(rational&& o) noexcept : rational() { mpq_swap(_x, o._x); }

@@ -363,10 +363,9 @@ namespace mpfr
 		friend class rational;
 		friend class real;
 		friend mpz_srcptr _take(const integer& x) { return x._x; }
+		mpz_t _x;
 
 	public:
-		mpz_t _x;  // NOLINT
-
 		integer() { mpz_init(_x); }
 		integer(const integer& o) { mpz_init_set(_x, o._x); }
 		integer(integer&& o) noexcept

@@ -76,19 +76,14 @@ namespace mpfr
 	inline constexpr bool _mpfr_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer> ||
 	                                                std::is_same_v<Tp, rational> || std::is_same_v<Tp, double>;
 
-	/////////////////////////////////////////////////////////////////
-	// class definition
-	/////////////////////////////////////////////////////////////////
-
 	class real
 	{
 		friend class integer;
 		friend class rational;
 		friend mpfr_srcptr _take(const real& x) { return x._x; }
+		mpfr_t _x;
 
 	public:
-		mpfr_t _x;  // NOLINT
-
 		/////////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
 		/////////////////////////////////////////////////////////////////
@@ -162,7 +157,12 @@ namespace mpfr
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const real& r)
 		{
-			return helper_ostream(s, const_cast<mpfr_t&>(r._x), global_rnd);  // NOLINT
+			return helper_ostream(s, r.clone()._x, global_rnd);
+		}
+		template <class Char, class Traits>
+		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, real&& r)
+		{
+			return helper_ostream(s, r._x, global_rnd);
 		}
 
 		[[nodiscard]] std::string str() const
@@ -488,11 +488,73 @@ namespace mpfr
 			mpfr_neg(_x, _x, global_rnd);
 			return std::move(*this);
 		}
+		friend real zero(const int n);
+		friend real inf(const int n);
+		friend real nan();
+		friend real const_log2();
+		friend real const_pi() noexcept;
+		friend real factorial(const _ulong n);
+		friend real sqrt(_ulong r);
+		friend real pow(_ulong op1, _ulong op2);
+		friend bool iszero(const real& r);
+		friend int sgn(const real& r);
+		friend real ceil(const real& r);
+		friend real ceil(real&& r);
+		friend real round(const real& r);
+		friend real round(real&& r);
+		friend real floor(const real& r);
+		friend real floor(real&& r);
+		friend bool isinteger(const real& r);
+		friend real exp(const real& r);
+		friend real exp(real&& r);
+		friend real abs(const real& r);
+		friend real abs(real&& r);
+		friend real sin(const real& r);
+		friend real sin(real&& r);
+		friend real cos(const real& r);
+		friend real cos(real&& r);
+		friend real tan(const real& r);
+		friend real tan(real&& r);
+		friend real sec(const real& r);
+		friend real sec(real&& r);
+		friend real csc(const real& r);
+		friend real csc(real&& r);
+		friend real cot(const real& r);
+		friend real cot(real&& r);
+		friend real log(const real& r);
+		friend real log(real&& r);
+		friend real sqrt(const real& r);
+		friend real sqrt(real&& r);
+		friend real gamma_inc(const real& r1, const real& r2);
+		friend real gamma_inc(real&& r1, const real& r2);
+		friend real gamma_inc(const real& r1, real&& r2);
+		friend real gamma_inc(real&& r1, real&& r2);
+		friend real fdim(const real& r1, const real& r2);
+		friend real fmax(const real& r1, const real& r2);
+		friend real fmin(const real& r1, const real& r2);
+		friend real pow(const real& r1, const real& r2);
+		friend real pow(real&& r1, const real& r2);
+		friend real pow(const real& r1, real&& r2);
+		friend real pow(real&& r1, real&& r2);
+		friend real pow(const real& op1, _ulong op2);
+		friend real pow(real&& op1, _ulong op2);
+		friend real pow(const real& op1, unsigned int op2);
+		friend real pow(real&& op1, unsigned int op2);
+		friend real pow(const real& op1, _long op2);
+		friend real pow(real&& op1, _long op2);
+		friend real pow(const real& op1, int op2);
+		friend real pow(real&& op1, int op2);
+		friend real pow(_ulong op1, const real& op2);
+		friend real pow(_ulong op1, real&& op2);
+		friend real pochhammer(const real& x, _ulong n);
+		friend int cmpabs(const real& r1, const real& r2);
+		template <class Char, class Traits>
+		friend std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& in, real& r);
 	};
 
 	// if sign is nonnegative, return +0
 	// if sign is negative, return -0
-	inline auto zero(const int n)
+	inline real zero(const int n)
 	{
 		real temp;
 		mpfr_set_zero(temp._x, n);
@@ -501,28 +563,28 @@ namespace mpfr
 
 	// if sign is nonnegative, return +inf
 	// if sign is negative, return -inf
-	inline auto inf(const int n)
+	inline real inf(const int n)
 	{
 		real temp;
 		mpfr_set_inf(temp._x, n);
 		return temp;
 	}
 
-	inline auto nan()
+	inline real nan()
 	{
 		real temp;
 		mpfr_set_nan(temp._x);
 		return temp;
 	}
 
-	inline auto const_log2()
+	inline real const_log2()
 	{
 		real temp;
 		mpfr_const_log2(temp._x, global_rnd);
 		return temp;
 	}
 
-	inline auto const_pi() noexcept
+	inline real const_pi() noexcept
 	{
 		real temp;
 		mpfr_const_pi(temp._x, global_rnd);
@@ -530,21 +592,21 @@ namespace mpfr
 	}
 
 	// return n! = Gamma(n + 1)
-	inline auto factorial(const _ulong n)
+	inline real factorial(const _ulong n)
 	{
 		real temp;
 		mpfr_fac_ui(temp._x, n, global_rnd);
 		return temp;
 	}
 
-	inline auto sqrt(_ulong r)
+	inline real sqrt(_ulong r)
 	{
 		real temp;
 		mpfr_sqrt_ui(temp._x, r, global_rnd);
 		return temp;
 	}
 
-	inline auto pow(_ulong op1, _ulong op2)
+	inline real pow(_ulong op1, _ulong op2)
 	{
 		real temp;
 		mpfr_ui_pow_ui(temp._x, op1, op2, global_rnd);
@@ -555,37 +617,37 @@ namespace mpfr
 
 	inline int sgn(const real& r) { return _sgn(r._x); }
 
-	inline auto ceil(const real& r)
+	inline real ceil(const real& r)
 	{
 		real temp;
 		mpfr_ceil(temp._x, r._x);
 		return temp;
 	}
-	inline auto ceil(real&& r)
+	inline real ceil(real&& r)
 	{
 		mpfr_ceil(r._x, r._x);
 		return std::move(r);
 	}
 
-	inline auto round(const real& r)
+	inline real round(const real& r)
 	{
 		real temp;
 		mpfr_round(temp._x, r._x);
 		return temp;
 	}
-	inline auto round(real&& r)
+	inline real round(real&& r)
 	{
 		mpfr_round(r._x, r._x);
 		return std::move(r);
 	}
 
-	inline auto floor(const real& r)
+	inline real floor(const real& r)
 	{
 		real temp;
 		mpfr_floor(temp._x, r._x);
 		return temp;
 	}
-	inline auto floor(real&& r)
+	inline real floor(real&& r)
 	{
 		mpfr_floor(r._x, r._x);
 		return std::move(r);
@@ -593,117 +655,117 @@ namespace mpfr
 
 	inline bool isinteger(const real& r) { return mpfr_integer_p(r._x) != 0; }
 
-	inline auto exp(const real& r)
+	inline real exp(const real& r)
 	{
 		real temp;
 		mpfr_exp(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto exp(real&& r)
+	inline real exp(real&& r)
 	{
 		mpfr_exp(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	inline auto abs(const real& r)
+	inline real abs(const real& r)
 	{
 		real temp;
 		mpfr_abs(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto abs(real&& r)
+	inline real abs(real&& r)
 	{
 		mpfr_abs(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	inline auto sin(const real& r)
+	inline real sin(const real& r)
 	{
 		real temp;
 		mpfr_sin(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto sin(real&& r)
+	inline real sin(real&& r)
 	{
 		mpfr_sin(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
-	inline auto cos(const real& r)
+	inline real cos(const real& r)
 	{
 		real temp;
 		mpfr_cos(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto cos(real&& r)
+	inline real cos(real&& r)
 	{
 		mpfr_cos(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
-	inline auto tan(const real& r)
+	inline real tan(const real& r)
 	{
 		real temp;
 		mpfr_tan(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto tan(real&& r)
+	inline real tan(real&& r)
 	{
 		mpfr_tan(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	inline auto sec(const real& r)
+	inline real sec(const real& r)
 	{
 		real temp;
 		mpfr_sec(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto sec(real&& r)
+	inline real sec(real&& r)
 	{
 		mpfr_sec(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
-	inline auto csc(const real& r)
+	inline real csc(const real& r)
 	{
 		real temp;
 		mpfr_csc(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto csc(real&& r)
+	inline real csc(real&& r)
 	{
 		mpfr_csc(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
-	inline auto cot(const real& r)
+	inline real cot(const real& r)
 	{
 		real temp;
 		mpfr_cot(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto cot(real&& r)
+	inline real cot(real&& r)
 	{
 		mpfr_cot(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	inline auto log(const real& r)
+	inline real log(const real& r)
 	{
 		real temp;
 		mpfr_log(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto log(real&& r)
+	inline real log(real&& r)
 	{
 		mpfr_log(r._x, r._x, global_rnd);
 		return std::move(r);
 	}
 
-	inline auto sqrt(const real& r)
+	inline real sqrt(const real& r)
 	{
 		real temp;
 		mpfr_sqrt(temp._x, r._x, global_rnd);
 		return temp;
 	}
-	inline auto sqrt(real&& r)
+	inline real sqrt(real&& r)
 	{
 		mpfr_sqrt(r._x, r._x, global_rnd);
 		return std::move(r);
@@ -713,108 +775,105 @@ namespace mpfr
 	// mathematical functions (definitions for multiple "real" arguments)
 	/////////////////////////////////////////////////////////////////
 
-	// operands must have same pricision!
-	// if you need to compute f(x, y) where x and y have different precisions, you must cast x or y
-
-	inline auto gamma_inc(const real& r1, const real& r2)
+	inline real gamma_inc(const real& r1, const real& r2)
 	{
 		real temp;
 		mpfr_gamma_inc(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
-	inline auto gamma_inc(real&& r1, const real& r2)
+	inline real gamma_inc(real&& r1, const real& r2)
 	{
 		mpfr_gamma_inc(r1._x, r1._x, r2._x, global_rnd);
 		return std::move(r1);
 	}
-	inline auto gamma_inc(const real& r1, real&& r2)
+	inline real gamma_inc(const real& r1, real&& r2)
 	{
 		mpfr_gamma_inc(r2._x, r1._x, r2._x, global_rnd);
 		return std::move(r2);
 	}
-	inline auto gamma_inc(real&& r1, real&& r2) { return gamma_inc(std::move(r1), r2); }
+	inline real gamma_inc(real&& r1, real&& r2) { return gamma_inc(std::move(r1), r2); }
 
-	inline auto fdim(const real& r1, const real& r2)
+	inline real fdim(const real& r1, const real& r2)
 	{
 		real temp;
 		mpfr_dim(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
 
-	inline auto fmax(const real& r1, const real& r2)
+	inline real fmax(const real& r1, const real& r2)
 	{
 		real temp;
 		mpfr_max(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
 
-	inline auto fmin(const real& r1, const real& r2)
+	inline real fmin(const real& r1, const real& r2)
 	{
 		real temp;
 		mpfr_min(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
 
-	inline auto pow(const real& r1, const real& r2)
+	inline real pow(const real& r1, const real& r2)
 	{
 		real temp;
 		mpfr_pow(temp._x, r1._x, r2._x, global_rnd);
 		return temp;
 	}
-	inline auto pow(real&& r1, const real& r2)
+	inline real pow(real&& r1, const real& r2)
 	{
 		mpfr_pow(r1._x, r1._x, r2._x, global_rnd);
 		return std::move(r1);
 	}
-	inline auto pow(const real& r1, real&& r2)
+	inline real pow(const real& r1, real&& r2)
 	{
 		mpfr_pow(r2._x, r1._x, r2._x, global_rnd);
 		return std::move(r2);
 	}
-	inline auto pow(real&& r1, real&& r2) { return pow(std::move(r1), r2); }
+	inline real pow(real&& r1, real&& r2) { return pow(std::move(r1), r2); }
 
-	inline auto pow(const real& op1, _ulong op2)
+	inline real pow(const real& op1, _ulong op2)
 	{
 		real temp;
 		mpfr_pow_ui(temp._x, op1._x, op2, global_rnd);
 		return temp;
 	}
-	inline auto pow(real&& op1, _ulong op2)
+	inline real pow(real&& op1, _ulong op2)
 	{
 		mpfr_pow_ui(op1._x, op1._x, op2, global_rnd);
 		return std::move(op1);
 	}
-	inline auto pow(const real& op1, unsigned int op2) { return pow(op1, _ulong(op2)); }
-	inline auto pow(real&& op1, unsigned int op2) { return pow(std::move(op1), _ulong(op2)); }
+	inline real pow(const real& op1, unsigned int op2) { return pow(op1, _ulong(op2)); }
+	inline real pow(real&& op1, unsigned int op2) { return pow(std::move(op1), _ulong(op2)); }
 
-	inline auto pow(const real& op1, _long op2)
+	inline real pow(const real& op1, _long op2)
 	{
 		real temp;
 		mpfr_pow_si(temp._x, op1._x, op2, global_rnd);
 		return temp;
 	}
-	inline auto pow(real&& op1, _long op2)
+	inline real pow(real&& op1, _long op2)
 	{
 		mpfr_pow_si(op1._x, op1._x, op2, global_rnd);
 		return std::move(op1);
 	}
-	inline auto pow(const real& op1, int op2) { return pow(op1, _long(op2)); }
-	inline auto pow(real&& op1, int op2) { return pow(std::move(op1), _long(op2)); }
+	inline real pow(const real& op1, int op2) { return pow(op1, _long(op2)); }
+	inline real pow(real&& op1, int op2) { return pow(std::move(op1), _long(op2)); }
 
-	inline auto pow(_ulong op1, const real& op2)
+	inline real pow(_ulong op1, const real& op2)
 	{
 		real temp;
 		mpfr_ui_pow(temp._x, op1, op2._x, global_rnd);
 		return temp;
 	}
-	inline auto pow(_ulong op1, real&& op2)
+	inline real pow(_ulong op1, real&& op2)
 	{
 		mpfr_ui_pow(op2._x, op1, op2._x, global_rnd);
 		return std::move(op2);
 	}
 
 	// returns (x)_(n) = x (x + 1) ... (x + n - 1)
-	inline auto pochhammer(const real& x, _ulong n)
+	inline real pochhammer(const real& x, _ulong n)
 	{
 		real temp(1);
 		for (_ulong i = 0; i < n; ++i) temp *= x + i;
