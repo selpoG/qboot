@@ -41,6 +41,7 @@
 #include <iostream>     // for basic_ostram, basic_istream
 #include <limits>       // for numeric_limits
 #include <locale>       // for use_facet, ctype
+#include <optional>     // for optional
 #include <sstream>      // for ostringstream
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string, to_string, basic_string, string_literals
@@ -63,8 +64,8 @@ namespace mp
 	extern mpfr_rnd_t global_rnd;
 
 	template <class Char, class Traits>
-	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
-	                                                        mpfr_rnd_t rnd);
+	inline std::basic_ostream<Char, Traits>& _helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
+	                                                         mpfr_rnd_t rnd);
 
 	inline bool _is_nan(mpfr_srcptr x) { return mpfr_nan_p(x) != 0; }    // NOLINT
 	inline bool _is_inf(mpfr_srcptr x) { return mpfr_inf_p(x) != 0; }    // NOLINT
@@ -150,16 +151,24 @@ namespace mp
 			os << std::setprecision(precision) << *this;
 			return os.str();
 		}
+		static std::optional<real> _parse(std::string_view str)
+		{
+			std::string s(str);
+			mpfr_t x;
+			mpfr_init2(x, global_prec);
+			if (mpfr_set_str(x, s.data(), 0, global_rnd) == -1) return {};
+			return real(x);
+		}
 
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const real& r)
 		{
-			return helper_ostream(s, r.clone()._x, global_rnd);
+			return _helper_ostream(s, r.clone()._x, global_rnd);
 		}
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, real&& r)
 		{
-			return helper_ostream(s, r._x, global_rnd);
+			return _helper_ostream(s, r._x, global_rnd);
 		}
 
 		[[nodiscard]] std::string str() const
@@ -181,10 +190,14 @@ namespace mp
 
 		explicit inline real(std::string_view op)
 		{
+			std::string s(op);
 			using namespace std::string_literals;
 			mpfr_init2(_x, global_prec);
-			if (auto err = mpfr_set_str(_x, op.data(), 0, global_rnd); err == -1)
+			if (mpfr_set_str(_x, s.data(), 0, global_rnd) == -1)
+			{
+				mpfr_clear(_x);
 				throw std::runtime_error("in mp::real(string_view):\n  invalid input format "s += op);
+			}
 		}
 
 		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
@@ -1007,8 +1020,8 @@ namespace mp
 	// TODO(selpo): handle ios_base::hexfloat
 
 	template <class Char, class Traits>
-	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
-	                                                        mpfr_rnd_t rnd)
+	inline std::basic_ostream<Char, Traits>& _helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
+	                                                         mpfr_rnd_t rnd)
 	{
 		if (_is_nan(x)) return helper_ostream_const(s, "@NaN@", false);
 		if (_is_inf(x)) return helper_ostream_const(s, "@Inf@", _sgn(x) < 0);
@@ -1063,7 +1076,7 @@ namespace mp
 	};
 
 	template <class Char, class Traits>
-	inline bool helper_extract_float(std::basic_istream<Char, Traits>& s, std::string* num)
+	inline bool _helper_extract_float(std::basic_istream<Char, Traits>& s, std::string* num)
 	{
 		const auto& fac = std::use_facet<std::ctype<Char>>(s.getloc());
 		const char pos = fac.widen('+'), neg = fac.widen('-'), point = fac.widen('.'), exp_e = fac.widen('e'),
@@ -1127,9 +1140,9 @@ namespace mp
 			if (s && !in.eof())
 			{
 				std::string num;
-				if (auto ok = helper_extract_float(in, &num); ok && !num.empty())
+				if (auto ok = _helper_extract_float(in, &num); ok && !num.empty())
 				{
-					if (auto err = mpfr_set_str(r._x, num.c_str(), 0, global_rnd); err == -1)
+					if (mpfr_set_str(r._x, num.c_str(), 0, global_rnd) == -1)
 					{
 						in.setstate(std::ios_base::failbit);
 						mpfr_set_zero(r._x, +1);

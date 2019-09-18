@@ -3,6 +3,7 @@
 
 #include <istream>      // for basic_istream
 #include <limits>       // for numeric_limits
+#include <optional>     // for optional
 #include <ostream>      // for basic_ostream
 #include <stdexcept>    // for runtime_error
 #include <string>       // for to_string, string_literals
@@ -424,6 +425,9 @@ namespace mp
 		return _cmp(r1, r2) >= 0;
 	}
 
+	inline std::optional<rational> parse(std::string_view str);
+	inline std::optional<rational> _parse_mantisa(std::string_view str);
+
 	class integer
 	{
 		mpz_t _x;
@@ -456,6 +460,17 @@ namespace mp
 		void negate() & { mpz_neg(_x, _x); }
 
 		[[nodiscard]] std::string str() const { return std::string(mpz_get_str(nullptr, 10, _x)); }
+		static std::optional<integer> _parse(std::string_view str)
+		{
+			std::string s(str);
+			mpz_t x;
+			if (mpz_init_set_str(x, s.data(), 10) == -1)
+			{
+				mpz_clear(x);
+				return {};
+			}
+			return integer(x);
+		}
 
 		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
 		explicit integer(T o)
@@ -464,11 +479,12 @@ namespace mp
 		}
 		explicit integer(std::string_view o)
 		{
+			std::string s(o);
 			using namespace std::string_literals;
-			if (auto err = mpz_init_set_str(_x, o.data(), 10); err == -1)
+			if (mpz_init_set_str(_x, s.data(), 10) == -1)
 			{
-				throw std::runtime_error("in mp::integer(string_view):\n  invalid input format "s += o);
 				mpz_clear(_x);
+				throw std::runtime_error("in mp::integer(string_view):\n  invalid input format "s += o);
 			}
 		}
 		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
@@ -482,8 +498,9 @@ namespace mp
 		}
 		integer& operator=(std::string_view o) &
 		{
+			std::string s(o);
 			using namespace std::string_literals;
-			if (auto err = mpz_set_str(_x, o.data(), 10); err == -1)
+			if (mpz_set_str(_x, s.data(), 10) == -1)
 				throw std::runtime_error("in mp::integer(string_view):\n  invalid input format "s += o);
 			return *this;
 		}
@@ -665,9 +682,9 @@ namespace mp
 			mpz_neg(_x, _x);
 			return std::move(*this);
 		}
-		friend inline mpz_srcptr mp::_mp_ops<integer>::data(const integer& rop);
-		friend inline integer mp::_mp_ops<integer>::get(mpq_srcptr rop);
-		friend inline integer mp::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
+
+		friend std::optional<rational> parse(std::string_view str);
+		friend std::optional<rational> _parse_mantisa(std::string_view str);
 
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const integer& z)

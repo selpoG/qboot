@@ -2,6 +2,7 @@
 #define QBOOT_RATIONAL_HPP_
 
 #include <istream>      // for basic_istream
+#include <optional>     // for optional
 #include <ostream>      // for basic_ostream
 #include <stdexcept>    // for runtime_error
 #include <string>       // for to_string, string_literals
@@ -54,6 +55,14 @@ namespace mp
 		integer den() const { return integer(mpq_denref(_x)); }
 
 		[[nodiscard]] std::string str() const { return std::string(mpq_get_str(nullptr, 10, _x)); }
+		static std::optional<rational> _parse(std::string_view str)
+		{
+			std::string s(str);
+			rational x;
+			if (mpq_set_str(x._x, s.data(), 10) == -1) return {};
+			mpq_canonicalize(x._x);
+			return std::optional{x};
+		}
 
 		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T> || std::is_same_v<T, double>>>
 		explicit rational(T o) : rational()
@@ -79,11 +88,12 @@ namespace mp
 
 		explicit rational(std::string_view o) : rational()
 		{
+			std::string s(o);
 			using namespace std::string_literals;
-			if (auto err = mpq_set_str(_x, o.data(), 10); err == -1)
+			if (mpq_set_str(_x, s.data(), 10) == -1)
 			{
-				throw std::runtime_error("in mp::rational(string_view):\n  invalid input format "s += o);
 				mpq_clear(_x);
+				throw std::runtime_error("in mp::rational(string_view):\n  invalid input format "s += o);
 			}
 			mpq_canonicalize(_x);
 		}
@@ -99,8 +109,9 @@ namespace mp
 		}
 		rational& operator=(std::string_view o)
 		{
+			std::string s(o);
 			using namespace std::string_literals;
-			if (auto err = mpq_set_str(_x, o.data(), 10); err == -1)
+			if (mpq_set_str(_x, s.data(), 10) == -1)
 				throw std::runtime_error("in mp::rational(string_view):\n  invalid input format "s += o);
 			mpq_canonicalize(_x);
 			return *this;
@@ -347,6 +358,7 @@ namespace mp
 			return std::move(*this);
 		}
 
+		friend std::optional<rational> parse(std::string_view str);
 		friend integer floor(const rational& q) { return _mp_ops<integer>::get(q._x); }
 		friend inline mpq_srcptr mp::_mp_ops<rational>::data(const rational& rop);
 		friend inline rational mp::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
@@ -387,6 +399,57 @@ namespace mp
 				break;
 		}
 		return rational(num, den);
+	}
+	// read str as a rational, even it contains a floating point '.' or an exponential mark 'e' or 'E'.
+	// if parse fails, return std::nullopt.
+	// str should not contain spaces.
+	//   read("123") == rational(123)
+	//   read("123/456") == rational(123, 456u) == rational(41, 152u)
+	//   read("1.23") == rational(123, 100u)
+	//   read("1.25") == rational(125, 100u) == rational(5, 4u)
+	//   read("3.2e-8") == rational(1, 31250000u)
+	//   read("-5e3") == rational(-5000)
+	//   read("12 / 59") -> fail!
+	//   read("12/59 ") -> fail!
+	inline std::optional<rational> parse(std::string_view str)
+	{
+		constexpr auto npos = std::string::npos;
+		auto t = str.find_first_not_of("+-0123456789/");
+		if (t == npos) return rational::_parse(str);
+		auto i = str.find_first_of("eE", t);
+		if (i == std::string::npos) return _parse_mantisa(str);
+		if (str.find_first_not_of("+-0123456789", i + 1) != npos) return {};
+		auto mant = _parse_mantisa(str.substr(0, i));
+		if (!mant) return {};
+		auto exp = integer::_parse(str.substr(i + 1));
+		if (!exp) return {};
+		if (exp.value() >= 0) return mant.value() * pow(10u, _ulong(exp.value()));
+		return mant.value() / pow(10u, _ulong(-exp.value()));
+	}
+	inline std::optional<rational> _parse_mantisa(std::string_view str)
+	{
+		constexpr auto npos = std::string::npos;
+		auto sg = str.find_first_of("+-");
+		if (sg != npos)
+		{
+			if (sg != 0) return {};
+			auto n = _parse_mantisa(str.substr(1));
+			if (!n) return {};
+			return (str[sg] == '+' ? 1 : -1) * n.value();
+		}
+		auto i = str.find('.');
+		if (i == npos)
+		{
+			auto x = integer::_parse(str);
+			if (!x.has_value()) return {};
+			return rational(x.value());
+		}
+		auto a = i == 0 ? integer() : integer::_parse(str.substr(0, i));
+		if (!a) return {};
+		if (i + 1 == str.size()) return rational(a.value());
+		auto b = integer::_parse(str.substr(i + 1));
+		if (!b) return {};
+		return a.value() + rational(b.value(), pow(10u, str.size() - i - 1));
 	}
 }  // namespace mp
 
