@@ -16,18 +16,18 @@ namespace qboot
 	// f(rho) = h_{Delta, spin}^{d12, d34}(z, z),
 	// g_{Delta, spin}^{d12, d34}(z, z) = (4 rho) ^ {Delta} f(rho)
 	// if p[0] may be 0, we use continuity of conformal block.
-	algebra::RealFunction<mpfr::real> hBlock_shifted(const PrimaryOperator& op, const mpfr::real& S,
-	                                                 const mpfr::real& P, uint32_t n_Max);
+	algebra::RealFunction<mp::real> hBlock_shifted(const PrimaryOperator& op, const mp::real& S, const mp::real& P,
+	                                               uint32_t n_Max);
 
 	// a function of z - 1 / 2 expanded at z = 1 / 2, g_{Delta, spin}^{d12, d34}(z, z)
-	algebra::RealFunction<mpfr::real> gBlock_real(const PrimaryOperator& op, const mpfr::real& S, const mpfr::real& P,
-	                                              const Context& context);
-
-	algebra::ComplexFunction<mpfr::real> gBlock(const PrimaryOperator& op, const mpfr::real& S, const mpfr::real& P,
+	algebra::RealFunction<mp::real> gBlock_real(const PrimaryOperator& op, const mp::real& S, const mp::real& P,
 	                                            const Context& context);
 
-	algebra::ComplexFunction<mpfr::real> gBlock(const PrimaryOperator& op, const mpfr::real& d1, const mpfr::real& d2,
-	                                            const mpfr::real& d3, const mpfr::real& d4, const Context& context);
+	algebra::ComplexFunction<mp::real> gBlock(const PrimaryOperator& op, const mp::real& S, const mp::real& P,
+	                                          const Context& context);
+
+	algebra::ComplexFunction<mp::real> gBlock(const PrimaryOperator& op, const mp::real& d1, const mp::real& d2,
+	                                          const mp::real& d3, const mp::real& d4, const Context& context);
 }  // namespace qboot
 
 #endif  // QBOOT_HOR_RECURSION_HPP_

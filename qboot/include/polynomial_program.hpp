@@ -58,10 +58,10 @@ namespace qboot
 		[[nodiscard]] algebra::Vector<algebra::Polynomial> bilinear_bases() { return chi_->bilinear_bases(); }
 
 		// {x_0, ..., x_D}
-		[[nodiscard]] algebra::Vector<mpfr::real> sample_points() { return chi_->sample_points(); }
+		[[nodiscard]] algebra::Vector<mp::real> sample_points() { return chi_->sample_points(); }
 
 		// {s_0, ..., s_D}
-		[[nodiscard]] algebra::Vector<mpfr::real> sample_scalings() { return chi_->sample_scalings(); }
+		[[nodiscard]] algebra::Vector<mp::real> sample_scalings() { return chi_->sample_scalings(); }
 
 		// M[n] / chi (0 <= n < N)
 		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n) = 0;
@@ -70,40 +70,40 @@ namespace qboot
 		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial> target_polynomial() = 0;
 
 		// evaluate M[n] at x = x_k (0 <= n < N, 0 <= k <= D)
-		[[nodiscard]] virtual algebra::Matrix<mpfr::real> matrix_eval_with_scale(uint32_t n, uint32_t k) = 0;
+		[[nodiscard]] virtual algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k) = 0;
 
 		// evaluate M[N] at x = x_k
-		[[nodiscard]] virtual algebra::Matrix<mpfr::real> target_eval_with_scale(uint32_t k) = 0;
+		[[nodiscard]] virtual algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) = 0;
 
 		// evaluate M[n] / chi at x = x_k (0 <= n < N, 0 <= k <= D)
-		[[nodiscard]] virtual algebra::Matrix<mpfr::real> matrix_eval_without_scale(uint32_t n, uint32_t k) = 0;
+		[[nodiscard]] virtual algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k) = 0;
 
 		// evaluate M[N] / chi at x = x_k
-		[[nodiscard]] virtual algebra::Matrix<mpfr::real> target_eval_without_scale(uint32_t k) = 0;
+		[[nodiscard]] virtual algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k) = 0;
 	};
 
 	class PolynomialInequalityEvaluated : public PolynomialInequality
 	{
 		// mat[n]: evaluated values of M[n]
 		// mat[n][k]: M[n] evaluated at x = x[k]
-		algebra::Vector<algebra::Vector<algebra::Matrix<mpfr::real>>> mat_;
+		algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>> mat_;
 		// M[N]
-		algebra::Vector<algebra::Matrix<mpfr::real>> target_{};
+		algebra::Vector<algebra::Matrix<mp::real>> target_{};
 
 		// get M[n] / chi or M[N] / chi as a polynomial matrix
 		[[nodiscard]] algebra::Matrix<algebra::Polynomial> as_polynomial(
-		    const algebra::Vector<algebra::Matrix<mpfr::real>>& vals);
+		    const algebra::Vector<algebra::Matrix<mp::real>>& vals);
 
 	public:
 		PolynomialInequalityEvaluated(uint32_t N, std::unique_ptr<ScaleFactor>&& scale,
-		                              algebra::Vector<algebra::Vector<mpfr::real>>&& mat,
-		                              algebra::Vector<mpfr::real>&& target);
-		PolynomialInequalityEvaluated(uint32_t N, algebra::Vector<mpfr::real>&& mat, mpfr::real&& target);
-		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, algebra::Vector<algebra::Matrix<mpfr::real>>&& mat,
-		                              algebra::Matrix<mpfr::real>&& target);
+		                              algebra::Vector<algebra::Vector<mp::real>>&& mat,
+		                              algebra::Vector<mp::real>&& target);
+		PolynomialInequalityEvaluated(uint32_t N, algebra::Vector<mp::real>&& mat, mp::real&& target);
+		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, algebra::Vector<algebra::Matrix<mp::real>>&& mat,
+		                              algebra::Matrix<mp::real>&& target);
 		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor>&& scale,
-		                              algebra::Vector<algebra::Vector<algebra::Matrix<mpfr::real>>>&& mat,
-		                              algebra::Vector<algebra::Matrix<mpfr::real>>&& target);
+		                              algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>>&& mat,
+		                              algebra::Vector<algebra::Matrix<mp::real>>&& target);
 		PolynomialInequalityEvaluated(const PolynomialInequalityEvaluated&) = delete;
 		PolynomialInequalityEvaluated& operator=(const PolynomialInequalityEvaluated&) = delete;
 		PolynomialInequalityEvaluated(PolynomialInequalityEvaluated&&) noexcept = default;
@@ -117,20 +117,20 @@ namespace qboot
 		{
 			return as_polynomial(target_);
 		}
-		[[nodiscard]] algebra::Matrix<mpfr::real> matrix_eval_with_scale(uint32_t n, uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k) override
 		{
 			return mat_[n][k].clone();
 		}
-		[[nodiscard]] algebra::Matrix<mpfr::real> target_eval_with_scale(uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) override
 		{
 			return target_[k].clone();
 		}
-		[[nodiscard]] algebra::Matrix<mpfr::real> matrix_eval_without_scale(uint32_t n, uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k) override
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			return mat_[n][k] / chi->eval(chi->sample_point(k));
 		}
-		[[nodiscard]] algebra::Matrix<mpfr::real> target_eval_without_scale(uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k) override
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			return target_[k] / chi->eval(chi->sample_point(k));
@@ -160,24 +160,24 @@ namespace qboot
 			return mat_[n].clone();
 		}
 		[[nodiscard]] algebra::Matrix<algebra::Polynomial> target_polynomial() override { return target_.clone(); }
-		[[nodiscard]] algebra::Matrix<mpfr::real> matrix_eval_with_scale(uint32_t n, uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k) override
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			auto x = chi->sample_point(k);
 			return mul_scalar(chi->eval(x), mat_[n].eval(x));
 		}
-		[[nodiscard]] algebra::Matrix<mpfr::real> target_eval_with_scale(uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) override
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			auto x = chi->sample_point(k);
 			return mul_scalar(chi->eval(x), target_.eval(x));
 		}
-		[[nodiscard]] algebra::Matrix<mpfr::real> matrix_eval_without_scale(uint32_t n, uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k) override
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			return mat_[n].eval(chi->sample_point(k));
 		}
-		[[nodiscard]] algebra::Matrix<mpfr::real> target_eval_without_scale(uint32_t k) override
+		[[nodiscard]] algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k) override
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			return target_.eval(chi->sample_point(k));
@@ -198,13 +198,13 @@ namespace qboot
 		// num of free variables
 		uint32_t N_;
 		// b[N]
-		mpfr::real obj_const_{};
+		mp::real obj_const_{};
 		// b[n]
-		algebra::Vector<mpfr::real> obj_;
+		algebra::Vector<mp::real> obj_;
 		// M_e[n]
-		std::vector<algebra::Vector<mpfr::real>> equation_{};
+		std::vector<algebra::Vector<mp::real>> equation_{};
 		// M_e[N]
-		std::vector<mpfr::real> equation_targets_{};
+		std::vector<mp::real> equation_targets_{};
 		// pivots for gaussian elimination
 		// y[leading_indices[j]] are not free
 		std::vector<uint32_t> leading_indices_{};
@@ -220,10 +220,10 @@ namespace qboot
 			for (uint32_t i = 0; i < N_; ++i) free_indices_.push_back(i);
 		}
 		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
-		[[nodiscard]] mpfr::real& objective_constant() { return obj_const_; }
-		[[nodiscard]] const mpfr::real& objective_constant() const { return obj_const_; }
-		[[nodiscard]] const algebra::Vector<mpfr::real>& objectives() const { return obj_; }
-		void objectives(algebra::Vector<mpfr::real>&& obj) &
+		[[nodiscard]] mp::real& objective_constant() { return obj_const_; }
+		[[nodiscard]] const mp::real& objective_constant() const { return obj_const_; }
+		[[nodiscard]] const algebra::Vector<mp::real>& objectives() const { return obj_; }
+		void objectives(algebra::Vector<mp::real>&& obj) &
 		{
 			assert(obj.size() == N_);
 			obj_ = std::move(obj);
@@ -232,7 +232,7 @@ namespace qboot
 		// we assume that all equations are linear independent
 		// the order of call of this function may affects the resulting SDPB input
 		// to guarantee the reproducibility, call this function in some fixed order
-		void add_equation(algebra::Vector<mpfr::real>&& vec, mpfr::real&& target) &;
+		void add_equation(algebra::Vector<mp::real>&& vec, mp::real&& target) &;
 		void add_inequality(std::unique_ptr<PolynomialInequality>&& ineq) &
 		{
 			assert(ineq->num_of_variables() == N_);

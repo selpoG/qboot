@@ -43,9 +43,9 @@ namespace algebra
 		using type = Vec<evaluated_t<R>>;
 	};
 	template <>
-	struct evaluated<mpfr::real>
+	struct evaluated<mp::real>
 	{
-		using type = mpfr::real;
+		using type = mp::real;
 	};
 	template <class Ring, class S>
 	struct substitute;
@@ -54,7 +54,7 @@ namespace algebra
 	template <class T, class S>
 	using substitute_t = typename substitute<T, S>::type;
 	template <class S>
-	struct substitute<mpfr::real, S>
+	struct substitute<mp::real, S>
 	{
 		using type = S;
 	};
@@ -63,7 +63,7 @@ namespace algebra
 	{
 		using type = Vec<substitute_t<R, S>>;
 	};
-	inline mpfr::real eval(const mpfr::real& v, [[maybe_unused]] const mpfr::real& x) { return v; }
+	inline mp::real eval(const mp::real& v, [[maybe_unused]] const mp::real& x) { return v; }
 	// interface Swappable<T> {
 	//	void swap(T&);
 	// };
@@ -132,7 +132,7 @@ namespace algebra
 				if (!arr_[i].iszero()) return false;
 			return true;
 		}
-		[[nodiscard]] auto abs() const { return mpfr::sqrt(norm()); }
+		[[nodiscard]] auto abs() const { return mp::sqrt(norm()); }
 		[[nodiscard]] auto norm() const
 		{
 			auto s = arr_[0].norm();
@@ -242,7 +242,7 @@ namespace algebra
 			for (uint32_t i = 1; i < x.sz_; ++i) s += mul(x.arr_[i], y.arr_[i]);
 			return s;
 		}
-		[[nodiscard]] Vector<evaluated_t<Ring>> eval(const mpfr::real& x) const
+		[[nodiscard]] Vector<evaluated_t<Ring>> eval(const mp::real& x) const
 		{
 			Vector<evaluated_t<Ring>> ans(sz_);
 			for (uint32_t i = 0; i < sz_; ++i) ans[i] = at(i).eval(x);
@@ -272,7 +272,7 @@ namespace algebra
 		[[nodiscard]] const uint32_t& row() const noexcept { return row_; }
 		[[nodiscard]] const uint32_t& column() const noexcept { return col_; }
 		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
-		[[nodiscard]] auto abs() const { return mpfr::sqrt(norm()); }
+		[[nodiscard]] auto abs() const { return mp::sqrt(norm()); }
 		[[nodiscard]] auto norm() const { return arr_.norm(); }
 		[[nodiscard]] Matrix clone() const { return Matrix(arr_.clone(), row_, col_); }
 		void swap(Matrix& other) &
@@ -329,7 +329,7 @@ namespace algebra
 			return std::move(*this);
 		}
 		// v^t M v
-		template <class = std::enable_if<std::is_same_v<Ring, mpfr::real>>>
+		template <class = std::enable_if<std::is_same_v<Ring, mp::real>>>
 		[[nodiscard]] Ring inner_product(const Vector<Ring>& v) const
 		{
 			assert(is_square() && row_ == v.size());
@@ -424,19 +424,19 @@ namespace algebra
 				}
 			return z;
 		}
-		[[nodiscard]] Matrix<evaluated_t<Ring>> eval(const mpfr::real& x) const
+		[[nodiscard]] Matrix<evaluated_t<Ring>> eval(const mp::real& x) const
 		{
 			return Matrix<evaluated_t<Ring>>(arr_.eval(x), row_, col_);
 		}
 	};
 
-	Matrix<mpfr::real> inverse(Matrix<mpfr::real>&& mat);
-	inline Matrix<mpfr::real> inverse(const Matrix<mpfr::real>& mat) { return inverse(mat.clone()); }
+	Matrix<mp::real> inverse(Matrix<mp::real>&& mat);
+	inline Matrix<mp::real> inverse(const Matrix<mp::real>& mat) { return inverse(mat.clone()); }
 	// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
 	// this = L L^t and L is lower triangular.
-	[[nodiscard]] Matrix<mpfr::real> cholesky_decomposition(const Matrix<mpfr::real>& mat);
+	[[nodiscard]] Matrix<mp::real> cholesky_decomposition(const Matrix<mp::real>& mat);
 	// calculate the inverse matrix of lower triangular matrix
-	[[nodiscard]] Matrix<mpfr::real> lower_triangular_inverse(const Matrix<mpfr::real>& mat);
+	[[nodiscard]] Matrix<mp::real> lower_triangular_inverse(const Matrix<mp::real>& mat);
 
 	template <class Ring>
 	std::ostream& operator<<(std::ostream& out, const Vector<Ring>& v)

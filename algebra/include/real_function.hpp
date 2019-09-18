@@ -16,7 +16,7 @@ namespace algebra
 	// take derivatives (der x) ^ k upto k <= lambda
 	// namely, a function is represented as
 	//   \sum_{k = 0}^{lambda} this->at(k) x ^ k + O(x ^ {lambda + 1})
-	// Ring must be mpfr::real or Polynomial
+	// Ring must be mp::real or Polynomial
 	template <class Ring>
 	class RealFunction
 	{
@@ -135,7 +135,7 @@ namespace algebra
 			return x.lambda_ == y.lambda_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const RealFunction& x, const RealFunction& y) { return !(x == y); }
-		[[nodiscard]] RealFunction<evaluated_t<Ring>> eval(const mpfr::real& x) const
+		[[nodiscard]] RealFunction<evaluated_t<Ring>> eval(const mp::real& x) const
 		{
 			return RealFunction<evaluated_t<Ring>>(coeffs_.eval(x));
 		}
@@ -168,8 +168,7 @@ namespace algebra
 		return out;
 	}
 	// f(x) = (a + b * x) ^ p
-	RealFunction<mpfr::real> power_function(const mpfr::real& a, const mpfr::real& b, const mpfr::real& p,
-	                                        uint32_t lambda);
+	RealFunction<mp::real> power_function(const mp::real& a, const mp::real& b, const mp::real& p, uint32_t lambda);
 
 	// convert a function f(x) of x to a function g(y) of y
 	// Let x = x(y), then g(y) = f(x(y))
@@ -177,12 +176,12 @@ namespace algebra
 	class RealConverter
 	{
 		uint32_t lambda_;
-		Matrix<mpfr::real> mat_;
+		Matrix<mp::real> mat_;
 
 	public:
 		// x = func(y)
 		// this converts a functino of x to a function of y
-		explicit RealConverter(const RealFunction<mpfr::real>& func);
+		explicit RealConverter(const RealFunction<mp::real>& func);
 		[[nodiscard]] RealConverter inverse() const;
 		// convert a function f of x to a function of y where x = func(y)
 		template <class R>
@@ -198,14 +197,14 @@ namespace algebra
 	//   \sum_{k = 0}^{lambda} this->at(k) x ^ {k + pow} + O(x ^ {pow + lambda + 1})
 	class RealFunctionWithPower
 	{
-		RealFunction<mpfr::real> f_;
-		mpfr::real pow_;
+		RealFunction<mp::real> f_;
+		mp::real pow_;
 
 	public:
-		RealFunctionWithPower(const RealFunction<mpfr::real>& f, const mpfr::real& p) : f_(f.clone()), pow_(p) {}
-		RealFunctionWithPower(RealFunction<mpfr::real>&& f, const mpfr::real& p) : f_(std::move(f)), pow_(p) {}
-		[[nodiscard]] const RealFunction<mpfr::real>& func() const { return f_; }
-		[[nodiscard]] const mpfr::real& power() const { return pow_; }
+		RealFunctionWithPower(const RealFunction<mp::real>& f, const mp::real& p) : f_(f.clone()), pow_(p) {}
+		RealFunctionWithPower(RealFunction<mp::real>&& f, const mp::real& p) : f_(std::move(f)), pow_(p) {}
+		[[nodiscard]] const RealFunction<mp::real>& func() const { return f_; }
+		[[nodiscard]] const mp::real& power() const { return pow_; }
 		// take derivative
 		void derivate() &
 		{
@@ -220,15 +219,15 @@ namespace algebra
 		[[nodiscard]] RealFunctionWithPower clone() const { return RealFunctionWithPower(f_, pow_); }
 		// evaluate at x = x
 		template <class R>
-		[[nodiscard]] mpfr::real approximate(const R& x) const
+		[[nodiscard]] mp::real approximate(const R& x) const
 		{
-			mpfr::real s{};
+			mp::real s{};
 			for (uint32_t i = f_.lambda(); i <= f_.lambda(); --i)
 			{
 				s *= x;
 				s += f_.at(i);
 			}
-			s *= mpfr::pow(x, pow_);
+			s *= mp::pow(x, pow_);
 			return s;
 		}
 	};

@@ -6,7 +6,7 @@
 #include <utility>   // for move
 
 using algebra::Vector, algebra::Matrix;
-using mpfr::real;
+using mp::real;
 using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view;
 
 namespace qboot

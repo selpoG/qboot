@@ -1,7 +1,7 @@
 #include "context.hpp"
 
 using algebra::RealFunction, algebra::ComplexFunction, algebra::RealConverter;
-using mpfr::real, mpfr::rational;
+using mp::real, mp::rational;
 
 namespace qboot
 {
@@ -9,11 +9,11 @@ namespace qboot
 	{
 		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqt(2) + r') ^ {-2}
 		// f = (4 - 2sqt(2) + r') ^ {-2}
-		auto f = algebra::power_function(4 - mpfr::sqrt(8), real(1), real(-2), lambda);
+		auto f = algebra::power_function(4 - mp::sqrt(8), real(1), real(-2), lambda);
 		// g1 = 2 sqrt(2) r' f
 		auto g1 = f.clone();
 		g1.shift(1);
-		g1 *= mpfr::sqrt(8);
+		g1 *= mp::sqrt(8);
 		// g2 = -r' ^ 2 f / 2
 		auto g2 = f.clone();
 		g2.shift(2);
@@ -26,7 +26,7 @@ namespace qboot
 	      lambda_(lambda),
 	      dim_(dim),
 	      epsilon_(dim - 2, 2u),
-	      rho_(3 - mpfr::sqrt(8)),
+	      rho_(3 - mp::sqrt(8)),
 	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse())
 	{
 		assert(dim >= 3 && dim % 2 == 1);

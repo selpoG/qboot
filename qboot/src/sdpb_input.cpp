@@ -3,7 +3,7 @@
 namespace fs = qboot::fs;
 
 using algebra::Vector, algebra::Matrix;
-using mpfr::real;
+using mp::real;
 using std::array, std::move, std::optional, std::make_unique;
 using std::ostream, std::ofstream, std::string, std::to_string, fs::path, fs::create_directory;
 
@@ -24,7 +24,7 @@ static ostream& write_vec(ostream& out, const Vector<real>& v)
 
 static void set_manip(ostream& out)
 {
-	out << std::defaultfloat << std::setprecision(3 + int32_t(double(mpfr::global_prec) * 0.302));
+	out << std::defaultfloat << std::setprecision(3 + int32_t(double(mp::global_prec) * 0.302));
 }
 
 namespace qboot

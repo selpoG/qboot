@@ -1,7 +1,7 @@
 #include "hor_formula.hpp"
 
 using algebra::Vector, algebra::Polynomial;
-using mpfr::real;
+using mp::real;
 
 namespace qboot
 {
@@ -374,7 +374,7 @@ namespace qboot
 		t0 -= t1;
 		t1 = 10 * epsilon;
 		t0 -= t1;
-		// a[0, 2] = -5 * mpfr::pow(Delta - epsilon - 1, 2) + mpfr::pow(spin + epsilon, 2);
+		// a[0, 2] = -5 * mp::pow(Delta - epsilon - 1, 2) + mp::pow(spin + epsilon, 2);
 		b[2] = t0 - 5;
 		t0 = Delta * (-4);
 		t1 = 4 * epsilon;
@@ -383,7 +383,8 @@ namespace qboot
 		b[3] = t0 + 4;
 		// a[0, 4] = -1;
 		b[4] = -1;
-		// sum(a[0, i] * n^i) = -n (n + 2 Delta - 2 epsilon - 2) (n + Delta - 2 epsilon - spin - 1) (n + Delta + spin - 1);
+		// \sum_i a[0, i] n ^ i
+		// = -n (n + 2 Delta - 2 epsilon - 2) (n + Delta - 2 epsilon - spin - 1) (n + Delta + spin - 1);
 		ps[0] = {b[0], b[1], b[2], b[3], b[4]};
 		t0 = Delta * (-4);
 		t0 *= Delta;

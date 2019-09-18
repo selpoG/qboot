@@ -29,7 +29,7 @@ using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional
     std::pair, std::vector;
 namespace fs = qboot::fs;
 
-using R = mpfr::real;
+using R = mp::real;
 using Op = qboot::PrimaryOperator;
 using Eq = qboot::Equation;
 using PolIneq = qboot::PolynomialInequalityWithCoeffs;
@@ -158,7 +158,7 @@ public:
 	TestScale& operator=(TestScale&&) noexcept = default;
 	~TestScale() override;
 	[[nodiscard]] uint32_t max_degree() const override { return deg_; }
-	[[nodiscard]] R eval(const R& v) const override { return mpfr::exp(-v); }
+	[[nodiscard]] R eval(const R& v) const override { return mp::exp(-v); }
 	[[nodiscard]] Vector<R> sample_scalings() override
 	{
 		Vector<R> sc(deg_ + 1);
@@ -205,20 +205,28 @@ void test_sdpb()
 
 int main(int argc, char* argv[])
 {
-	mpfr::global_prec = 1000;
-	mpfr::global_rnd = MPFR_RNDN;
+	mp::global_prec = 1000;
+	mp::global_rnd = MPFR_RNDN;
 	constexpr uint32_t n_Max = 400, lambda = 14, dim_ = 3, maxspin = 24;
 	[[maybe_unused]] constexpr uint32_t numax = 6;
-	assert(argc == 4);
-	unique_ptr<char*[]> args(argv);
-	auto d_s = R(args[1]);
-	auto d_e = R(args[2]);
-	auto d_e1 = R(args[3]);
+	if (argc != 1 && argc != 4)
+	{
+		cout << "usage: ./program [delta_s delta_e delta_e1]" << endl;
+		return 1;
+	}
+	R d_s("0.5181489"), d_e("1.412625"), d_e1("3.83");
+	if (argc == 4)
+	{
+		unique_ptr<char*[]> args(argv);
+		d_s = R(args[1]);
+		d_e = R(args[2]);
+		d_e1 = R(args[3]);
+		args.release();
+	}
 	Context c(n_Max, lambda, dim_);
 	Op sigma(d_s, 0, c);
 	Op epsilon(d_e, 0, c);
 	Op e1(d_e1, 0, c);
 	mixed_ising(c, sigma, epsilon, e1, numax, maxspin);
-	args.release();
 	return 0;
 }

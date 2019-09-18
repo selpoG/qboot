@@ -4,7 +4,7 @@
 #include <utility>  // for move
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
-using mpfr::real;
+using mp::real;
 using std::move, std::unique_ptr, std::make_unique;
 
 namespace qboot
@@ -146,7 +146,7 @@ namespace qboot
 		}
 		uint32_t argmax = 0;
 		for (uint32_t n = 1; n < N_; ++n)
-			if (mpfr::cmpabs(vec[argmax], vec[n]) < 0) argmax = n;
+			if (mp::cmpabs(vec[argmax], vec[n]) < 0) argmax = n;
 		auto max = vec[argmax];
 		target /= max;
 		vec /= max;
@@ -228,10 +228,10 @@ namespace qboot
 					}
 			for (uint32_t m = 0; m <= d0; ++m)
 				for (uint32_t k = 0; k <= deg; ++k)
-					q0.at(m, k) = ineq->bilinear_bases()[m].eval(xs[k]) * mpfr::sqrt(scs[k]);
+					q0.at(m, k) = ineq->bilinear_bases()[m].eval(xs[k]) * mp::sqrt(scs[k]);
 			for (uint32_t m = 0; m <= d1; ++m)
 				for (uint32_t k = 0; k <= deg; ++k)
-					q1.at(m, k) = ineq->bilinear_bases()[m].eval(xs[k]) * mpfr::sqrt(scs[k] * xs[k]);
+					q1.at(m, k) = ineq->bilinear_bases()[m].eval(xs[k]) * mp::sqrt(scs[k] * xs[k]);
 			sdpb.register_constraint(
 			    j, DualConstraint(ineq->size(), ineq->max_degree(), move(d_B), move(d_c), {move(q0), move(q1)}));
 		}

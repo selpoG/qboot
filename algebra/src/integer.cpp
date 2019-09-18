@@ -2,6 +2,6 @@
 
 #include "rational.hpp"
 
-namespace mpfr
+namespace mp
 {
-}  // namespace mpfr
+}  // namespace mp

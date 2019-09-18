@@ -23,16 +23,16 @@
 
 namespace qboot
 {
-	algebra::Vector<algebra::Polynomial> _get_nonzero_spin_rec_coeffs(const PrimaryOperator& op, const mpfr::real& S,
-	                                                                  const mpfr::real& P);
+	algebra::Vector<algebra::Polynomial> _get_nonzero_spin_rec_coeffs(const PrimaryOperator& op, const mp::real& S,
+	                                                                  const mp::real& P);
 
-	algebra::Vector<algebra::Polynomial> _get_zero_spin_rec_coeffs(const PrimaryOperator& op, const mpfr::real& S,
-	                                                               const mpfr::real& P);
+	algebra::Vector<algebra::Polynomial> _get_zero_spin_rec_coeffs(const PrimaryOperator& op, const mp::real& S,
+	                                                               const mp::real& P);
 
 	// gives coefficient polynomials p[i] of recursion equation of b[i].
 	// \sum_{i = 0}^{p.size() - 1} b[n - i] p[i] = 0
-	inline algebra::Vector<algebra::Polynomial> _get_rec_coeffs(const PrimaryOperator& op, const mpfr::real& S,
-	                                                            const mpfr::real& P)
+	inline algebra::Vector<algebra::Polynomial> _get_rec_coeffs(const PrimaryOperator& op, const mp::real& S,
+	                                                            const mp::real& P)
 	{
 		if (op.spin() == 0) return _get_zero_spin_rec_coeffs(op, S, P);
 		return _get_nonzero_spin_rec_coeffs(op, S, P);

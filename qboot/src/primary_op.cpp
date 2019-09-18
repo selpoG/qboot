@@ -7,7 +7,7 @@ namespace qboot
 {
 	PrimaryOperator::PrimaryOperator(const Context& c) : PrimaryOperator(c.epsilon()) {}
 	PrimaryOperator::PrimaryOperator(uint32_t spin, const Context& c) : PrimaryOperator(spin, c.epsilon()) {}
-	PrimaryOperator::PrimaryOperator(const mpfr::real& delta, uint32_t spin, const Context& c)
+	PrimaryOperator::PrimaryOperator(const mp::real& delta, uint32_t spin, const Context& c)
 	    : PrimaryOperator(delta, spin, c.epsilon())
 	{
 	}

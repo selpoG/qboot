@@ -15,7 +15,7 @@
 #include "integer.hpp"
 #include "rational.hpp"
 
-namespace mpfr
+namespace mp
 {
 	template <class Tp>
 	inline constexpr bool _mpq_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer>;
@@ -83,7 +83,7 @@ namespace mpfr
 			using namespace std::string_literals;
 			if (auto err = mpq_set_str(_x, o.data(), 10); err == -1)
 			{
-				throw std::runtime_error("in mpfr::rational(string_view):\n  invalid input format "s += o);
+				throw std::runtime_error("in mp::rational(string_view):\n  invalid input format "s += o);
 				mpq_clear(_x);
 			}
 			mpq_canonicalize(_x);
@@ -102,7 +102,7 @@ namespace mpfr
 		{
 			using namespace std::string_literals;
 			if (auto err = mpq_set_str(_x, o.data(), 10); err == -1)
-				throw std::runtime_error("in mpfr::rational(string_view):\n  invalid input format "s += o);
+				throw std::runtime_error("in mp::rational(string_view):\n  invalid input format "s += o);
 			mpq_canonicalize(_x);
 			return *this;
 		}
@@ -349,8 +349,8 @@ namespace mpfr
 		}
 
 		friend integer floor(const rational& q) { return _mp_ops<integer>::get(q._x); }
-		friend inline mpq_srcptr mpfr::_mp_ops<rational>::data(const rational& rop);
-		friend inline rational mpfr::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
+		friend inline mpq_srcptr mp::_mp_ops<rational>::data(const rational& rop);
+		friend inline rational mp::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const rational& q)
@@ -389,6 +389,6 @@ namespace mpfr
 		}
 		return rational(num, den);
 	}
-}  // namespace mpfr
+}  // namespace mp
 
 #endif  // QBOOT_RATIONAL_HPP_

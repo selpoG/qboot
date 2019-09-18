@@ -54,12 +54,12 @@
 #include "integer.hpp"
 #include "rational.hpp"
 
-namespace mpfr
+namespace mp
 {
 	// global variables
-	// internal (binary) precision of mpfr::real
+	// internal (binary) precision of mp::real
 	extern mpfr_prec_t global_prec;
-	// rounding mode of mpfr::real
+	// rounding mode of mp::real
 	extern mpfr_rnd_t global_rnd;
 
 	template <class Char, class Traits>
@@ -184,7 +184,7 @@ namespace mpfr
 			using namespace std::string_literals;
 			mpfr_init2(_x, global_prec);
 			if (auto err = mpfr_set_str(_x, op.data(), 0, global_rnd); err == -1)
-				throw std::runtime_error("in mpfr::real(string_view):\n  invalid input format "s += op);
+				throw std::runtime_error("in mp::real(string_view):\n  invalid input format "s += op);
 		}
 
 		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
@@ -871,10 +871,10 @@ namespace mpfr
 	// do not need to define rvalue version because we cannot reuse x in the above algorithm
 
 	inline int cmpabs(const real& r1, const real& r2) { return mpfr_cmpabs(r1._x, r2._x); }
-}  // namespace mpfr
+}  // namespace mp
 
 // io functions
-namespace mpfr
+namespace mp
 {
 	/////////////////////////////////////////////////////////////////
 	// helper functions
@@ -1153,6 +1153,6 @@ namespace mpfr
 		}
 		return in;
 	}
-}  // namespace mpfr
+}  // namespace mp
 
 #endif  // QBOOT_REAL_HPP_

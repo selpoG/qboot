@@ -13,7 +13,7 @@
 #include "gmpxx.h"
 #include "mpfr.h"
 
-namespace mpfr
+namespace mp
 {
 	// clang-tidy warns to use int32_t or int64_t instead of long int
 	using _long = long int;            // NOLINT
@@ -467,7 +467,7 @@ namespace mpfr
 			using namespace std::string_literals;
 			if (auto err = mpz_init_set_str(_x, o.data(), 10); err == -1)
 			{
-				throw std::runtime_error("in mpfr::integer(string_view):\n  invalid input format "s += o);
+				throw std::runtime_error("in mp::integer(string_view):\n  invalid input format "s += o);
 				mpz_clear(_x);
 			}
 		}
@@ -484,7 +484,7 @@ namespace mpfr
 		{
 			using namespace std::string_literals;
 			if (auto err = mpz_set_str(_x, o.data(), 10); err == -1)
-				throw std::runtime_error("in mpfr::integer(string_view):\n  invalid input format "s += o);
+				throw std::runtime_error("in mp::integer(string_view):\n  invalid input format "s += o);
 			return *this;
 		}
 		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
@@ -665,9 +665,9 @@ namespace mpfr
 			mpz_neg(_x, _x);
 			return std::move(*this);
 		}
-		friend inline mpz_srcptr mpfr::_mp_ops<integer>::data(const integer& rop);
-		friend inline integer mpfr::_mp_ops<integer>::get(mpq_srcptr rop);
-		friend inline integer mpfr::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
+		friend inline mpz_srcptr mp::_mp_ops<integer>::data(const integer& rop);
+		friend inline integer mp::_mp_ops<integer>::get(mpq_srcptr rop);
+		friend inline integer mp::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const integer& z)
@@ -715,6 +715,6 @@ namespace mpfr
 		return z;
 	}
 	inline mpz_srcptr _mp_ops<integer>::data(const integer& op) { return op._x; }
-}  // namespace mpfr
+}  // namespace mp
 
 #endif  // QBOOT_INTEGER_HPP_
