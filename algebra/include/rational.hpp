@@ -140,7 +140,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline rational& operator+=(const Tp& o) &
+		rational& operator+=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, rational>)
 				mpq_add(_x, _x, o._x);
@@ -150,7 +150,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline rational& operator-=(const Tp& o) &
+		rational& operator-=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, rational>)
 				mpq_sub(_x, _x, o._x);
@@ -160,7 +160,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline rational& operator*=(const Tp& o) &
+		rational& operator*=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, rational>)
 				mpq_mul(_x, _x, o._x);
@@ -173,7 +173,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline rational& operator/=(const Tp& o) &
+		rational& operator/=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, rational>)
 				mpq_div(_x, _x, o._x);
@@ -243,56 +243,56 @@ namespace mp
 		friend rational operator/(rational&& a, rational&& b) { return a /= b; }
 
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator+(const rational& r1, const Tp& r2)
+		friend rational operator+(const rational& r1, const Tp& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::add(temp._x, r1._x, r2);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator+(rational&& r1, const Tp& r2)
+		friend rational operator+(rational&& r1, const Tp& r2)
 		{
 			return r1 += r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator+(const Tp& r1, const rational& r2)
+		friend rational operator+(const Tp& r1, const rational& r2)
 		{
 			return r2 + r1;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator+(const Tp& r1, rational&& r2)
+		friend rational operator+(const Tp& r1, rational&& r2)
 		{
 			return r2 += r1;
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator-(const rational& r1, const Tp& r2)
+		friend rational operator-(const rational& r1, const Tp& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::sub_a(temp._x, r1._x, r2);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator-(rational&& r1, const Tp& r2)
+		friend rational operator-(rational&& r1, const Tp& r2)
 		{
 			return r1 -= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator-(const Tp& r1, const rational& r2)
+		friend rational operator-(const Tp& r1, const rational& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::sub_b(temp._x, r1, r2._x);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator-(const Tp& r1, rational&& r2)
+		friend rational operator-(const Tp& r1, rational&& r2)
 		{
 			_mp_ops<Tp>::sub_b(r2._x, r1, r2._x);
 			return std::move(r2);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator*(const rational& r1, const Tp& r2)
+		friend rational operator*(const rational& r1, const Tp& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::mul(temp._x, r1._x, r2);
@@ -300,23 +300,23 @@ namespace mp
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator*(rational&& r1, const Tp& r2)
+		friend rational operator*(rational&& r1, const Tp& r2)
 		{
 			return r1 *= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator*(const Tp& r1, const rational& r2) noexcept
+		friend rational operator*(const Tp& r1, const rational& r2) noexcept
 		{
 			return r2 * r1;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator*(const Tp& r1, rational&& r2)
+		friend rational operator*(const Tp& r1, rational&& r2)
 		{
 			return r2 *= r1;
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator/(const rational& r1, const Tp& r2)
+		friend rational operator/(const rational& r1, const Tp& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::div_a(temp._x, r1._x, r2);
@@ -324,12 +324,12 @@ namespace mp
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator/(rational&& r1, const Tp& r2)
+		friend rational operator/(rational&& r1, const Tp& r2)
 		{
 			return r1 /= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator/(const Tp& r1, const rational& r2)
+		friend rational operator/(const Tp& r1, const rational& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::div_b(temp._x, r1, r2._x);
@@ -337,22 +337,22 @@ namespace mp
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
-		friend inline rational operator/(const Tp& r1, rational&& r2)
+		friend rational operator/(const Tp& r1, rational&& r2)
 		{
 			_mp_ops<Tp>::div_b(r2._x, r1, r2._x);
 			mpq_canonicalize(r2._x);
 			return std::move(r2);
 		}
 
-		inline rational operator+() const& { return *this; }
-		inline rational operator+() && { return std::move(*this); }
-		inline rational operator-() const&
+		rational operator+() const& { return *this; }
+		rational operator+() && { return std::move(*this); }
+		rational operator-() const&
 		{
 			rational temp;
 			mpq_neg(temp._x, _x);
 			return temp;
 		}
-		inline rational operator-() &&
+		rational operator-() &&
 		{
 			mpq_neg(_x, _x);
 			return std::move(*this);
@@ -360,8 +360,8 @@ namespace mp
 
 		friend std::optional<rational> parse(std::string_view str);
 		friend integer floor(const rational& q) { return _mp_ops<integer>::get(q._x); }
-		friend inline mpq_srcptr mp::_mp_ops<rational>::data(const rational& rop);
-		friend inline rational mp::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
+		friend mpq_srcptr mp::_mp_ops<rational>::data(const rational& rop);
+		friend rational mp::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const rational& q)

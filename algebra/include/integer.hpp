@@ -525,7 +525,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline integer& operator+=(const Tp& o) &
+		integer& operator+=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, integer>)
 				mpz_add(_x, _x, o._x);
@@ -535,7 +535,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline integer& operator-=(const Tp& o) &
+		integer& operator-=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, integer>)
 				mpz_sub(_x, _x, o._x);
@@ -545,7 +545,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline integer& operator*=(const Tp& o) &
+		integer& operator*=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, integer>)
 				mpz_mul(_x, _x, o._x);
@@ -598,86 +598,86 @@ namespace mp
 		friend integer operator*(integer&& a, integer&& b) { return a *= b; }
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator+(const integer& r1, const Tp& r2)
+		friend integer operator+(const integer& r1, const Tp& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::add(temp._x, r1._x, r2);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator+(integer&& r1, const Tp& r2)
+		friend integer operator+(integer&& r1, const Tp& r2)
 		{
 			return r1 += r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator+(const Tp& r1, const integer& r2)
+		friend integer operator+(const Tp& r1, const integer& r2)
 		{
 			return r2 + r1;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator+(const Tp& r1, integer&& r2)
+		friend integer operator+(const Tp& r1, integer&& r2)
 		{
 			return r2 += r1;
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator-(const integer& r1, const Tp& r2)
+		friend integer operator-(const integer& r1, const Tp& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::sub_a(temp._x, r1._x, r2);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator-(integer&& r1, const Tp& r2)
+		friend integer operator-(integer&& r1, const Tp& r2)
 		{
 			return r1 -= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator-(const Tp& r1, const integer& r2)
+		friend integer operator-(const Tp& r1, const integer& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::sub_b(temp._x, r1, r2._x);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator-(const Tp& r1, integer&& r2)
+		friend integer operator-(const Tp& r1, integer&& r2)
 		{
 			_mp_ops<Tp>::sub_b(r2._x, r1, r2._x);
 			return std::move(r2);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator*(const integer& r1, const Tp& r2)
+		friend integer operator*(const integer& r1, const Tp& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::mul(temp._x, r1._x, r2);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator*(integer&& r1, const Tp& r2)
+		friend integer operator*(integer&& r1, const Tp& r2)
 		{
 			return r1 *= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator*(const Tp& r1, const integer& r2)
+		friend integer operator*(const Tp& r1, const integer& r2)
 		{
 			return r2 * r1;
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
-		friend inline integer operator*(const Tp& r1, integer&& r2)
+		friend integer operator*(const Tp& r1, integer&& r2)
 		{
 			return r2 *= r1;
 		}
 
-		inline integer operator+() const& { return *this; }
-		inline integer operator+() && { return std::move(*this); }
-		inline integer operator-() const&
+		integer operator+() const& { return *this; }
+		integer operator+() && { return std::move(*this); }
+		integer operator-() const&
 		{
 			integer temp;
 			mpz_neg(temp._x, _x);
 			return temp;
 		}
-		inline integer operator-() &&
+		integer operator-() &&
 		{
 			mpz_neg(_x, _x);
 			return std::move(*this);
@@ -685,6 +685,9 @@ namespace mp
 
 		friend std::optional<rational> parse(std::string_view str);
 		friend std::optional<rational> _parse_mantisa(std::string_view str);
+		friend mpz_srcptr mp::_mp_ops<integer>::data(const integer& rop);
+		friend integer mp::_mp_ops<integer>::get(mpq_srcptr rop);
+		friend integer mp::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, const integer& z)

@@ -88,19 +88,19 @@ namespace mp
 
 		// default and copy constructor
 
-		inline real()
+		real()
 		{
 			mpfr_init2(_x, global_prec);
 			mpfr_set_zero(_x, +1);
 		}
 
-		inline real(const real& o)
+		real(const real& o)
 		{
 			mpfr_init2(_x, global_prec);
 			mpfr_set(_x, o._x, global_rnd);
 		}
 
-		inline real(real&& o) noexcept
+		real(real&& o) noexcept
 		{
 			mpfr_init2(_x, global_prec);
 			mpfr_swap(_x, o._x);
@@ -108,14 +108,14 @@ namespace mp
 
 		// default assignment operator
 
-		inline real& operator=(const real& o) &
+		real& operator=(const real& o) &
 		{
 			if (this == &o) return *this;
 			mpfr_set(_x, o._x, global_rnd);
 			return *this;
 		}
 
-		inline real& operator=(real&& o) & noexcept
+		real& operator=(real&& o) & noexcept
 		{
 			if (this == &o) return *this;
 			mpfr_swap(_x, o._x);
@@ -124,7 +124,7 @@ namespace mp
 
 		// destructor
 
-		inline ~real() { mpfr_clear(_x); }
+		~real() { mpfr_clear(_x); }
 
 		void swap(real& o) & { mpfr_swap(_x, o._x); }
 
@@ -182,13 +182,13 @@ namespace mp
 		// converting constructors and converting assignment operators
 		/////////////////////////////////////////////////////////////////
 
-		explicit inline real(mpfr_srcptr o)
+		explicit real(mpfr_srcptr o)
 		{
 			mpfr_init2(_x, global_prec);
 			mpfr_set(_x, o, global_rnd);
 		}
 
-		explicit inline real(std::string_view op)
+		explicit real(std::string_view op)
 		{
 			std::string s(op);
 			using namespace std::string_literals;
@@ -201,7 +201,7 @@ namespace mp
 		}
 
 		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
-		explicit inline real(const T& o)
+		explicit real(const T& o)
 		{
 			mpfr_init2(_x, global_prec);
 			if constexpr (_mpfr_is_other_operands<T>)
@@ -213,7 +213,7 @@ namespace mp
 		}
 
 		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
-		inline real(T op, mpfr_exp_t e)
+		real(T op, mpfr_exp_t e)
 		{
 			mpfr_init2(_x, global_prec);
 			if constexpr (std::is_signed_v<T>)
@@ -235,7 +235,7 @@ namespace mp
 		// converting assignment operators
 
 		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
-		inline real& operator=(const T& o) &
+		real& operator=(const T& o) &
 		{
 			if constexpr (_mpfr_is_other_operands<T>)
 				_mp_ops<T>::set(_x, o, global_rnd);
@@ -268,7 +268,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline real& operator+=(const Tp& o) &
+		real& operator+=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, real>)
 				mpfr_add(_x, _x, o._x, global_rnd);
@@ -278,7 +278,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline real& operator-=(const Tp& o) &
+		real& operator-=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, real>)
 				mpfr_sub(_x, _x, o._x, global_rnd);
@@ -288,7 +288,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline real& operator*=(const Tp& o) &
+		real& operator*=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, real>)
 				mpfr_mul(_x, _x, o._x, global_rnd);
@@ -298,7 +298,7 @@ namespace mp
 		}
 
 		template <class Tp>
-		inline real& operator/=(const Tp& o) &
+		real& operator/=(const Tp& o) &
 		{
 			if constexpr (std::is_same_v<Tp, real>)
 				mpfr_div(_x, _x, o._x, global_rnd);
@@ -369,98 +369,98 @@ namespace mp
 		friend real operator/(real&& r1, real&& r2) { return r1 /= r2; }
 
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator+(const real& r1, const Tp& r2)
+		friend real operator+(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::add(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator+(real&& r1, const Tp& r2)
+		friend real operator+(real&& r1, const Tp& r2)
 		{
 			return r1 += r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator+(const Tp& r1, const real& r2)
+		friend real operator+(const Tp& r1, const real& r2)
 		{
 			return r2 + r1;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator+(const Tp& r1, real&& r2)
+		friend real operator+(const Tp& r1, real&& r2)
 		{
 			return r2 += r1;
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator-(const real& r1, const Tp& r2)
+		friend real operator-(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::sub_a(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator-(real&& r1, const Tp& r2)
+		friend real operator-(real&& r1, const Tp& r2)
 		{
 			return r1 -= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator-(const Tp& r1, const real& r2)
+		friend real operator-(const Tp& r1, const real& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::sub_b(temp._x, r1, r2._x, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator-(const Tp& r1, real&& r2)
+		friend real operator-(const Tp& r1, real&& r2)
 		{
 			_mp_ops<Tp>::sub_b(r2._x, r1, r2._x, global_rnd);
 			return std::move(r2);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator*(const real& r1, const Tp& r2)
+		friend real operator*(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::mul(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator*(real&& r1, const Tp& r2)
+		friend real operator*(real&& r1, const Tp& r2)
 		{
 			return r1 *= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator*(const Tp& r1, const real& r2) noexcept
+		friend real operator*(const Tp& r1, const real& r2) noexcept
 		{
 			return r2 * r1;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator*(const Tp& r1, real&& r2)
+		friend real operator*(const Tp& r1, real&& r2)
 		{
 			return r2 *= r1;
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator/(const real& r1, const Tp& r2)
+		friend real operator/(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::div_a(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator/(real&& r1, const Tp& r2)
+		friend real operator/(real&& r1, const Tp& r2)
 		{
 			return r1 /= r2;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator/(const Tp& r1, const real& r2)
+		friend real operator/(const Tp& r1, const real& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::div_b(temp._x, r1, r2._x, global_rnd);
 			return temp;
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
-		friend inline real operator/(const Tp& r1, real&& r2)
+		friend real operator/(const Tp& r1, real&& r2)
 		{
 			_mp_ops<Tp>::div_b(r2._x, r1, r2._x, global_rnd);
 			return std::move(r2);
@@ -471,7 +471,7 @@ namespace mp
 		/////////////////////////////////////////////////////////////////
 
 		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
-		explicit inline operator T() const
+		explicit operator T() const
 		{
 			if constexpr (_mpfr_is_other_operands<T>)
 				return _mp_ops<T>::get(_x, global_rnd);
@@ -485,15 +485,15 @@ namespace mp
 		// unary operators
 		/////////////////////////////////////////////////////////////////
 
-		inline real operator+() const& { return *this; }
-		inline real operator+() && { return std::move(*this); }
-		inline real operator-() const&
+		real operator+() const& { return *this; }
+		real operator+() && { return std::move(*this); }
+		real operator-() const&
 		{
 			real temp;
 			mpfr_neg(temp._x, _x, global_rnd);
 			return temp;
 		}
-		inline real operator-() &&
+		real operator-() &&
 		{
 			mpfr_neg(_x, _x, global_rnd);
 			return std::move(*this);
