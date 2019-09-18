@@ -63,7 +63,7 @@ namespace mpfr
 	extern mpfr_rnd_t global_rnd;
 
 	template <class Char, class Traits>
-	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_t x,
+	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
 	                                                        mpfr_rnd_t rnd);
 
 	inline bool _is_nan(mpfr_srcptr x) { return mpfr_nan_p(x) != 0; }    // NOLINT
@@ -78,9 +78,6 @@ namespace mpfr
 
 	class real
 	{
-		friend class integer;
-		friend class rational;
-		friend mpfr_srcptr _take(const real& x) { return x._x; }
 		mpfr_t _x;
 
 	public:
@@ -176,7 +173,7 @@ namespace mpfr
 		// converting constructors and converting assignment operators
 		/////////////////////////////////////////////////////////////////
 
-		explicit inline real(const mpfr_t& o)
+		explicit inline real(mpfr_srcptr o)
 		{
 			mpfr_init2(_x, global_prec);
 			mpfr_set(_x, o, global_rnd);
@@ -1010,7 +1007,7 @@ namespace mpfr
 	// TODO(selpo): handle ios_base::hexfloat
 
 	template <class Char, class Traits>
-	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_t x,
+	inline std::basic_ostream<Char, Traits>& helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
 	                                                        mpfr_rnd_t rnd)
 	{
 		if (_is_nan(x)) return helper_ostream_const(s, "@NaN@", false);

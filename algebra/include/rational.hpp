@@ -24,9 +24,6 @@ namespace mpfr
 
 	class rational
 	{
-		friend class integer;
-		friend class real;
-		friend mpq_srcptr _take(const rational& x) { return x._x; }
 		mpq_t _x;
 
 	public:
@@ -46,10 +43,16 @@ namespace mpfr
 		~rational() { mpq_clear(_x); }
 		void swap(rational& o) & { mpq_swap(_x, o._x); }
 
+		explicit rational(mpq_srcptr o) : rational() { mpq_set(_x, o); }
+
 		[[nodiscard]] rational clone() const { return *this; }
 		[[nodiscard]] bool iszero() const { return mpq_sgn(_x) == 0; }
 		void negate() & { mpq_neg(_x, _x); }
 		void invert() & { mpq_inv(_x, _x); }
+		// numerator
+		integer num() const { return integer(mpq_numref(_x)); }
+		// denominator
+		integer den() const { return integer(mpq_denref(_x)); }
 
 		[[nodiscard]] std::string str() const { return std::string(mpq_get_str(nullptr, 10, _x)); }
 
@@ -66,6 +69,12 @@ namespace mpfr
 				mpq_set_si(_x, num, den);
 			else
 				mpq_set_ui(_x, num, den);
+			mpq_canonicalize(_x);
+		}
+
+		rational(const integer& num, const integer& den) : rational()
+		{
+			_mp_ops<integer>::set(_x, num, den);
 			mpq_canonicalize(_x);
 		}
 
@@ -126,7 +135,7 @@ namespace mpfr
 			if constexpr (std::is_same_v<Tp, rational>)
 				mpq_add(_x, _x, o._x);
 			else
-				_mp_ops<Tp>::addmul(mpq_numref(_x), mpq_denref(_x), o);
+				_mp_ops<Tp>::add(_x, _x, o);
 			return *this;
 		}
 
@@ -136,7 +145,7 @@ namespace mpfr
 			if constexpr (std::is_same_v<Tp, rational>)
 				mpq_sub(_x, _x, o._x);
 			else
-				_mp_ops<Tp>::submul(mpq_numref(_x), mpq_denref(_x), o);
+				_mp_ops<Tp>::sub_a(_x, _x, o);
 			return *this;
 		}
 
@@ -160,7 +169,7 @@ namespace mpfr
 				mpq_div(_x, _x, o._x);
 			else
 			{
-				_mp_ops<Tp>::mul(_x, _x, o);
+				_mp_ops<Tp>::div_a(_x, _x, o);
 				mpq_canonicalize(_x);
 			}
 			return *this;
@@ -339,8 +348,8 @@ namespace mpfr
 			return std::move(*this);
 		}
 
-		friend rational pochhammer(const rational& x, _ulong n);
 		friend integer floor(const rational& q) { return _mp_ops<integer>::get(q._x); }
+		friend inline mpq_srcptr mpfr::_mp_ops<rational>::data(const rational& rop);
 		friend inline rational mpfr::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
 		template <class Char, class Traits>
@@ -355,14 +364,10 @@ namespace mpfr
 			mpq_canonicalize(q._x);
 			return s;
 		}
+		friend rational pochhammer(const rational& x, _ulong n);
 	};
-	inline integer mpfr::_mp_ops<integer>::get(mpq_srcptr rop)
-	{
-		integer z;
-		mpz_fdiv_q(z._x, mpq_numref(rop), mpq_denref(rop));
-		return z;
-	}
-	inline rational mpfr::_mp_ops<rational>::get(mpfr_srcptr rop, [[maybe_unused]] mpfr_rnd_t rnd)
+	inline mpq_srcptr _mp_ops<rational>::data(const rational& op) { return op._x; }
+	inline rational _mp_ops<rational>::get(mpfr_srcptr rop, [[maybe_unused]] mpfr_rnd_t rnd)
 	{
 		rational q;
 		mpfr_get_q(q._x, rop);
@@ -370,9 +375,19 @@ namespace mpfr
 	}
 	inline rational pochhammer(const rational& x, _ulong n)
 	{
-		rational temp(1);
-		for (_ulong i = 0; i < n; ++i) temp *= x + i;
-		return temp;
+		if (n == 0) return rational(1);
+		if (n == 1) return x;
+		integer xnum = x.num(), xden = x.den();
+		integer num(1), den = pow(xden, n);
+		for (_ulong i = 0;;)
+		{
+			num *= xnum;
+			if (++i < n)
+				xnum += xden;
+			else
+				break;
+		}
+		return rational(num, den);
 	}
 }  // namespace mpfr
 

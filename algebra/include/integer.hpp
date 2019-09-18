@@ -27,10 +27,6 @@ namespace mpfr
 	inline constexpr bool _is_mp =
 	    std::is_same_v<Tp, integer> || std::is_same_v<Tp, rational> || std::is_same_v<Tp, real>;
 
-	mpz_srcptr _take(const integer& x);
-	mpq_srcptr _take(const rational& x);
-	mpfr_srcptr _take(const real& x);
-
 	// check all values in integral class I1 are included in integral class I2
 	// and I1, I2 has the same signed property
 	template <class I1, class I2>
@@ -58,8 +54,14 @@ namespace mpfr
 	template <>
 	struct _mp_ops<integer>
 	{
-		inline static void set(mpq_ptr rop, const integer& op) { mpq_set_z(rop, _take(op)); }
-		inline static void set(mpfr_ptr rop, const integer& op, mpfr_rnd_t rnd) { mpfr_set_z(rop, _take(op), rnd); }
+		friend class integer;
+		inline static void set(mpq_ptr rop, const integer& op) { mpq_set_z(rop, data(op)); }
+		inline static void set(mpq_ptr rop, const integer& numop, const integer& denop)
+		{
+			mpz_set(mpq_numref(rop), data(numop));
+			mpz_set(mpq_denref(rop), data(denop));
+		}
+		inline static void set(mpfr_ptr rop, const integer& op, mpfr_rnd_t rnd) { mpfr_set_z(rop, data(op), rnd); }
 		inline static integer get(mpq_srcptr rop);
 		inline static integer get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 		inline static void add(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
@@ -69,7 +71,7 @@ namespace mpfr
 		}
 		inline static void add(mpfr_ptr rop, mpfr_srcptr op1, const integer& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_add_z(rop, op1, _take(op2), rnd);
+			mpfr_add_z(rop, op1, data(op2), rnd);
 		}
 		inline static void sub_a(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
 		{
@@ -78,7 +80,7 @@ namespace mpfr
 		}
 		inline static void sub_a(mpfr_ptr rop, mpfr_srcptr op1, const integer& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_sub_z(rop, op1, _take(op2), rnd);
+			mpfr_sub_z(rop, op1, data(op2), rnd);
 		}
 		inline static void sub_b(mpq_ptr rop, const integer& op1, mpq_srcptr op2)
 		{
@@ -87,25 +89,25 @@ namespace mpfr
 		}
 		inline static void sub_b(mpfr_ptr rop, const integer& op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
-			mpfr_z_sub(rop, _take(op1), op2, rnd);
+			mpfr_z_sub(rop, data(op1), op2, rnd);
 		}
 		inline static void mul(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
 		{
 			if (rop != op1) mpz_set(mpq_denref(rop), mpq_denref(op1));
-			mpz_mul(mpq_numref(rop), mpq_numref(op1), _take(op2));
+			mpz_mul(mpq_numref(rop), mpq_numref(op1), data(op2));
 		}
 		inline static void mul(mpfr_ptr rop, mpfr_srcptr op1, const integer& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_mul_z(rop, op1, _take(op2), rnd);
+			mpfr_mul_z(rop, op1, data(op2), rnd);
 		}
 		inline static void div_a(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
 		{
 			if (rop != op1) mpz_set(mpq_numref(rop), mpq_numref(op1));
-			mpz_mul(mpq_denref(rop), mpq_denref(op1), _take(op2));
+			mpz_mul(mpq_denref(rop), mpq_denref(op1), data(op2));
 		}
 		inline static void div_a(mpfr_ptr rop, mpfr_srcptr op1, const integer& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_div_z(rop, op1, _take(op2), rnd);
+			mpfr_div_z(rop, op1, data(op2), rnd);
 		}
 		inline static void div_b(mpq_ptr rop, const integer& op1, mpq_srcptr op2)
 		{
@@ -117,44 +119,51 @@ namespace mpfr
 			mpfr_ui_div(rop, 1, op2, rnd);
 			mul(rop, rop, op1, rnd);
 		}
-		inline static void addmul(mpz_ptr rop, mpz_srcptr op1, const integer& op2) { mpz_addmul(rop, op1, _take(op2)); }
-		inline static void submul(mpz_ptr rop, mpz_srcptr op1, const integer& op2) { mpz_submul(rop, op1, _take(op2)); }
-		inline static int cmp(mpq_srcptr op1, const integer& op2) { return mpq_cmp_z(op1, _take(op2)); }
-		inline static int cmp(mpfr_srcptr op1, const integer& op2) { return mpfr_cmp_z(op1, _take(op2)); }
+		inline static void addmul(mpz_ptr rop, mpz_srcptr op1, const integer& op2) { mpz_addmul(rop, op1, data(op2)); }
+		inline static void submul(mpz_ptr rop, mpz_srcptr op1, const integer& op2) { mpz_submul(rop, op1, data(op2)); }
+		inline static int cmp(mpq_srcptr op1, const integer& op2) { return mpq_cmp_z(op1, data(op2)); }
+		inline static int cmp(mpfr_srcptr op1, const integer& op2) { return mpfr_cmp_z(op1, data(op2)); }
+
+	private:
+		inline static mpz_srcptr data(const integer& op);
 	};
 
 	template <>
 	struct _mp_ops<rational>
 	{
-		inline static void set(mpfr_ptr rop, const rational& op, mpfr_rnd_t rnd) { mpfr_set_q(rop, _take(op), rnd); }
+		friend class rational;
+		inline static void set(mpfr_ptr rop, const rational& op, mpfr_rnd_t rnd) { mpfr_set_q(rop, data(op), rnd); }
 		inline static rational get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 		inline static void add(mpfr_ptr rop, mpfr_srcptr op1, const rational& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_add_q(rop, op1, _take(op2), rnd);
+			mpfr_add_q(rop, op1, data(op2), rnd);
 		}
 		inline static void sub_a(mpfr_ptr rop, mpfr_srcptr op1, const rational& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_sub_q(rop, op1, _take(op2), rnd);
+			mpfr_sub_q(rop, op1, data(op2), rnd);
 		}
 		inline static void sub_b(mpfr_ptr rop, const rational& op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
-			mpfr_neg(rop, op2, rnd);
-			add(rop, rop, op1, rnd);
+			sub_a(rop, op2, op1, rnd);
+			mpfr_neg(rop, rop, rnd);
 		}
 		inline static void mul(mpfr_ptr rop, mpfr_srcptr op1, const rational& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_mul_q(rop, op1, _take(op2), rnd);
+			mpfr_mul_q(rop, op1, data(op2), rnd);
 		}
 		inline static void div_a(mpfr_ptr rop, mpfr_srcptr op1, const rational& op2, mpfr_rnd_t rnd)
 		{
-			mpfr_div_q(rop, op1, _take(op2), rnd);
+			mpfr_div_q(rop, op1, data(op2), rnd);
 		}
 		inline static void div_b(mpfr_ptr rop, const rational& op1, mpfr_srcptr op2, mpfr_rnd_t rnd)
 		{
 			mpfr_ui_div(rop, 1, op2, rnd);
 			mul(rop, rop, op1, rnd);
 		}
-		inline static int cmp(mpfr_srcptr op1, const rational& op2) { return mpfr_cmp_q(op1, _take(op2)); }
+		inline static int cmp(mpfr_srcptr op1, const rational& op2) { return mpfr_cmp_q(op1, data(op2)); }
+
+	private:
+		inline static mpq_srcptr data(const rational& op);
 	};
 
 	template <>
@@ -417,9 +426,6 @@ namespace mpfr
 
 	class integer
 	{
-		friend class rational;
-		friend class real;
-		friend mpz_srcptr _take(const integer& x) { return x._x; }
 		mpz_t _x;
 
 	public:
@@ -442,6 +448,8 @@ namespace mpfr
 		}
 		~integer() { mpz_clear(_x); }
 		void swap(integer& o) & { mpz_swap(_x, o._x); }
+
+		explicit integer(mpz_srcptr o) { mpz_init_set(_x, o); }
 
 		[[nodiscard]] integer clone() const { return *this; }
 		[[nodiscard]] bool iszero() const { return mpz_sgn(_x) == 0; }
@@ -554,13 +562,13 @@ namespace mpfr
 			mpz_sub(z._x, a._x, b._x);
 			return z;
 		}
-		friend integer operator-(integer&& a, const integer& b) { return a += b; }
+		friend integer operator-(integer&& a, const integer& b) { return a -= b; }
 		friend integer operator-(const integer& a, integer&& b)
 		{
 			mpz_sub(b._x, a._x, b._x);
 			return std::move(b);
 		}
-		friend integer operator-(integer&& a, integer&& b) { return a += b; }
+		friend integer operator-(integer&& a, integer&& b) { return a -= b; }
 
 		friend integer operator*(const integer& a, const integer& b)
 		{
@@ -568,9 +576,9 @@ namespace mpfr
 			mpz_mul(z._x, a._x, b._x);
 			return z;
 		}
-		friend integer operator*(integer&& a, const integer& b) { return a += b; }
-		friend integer operator*(const integer& a, integer&& b) { return b += a; }
-		friend integer operator*(integer&& a, integer&& b) { return a += b; }
+		friend integer operator*(integer&& a, const integer& b) { return a *= b; }
+		friend integer operator*(const integer& a, integer&& b) { return b *= a; }
+		friend integer operator*(integer&& a, integer&& b) { return a *= b; }
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend inline integer operator+(const integer& r1, const Tp& r2)
@@ -657,6 +665,7 @@ namespace mpfr
 			mpz_neg(_x, _x);
 			return std::move(*this);
 		}
+		friend inline mpz_srcptr mpfr::_mp_ops<integer>::data(const integer& rop);
 		friend inline integer mpfr::_mp_ops<integer>::get(mpq_srcptr rop);
 		friend inline integer mpfr::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
@@ -670,22 +679,42 @@ namespace mpfr
 		{
 			return s >> z._x;
 		}
+		friend integer pow(const integer& op1, _ulong op2);
+		friend integer pow(integer&& op1, _ulong op2);
 		friend integer pow(_ulong op1, _ulong op2);
 	};
-	inline _ulong mpfr::_mp_ops<_ulong>::get(mpq_srcptr op) { return _ulong(_mp_ops<integer>::get(op)); }
-	inline _long mpfr::_mp_ops<_long>::get(mpq_srcptr op) { return _long(_mp_ops<integer>::get(op)); }
-	inline integer mpfr::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd)
+	inline integer pow(const integer& op1, _ulong op2)
+	{
+		integer temp;
+		mpz_pow_ui(temp._x, op1._x, op2);
+		return temp;
+	}
+	inline integer pow(integer&& op1, _ulong op2)
+	{
+		mpz_pow_ui(op1._x, op1._x, op2);
+		return std::move(op1);
+	}
 	inline integer pow(_ulong op1, _ulong op2)
 	{
 		integer temp;
 		mpz_ui_pow_ui(temp._x, op1, op2);
 		return temp;
 	}
+	inline _ulong _mp_ops<_ulong>::get(mpq_srcptr op) { return _ulong(_mp_ops<integer>::get(op)); }
+	inline _long _mp_ops<_long>::get(mpq_srcptr op) { return _long(_mp_ops<integer>::get(op)); }
+	inline integer _mp_ops<integer>::get(mpq_srcptr rop)
+	{
+		integer z;
+		mpz_fdiv_q(z._x, mpq_numref(rop), mpq_denref(rop));
+		return z;
+	}
+	inline integer _mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd)
 	{
 		integer z;
 		mpfr_get_z(z._x, rop, rnd);
 		return z;
 	}
+	inline mpz_srcptr _mp_ops<integer>::data(const integer& op) { return op._x; }
 }  // namespace mpfr
 
 #endif  // QBOOT_INTEGER_HPP_
