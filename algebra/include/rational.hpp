@@ -13,7 +13,6 @@
 #include "mpfr.h"
 
 #include "integer.hpp"
-#include "rational.hpp"
 
 namespace mp
 {
