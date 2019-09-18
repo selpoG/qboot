@@ -21,7 +21,7 @@ namespace qboot
 	{
 		ostringstream os;
 		os << "GeneralPrimaryOperator(spin=" << spin_ << ", epsilon=" << epsilon_ << ", delta in [" << from_ << ", "
-		   << (to_.has_value() ? to_->str() : "infty") << "))";
+		   << (to_.has_value() ? to_.value().str() : "infty") << "))";
 		return os.str();
 	}
 }  // namespace qboot

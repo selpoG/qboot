@@ -105,7 +105,7 @@ namespace qboot
 		ScopedTag pvms(file, "polynomialVectorMatrices");
 		for (uint32_t j = 0; j < num_constraints_; ++j)
 		{
-			const auto& c = *constraints_[j];
+			const auto& c = constraints_[j].value();
 			ScopedTag pvm(file, "polynomialVectorMatrix");
 			{
 				ScopedTag tmp(file, "rows");

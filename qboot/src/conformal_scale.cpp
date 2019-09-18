@@ -77,7 +77,7 @@ namespace qboot
 		if (end_.has_value())
 		{
 			bilinear_bases_ = Vector<Polynomial>{max_degree() / 2 + 1};
-			for (uint32_t i = 0; i < bilinear_bases_->size(); ++i) bilinear_bases_->at(i) = Polynomial(i);
+			for (uint32_t i = 0; i < bilinear_bases_.value().size(); ++i) bilinear_bases_.value().at(i) = Polynomial(i);
 		}
 		else
 		{
@@ -97,7 +97,7 @@ namespace qboot
 			{
 				Vector<real> v(i + 1);
 				for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
-				bilinear_bases_->at(i) = Polynomial(move(v));
+				bilinear_bases_.value().at(i) = Polynomial(move(v));
 			}
 		}
 	}

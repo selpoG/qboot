@@ -122,20 +122,20 @@ namespace qboot
 		[[nodiscard]] mp::real eval_d(const mp::real& delta) const
 		{
 			mp::real ans = mp::pow(4 * *rho_, delta);
-			if (end_.has_value()) ans *= mp::pow(get_x(delta) + *end_, -int32_t(max_degree()));
+			if (end_.has_value()) ans *= mp::pow(get_x(delta) + end_.value(), -int32_t(max_degree()));
 			for (const auto& p : poles_) ans /= delta - p;
 			return ans;
 		}
 		// convert x (in [0, \infty)) to delta
 		[[nodiscard]] mp::real get_delta(const mp::real& x) const
 		{
-			if (end_.has_value()) return *end_ * (x + gap_) / (x + *end_);
+			if (end_.has_value()) return end_.value() * (x + gap_) / (x + end_.value());
 			return x + gap_;
 		}
 		// convert delta to x (in [0, \infty))
 		[[nodiscard]] mp::real get_x(const mp::real& delta) const
 		{
-			if (end_.has_value()) return *end_ * (delta - gap_) / (*end_ - gap_);
+			if (end_.has_value()) return end_.value() * (delta - gap_) / (end_.value() - gap_);
 			return delta - gap_;
 		}
 		// evaluate at delta
@@ -157,7 +157,7 @@ namespace qboot
 		[[nodiscard]] algebra::Polynomial bilinear_base(uint32_t m) override
 		{
 			_set_bilinear_bases();
-			return bilinear_bases_->at(m).clone();
+			return bilinear_bases_.value().at(m).clone();
 		}
 		[[nodiscard]] algebra::Vector<algebra::Polynomial> bilinear_bases() override
 		{

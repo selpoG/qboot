@@ -77,14 +77,14 @@ namespace qboot
 	{
 		out << num_constraints_ << "\n";
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-			for (const auto& bas : constraints_[i]->bilinear()) write_mat(out, bas);
+			for (const auto& bas : constraints_[i].value().bilinear()) write_mat(out, bas);
 	}
 	void SDPBInput::write_free_var_matrix(const path& root, uint32_t i) const
 	{
 		string filename = "free_var_matrix." + to_string(i);
 		ofstream file(root / filename);
 		set_manip(file);
-		write_free_var_matrix(file, *constraints_[i]);
+		write_free_var_matrix(file, constraints_[i].value());
 	}
 	void SDPBInput::write_free_var_matrix(ostream& out, const DualConstraint& cons) const
 	{
@@ -95,7 +95,7 @@ namespace qboot
 		string filename = "primal_objective_c." + to_string(i);
 		ofstream file(root / filename);
 		set_manip(file);
-		write_primal_objective_c(file, *constraints_[i]);
+		write_primal_objective_c(file, constraints_[i].value());
 	}
 	void SDPBInput::write_primal_objective_c(ostream& out, const DualConstraint& cons) const
 	{
@@ -113,17 +113,17 @@ namespace qboot
 		out << num_constraints_ << "\n";
 		for (uint32_t i = 0; i < num_constraints_; ++i) out << i << "\n";
 		out << num_constraints_ << "\n";
-		for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i]->dim() << "\n";
+		for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i].value().dim() << "\n";
 		out << num_constraints_ << "\n";
-		for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i]->degree() << "\n";
+		for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i].value().degree() << "\n";
 		out << num_constraints_ << "\n";
-		for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i]->schur_size() << "\n";
+		for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i].value().schur_size() << "\n";
 		out << 2 * num_constraints_ << "\n";
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-			for (const auto& m : constraints_[i]->bilinear()) out << m.row() * constraints_[i]->dim() << "\n";
+			for (const auto& m : constraints_[i].value().bilinear()) out << m.row() * constraints_[i].value().dim() << "\n";
 		out << 2 * num_constraints_ << "\n";
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-			for (const auto& m : constraints_[i]->bilinear()) out << m.column() * constraints_[i]->dim() << "\n";
+			for (const auto& m : constraints_[i].value().bilinear()) out << m.column() * constraints_[i].value().dim() << "\n";
 	}
 	void SDPBInput::write(const path& root_) const
 	{

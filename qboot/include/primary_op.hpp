@@ -96,12 +96,12 @@ namespace qboot
 		[[nodiscard]] const mp::real& lower_bound() const { return from_; }
 		[[nodiscard]] bool is_finite() const noexcept { return to_.has_value(); }
 		// if not is_finite(), do not call this
-		[[nodiscard]] const mp::real& upper_bound() const { return *to_; }
+		[[nodiscard]] const mp::real& upper_bound() const { return to_.value(); }
 		// if not is_finite(), returns nullopt
 		[[nodiscard]] const std::optional<mp::real>& upper_bound_safe() const { return to_; }
 		[[nodiscard]] PrimaryOperator fix_delta(const mp::real& delta) const
 		{
-			assert(from_ <= delta && (!to_.has_value() || delta < *to_));
+			assert(from_ <= delta && (!to_.has_value() || delta < to_.value()));
 			return PrimaryOperator(delta, spin_, epsilon_);
 		}
 		[[nodiscard]] std::string str() const;

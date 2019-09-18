@@ -74,7 +74,7 @@ namespace qboot
 		std::optional<algebra::Vector<mp::real>> ope_{};
 		static std::optional<algebra::Vector<mp::real>> clone(const std::optional<algebra::Vector<mp::real>>& ope)
 		{
-			if (ope.has_value()) return ope->clone();
+			if (ope.has_value()) return ope.value().clone();
 			return {};
 		}
 		void set_operators(const mp::rational& epsilon, const std::function<uint32_t(uint32_t)>& num_poles) &
@@ -84,9 +84,9 @@ namespace qboot
 			for (const auto& [sp, lb, ub] : op_args_)
 			{
 				if (ub.has_value())
-					ops_.emplace_back(sp, num_poles(sp), epsilon, *lb, *ub);
+					ops_.emplace_back(sp, num_poles(sp), epsilon, lb.value(), ub.value());
 				else if (lb.has_value())
-					ops_.emplace_back(sp, num_poles(sp), epsilon, *lb);
+					ops_.emplace_back(sp, num_poles(sp), epsilon, lb.value());
 				else
 					ops_.emplace_back(sp, num_poles(sp), epsilon);
 			}
@@ -166,7 +166,7 @@ namespace qboot
 		[[nodiscard]] mp::real take_element(uint32_t id, const algebra::Matrix<mp::real>& m) const
 		{
 			const auto& ope = sector(id).ope();
-			if (ope) return m.inner_product(*ope);
+			if (ope) return m.inner_product(ope.value());
 			return m.at(0, 0);
 		}
 		[[nodiscard]] algebra::Vector<algebra::Matrix<mp::real>> make_disc_mat(uint32_t id) const;
