@@ -69,6 +69,25 @@ namespace mp
 		}
 
 		[[nodiscard]] std::string str() const { return std::string(mpq_get_str(nullptr, 10, _x)); }
+		// replace '/' by slash, '-' by minus
+		// for example, rational(-17, 31u).str('#', '%') = "%17#31"
+		[[nodiscard]] std::string str(char slash, char minus = '-') const
+		{
+			std::string s;
+			if (*this < 0)
+			{
+				s += minus;
+				s += (-num()).str();
+			}
+			else
+				s += num().str();
+			if (!isinteger())
+			{
+				s += slash;
+				s += den().str();
+			}
+			return s;
+		}
 		static std::optional<rational> _parse(std::string_view str)
 		{
 			std::string s(str);
