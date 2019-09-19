@@ -2,7 +2,7 @@
 
 #include "real.hpp"  // for real, pow, sgn
 
-using mpfr::real;
+using mp::real;
 using std::move, std::ostream;
 
 namespace algebra
@@ -131,7 +131,7 @@ namespace algebra
 		for (uint32_t i = 1; i <= d; ++i)
 		{
 			auto& val = v[i];
-			auto sgn = mpfr::sgn(val);
+			auto sgn = mp::sgn(val);
 			if (sgn == 0) continue;
 			if (f)
 			{

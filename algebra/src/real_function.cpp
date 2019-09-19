@@ -1,6 +1,6 @@
 #include "real_function.hpp"
 
-using mpfr::real;
+using mp::real;
 
 namespace algebra
 {
@@ -11,7 +11,7 @@ namespace algebra
 	{
 		assert(a != 0);
 		RealFunction<real> f(lambda);
-		f.at(0) = mpfr::pow(a, p);
+		f.at(0) = mp::pow(a, p);
 		real tmp = b / a;
 		for (uint32_t k = 1; k <= lambda; ++k) { f.at(k) = f.at(k - 1) * tmp * (p - (k - 1)) / k; }
 		return f;

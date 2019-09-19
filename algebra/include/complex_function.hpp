@@ -57,7 +57,7 @@ namespace algebra
 	//   \sum_{n = 0}^{lambda / 2} \sum_{m = 0}^{lambda - 2 n} this->at(n, m) (x - x0) ^ m (y - y0) ^ n + ...
 	// we take (x0, y0) = (1 / 2, 0)
 	// if a nontrivial symmetry even (resp. odd) is given, m runs over even (resp. odd) number only.
-	// Ring must be mpfr::real or Polynomial
+	// Ring must be mp::real or Polynomial
 	template <class Ring>
 	class ComplexFunction
 	{
@@ -222,13 +222,13 @@ namespace algebra
 			return x.lambda_ == y.lambda_ && x.sym_ == y.sym_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
-		[[nodiscard]] ComplexFunction<evaluated_t<Ring>> eval(const mpfr::real& x) const
+		[[nodiscard]] ComplexFunction<evaluated_t<Ring>> eval(const mp::real& x) const
 		{
 			return ComplexFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
 		}
 	};
 	template <>
-	ComplexFunction<mpfr::real> ComplexFunction<mpfr::real>::proj(FunctionSymmetry sym) &&;
+	ComplexFunction<mp::real> ComplexFunction<mp::real>::proj(FunctionSymmetry sym) &&;
 	template <>
 	ComplexFunction<Polynomial> ComplexFunction<Polynomial>::proj(FunctionSymmetry sym) &&;
 	template <class Ring>
@@ -272,7 +272,7 @@ namespace algebra
 		return out << "]";
 	}
 	// v ^ d = ((1 - z) (1 - z_bar)) ^ d as a function of x, y
-	ComplexFunction<mpfr::real> v_to_d(const mpfr::real& d, uint32_t lambda);
+	ComplexFunction<mp::real> v_to_d(const mp::real& d, uint32_t lambda);
 }  // namespace algebra
 
 #endif  // QBOOT_COMPLEX_FUNCTION_HPP_

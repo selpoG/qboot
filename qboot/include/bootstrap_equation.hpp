@@ -21,6 +21,7 @@
 #include "matrix.hpp"              // for Vector, Matrix
 #include "polynomial_program.hpp"  // for PolynomialProgram
 #include "primary_op.hpp"          // for GeneralPrimaryOperator, PrimaryOperator
+#include "rational.hpp"            // for rational
 #include "real.hpp"                // for real
 
 namespace qboot
@@ -40,21 +41,21 @@ namespace qboot
 	class Entry
 	{
 		uint32_t r_, c_;
-		mpfr::real coeff_;
+		mp::real coeff_;
 		Block block_;
 
 	public:
-		Entry(uint32_t r, uint32_t c, const mpfr::real& coeff, const Block& block)
+		Entry(uint32_t r, uint32_t c, const mp::real& coeff, const Block& block)
 		    : r_(r), c_(c), coeff_(coeff), block_(block)
 		{
 		}
-		Entry(const mpfr::real& coeff, const Block& block) : Entry(0, 0, coeff, block) {}
-		Entry(uint32_t r, uint32_t c, const Block& block) : Entry(r, c, mpfr::real(1), block) {}
-		explicit Entry(const Block& block) : Entry(0, 0, mpfr::real(1), block) {}
+		Entry(const mp::real& coeff, const Block& block) : Entry(0, 0, coeff, block) {}
+		Entry(uint32_t r, uint32_t c, const Block& block) : Entry(r, c, mp::real(1), block) {}
+		explicit Entry(const Block& block) : Entry(0, 0, mp::real(1), block) {}
 		[[nodiscard]] const Block& block() const { return block_; }
 		[[nodiscard]] uint32_t row() const { return r_; }
 		[[nodiscard]] uint32_t column() const { return c_; }
-		[[nodiscard]] const mpfr::real& coeff() const { return coeff_; }
+		[[nodiscard]] const mp::real& coeff() const { return coeff_; }
 	};
 	enum class SectorType : bool
 	{
@@ -68,24 +69,24 @@ namespace qboot
 		uint32_t sz_;
 		SectorType type_;
 		// tuple(spin, lower bound of delta, upper bound of delta)
-		std::vector<std::tuple<uint32_t, std::optional<mpfr::real>, std::optional<mpfr::real>>> op_args_{};
+		std::vector<std::tuple<uint32_t, std::optional<mp::real>, std::optional<mp::real>>> op_args_{};
 		std::vector<GeneralPrimaryOperator> ops_{};
-		std::optional<algebra::Vector<mpfr::real>> ope_{};
-		static std::optional<algebra::Vector<mpfr::real>> clone(const std::optional<algebra::Vector<mpfr::real>>& ope)
+		std::optional<algebra::Vector<mp::real>> ope_{};
+		static std::optional<algebra::Vector<mp::real>> clone(const std::optional<algebra::Vector<mp::real>>& ope)
 		{
-			if (ope.has_value()) return ope->clone();
+			if (ope.has_value()) return ope.value().clone();
 			return {};
 		}
-		void set_operators(const mpfr::real& epsilon, const std::function<uint32_t(uint32_t)>& num_poles) &
+		void set_operators(const mp::rational& epsilon, const std::function<uint32_t(uint32_t)>& num_poles) &
 		{
 			assert(type_ == SectorType::Continuous);
 			ops_ = {};
 			for (const auto& [sp, lb, ub] : op_args_)
 			{
 				if (ub.has_value())
-					ops_.emplace_back(sp, num_poles(sp), epsilon, *lb, *ub);
+					ops_.emplace_back(sp, num_poles(sp), epsilon, lb.value(), ub.value());
 				else if (lb.has_value())
-					ops_.emplace_back(sp, num_poles(sp), epsilon, *lb);
+					ops_.emplace_back(sp, num_poles(sp), epsilon, lb.value());
 				else
 					ops_.emplace_back(sp, num_poles(sp), epsilon);
 			}
@@ -97,7 +98,7 @@ namespace qboot
 		{
 			assert(sz_ > 0);
 		}
-		Sector(std::string_view name, uint32_t size, algebra::Vector<mpfr::real>&& ope)
+		Sector(std::string_view name, uint32_t size, algebra::Vector<mp::real>&& ope)
 		    : name_(name), sz_(size), type_(SectorType::Discrete), ope_{std::move(ope)}
 		{
 			assert(ope_->size() == sz_);
@@ -119,21 +120,21 @@ namespace qboot
 		[[nodiscard]] uint32_t size() const { return sz_; }
 		[[nodiscard]] SectorType type() const { return type_; }
 		[[nodiscard]] bool is_matrix() const { return sz_ > 1 && !ope_.has_value(); }
-		[[nodiscard]] const std::optional<algebra::Vector<mpfr::real>>& ope() const { return ope_; }
+		[[nodiscard]] const std::optional<algebra::Vector<mp::real>>& ope() const { return ope_; }
 		// delta in [unitarity bound, inf)
 		void add_op(uint32_t spin) &
 		{
 			assert(type_ == SectorType::Continuous);
-			op_args_.emplace_back(spin, std::optional<mpfr::real>{}, std::optional<mpfr::real>{});
+			op_args_.emplace_back(spin, std::optional<mp::real>{}, std::optional<mp::real>{});
 		}
 		// delta in [lb, inf)
-		void add_op(uint32_t spin, const mpfr::real& lb) &
+		void add_op(uint32_t spin, const mp::real& lb) &
 		{
 			assert(type_ == SectorType::Continuous);
-			op_args_.emplace_back(spin, lb, std::optional<mpfr::real>{});
+			op_args_.emplace_back(spin, lb, std::optional<mp::real>{});
 		}
 		// delta in [lb, ub)
-		void add_op(uint32_t spin, const mpfr::real& lb, const mpfr::real& ub) &
+		void add_op(uint32_t spin, const mp::real& lb, const mp::real& ub) &
 		{
 			assert(type_ == SectorType::Continuous);
 			ub.isinf() ? add_op(spin, lb) : void(op_args_.emplace_back(spin, lb, ub));
@@ -162,20 +163,20 @@ namespace qboot
 		// total dimension (index of equations, index of derivatives)
 		uint32_t N_ = 0;
 
-		[[nodiscard]] mpfr::real take_element(uint32_t id, const algebra::Matrix<mpfr::real>& m) const
+		[[nodiscard]] mp::real take_element(uint32_t id, const algebra::Matrix<mp::real>& m) const
 		{
 			const auto& ope = sector(id).ope();
-			if (ope) return m.inner_product(*ope);
+			if (ope) return m.inner_product(ope.value());
 			return m.at(0, 0);
 		}
-		[[nodiscard]] algebra::Vector<algebra::Matrix<mpfr::real>> make_disc_mat(uint32_t id) const;
+		[[nodiscard]] algebra::Vector<algebra::Matrix<mp::real>> make_disc_mat(uint32_t id) const;
 		[[nodiscard]] std::unique_ptr<ConformalScale> common_scale(uint32_t id, const GeneralPrimaryOperator& op) const;
-		[[nodiscard]] algebra::Vector<algebra::Vector<algebra::Matrix<mpfr::real>>> make_cont_mat(
+		[[nodiscard]] algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>> make_cont_mat(
 		    uint32_t id, const GeneralPrimaryOperator& op, std::unique_ptr<ConformalScale>* ag) const;
 
 		// alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
-		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm, mpfr::real&& N,
+		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm, mp::real&& N,
 		                                             bool verbose = false) const;
 
 	public:
@@ -237,7 +238,7 @@ namespace qboot
 		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm,
 		                                             bool verbose = false) const
 		{
-			return ope_maximize(target, norm, mpfr::real(1), verbose);
+			return ope_maximize(target, norm, mp::real(1), verbose);
 		}
 
 		// create a PolynomialProgram which finds a linear functional alpha
@@ -248,7 +249,7 @@ namespace qboot
 		[[nodiscard]] PolynomialProgram ope_minimize(std::string_view target, std::string_view norm,
 		                                             bool verbose = false) const
 		{
-			return ope_maximize(target, norm, mpfr::real(-1), verbose);
+			return ope_maximize(target, norm, mp::real(-1), verbose);
 		}
 	};
 	using Externals = std::array<PrimaryOperator, 4>;
@@ -268,33 +269,30 @@ namespace qboot
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
 		[[nodiscard]] uint32_t dimension() const { return dim_; }
 		const std::vector<Entry>& operator[](uint32_t id) const { return terms_[id]; }
-		void add(std::string_view sec, uint32_t r, uint32_t c, const mpfr::real& coeff, const PrimaryOperator& o,
+		void add(std::string_view sec, uint32_t r, uint32_t c, const mp::real& coeff, const PrimaryOperator& o,
 		         const Externals& os)
 		{
 			auto id = boot_.get_id(sec);
 			assert(r < boot_.sector(id).size() && c < boot_.sector(id).size());
 			terms_[id].emplace_back(r, c, coeff, ConformalBlock<PrimaryOperator>(o, os[0], os[1], os[2], os[3], sym_));
 		}
-		void add(std::string_view sec, const mpfr::real& coeff, const PrimaryOperator& o, const Externals& os)
+		void add(std::string_view sec, const mp::real& coeff, const PrimaryOperator& o, const Externals& os)
 		{
 			add(sec, 0, 0, coeff, o, os);
 		}
 		void add(std::string_view sec, uint32_t r, uint32_t c, const PrimaryOperator& o, const Externals& os)
 		{
-			add(sec, r, c, mpfr::real(1), o, os);
+			add(sec, r, c, mp::real(1), o, os);
 		}
 		void add(std::string_view sec, const PrimaryOperator& o, const Externals& os) { add(sec, 0, 0, o, os); }
-		void add(std::string_view sec, uint32_t r, uint32_t c, const mpfr::real& coeff, const Externals& os)
+		void add(std::string_view sec, uint32_t r, uint32_t c, const mp::real& coeff, const Externals& os)
 		{
 			auto id = boot_.get_id(sec);
 			assert(r < boot_.sector(id).size() && c < boot_.sector(id).size());
 			terms_[id].emplace_back(r, c, coeff, GeneralConformalBlock(os[0], os[1], os[2], os[3], sym_));
 		}
-		void add(std::string_view sec, const mpfr::real& coeff, const Externals& os) { add(sec, 0, 0, coeff, os); }
-		void add(std::string_view sec, uint32_t r, uint32_t c, const Externals& os)
-		{
-			add(sec, r, c, mpfr::real(1), os);
-		}
+		void add(std::string_view sec, const mp::real& coeff, const Externals& os) { add(sec, 0, 0, coeff, os); }
+		void add(std::string_view sec, uint32_t r, uint32_t c, const Externals& os) { add(sec, r, c, mp::real(1), os); }
 		void add(std::string_view sec, const Externals& os) { add(sec, 0, 0, os); }
 	};
 }  // namespace qboot

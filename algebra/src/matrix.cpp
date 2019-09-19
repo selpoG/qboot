@@ -1,11 +1,10 @@
 #include "matrix.hpp"
 
 #include "complex_function.hpp"  // for ComplexFunction
-#include "mpfr.h"                // for cmpabs
 #include "polynomial.hpp"        // for Polynomial
 #include "real_function.hpp"     // for ComplexFunction
 
-using mpfr::real;
+using mp::real;
 
 namespace algebra
 {
@@ -44,7 +43,7 @@ namespace algebra
 		{
 			uint32_t p = j;
 			for (uint32_t i = j + 1; i < mat.row(); ++i)
-				if (mpfr::cmpabs(mat.at(p, j), mat.at(i, j)) < 0) p = i;
+				if (mp::cmpabs(mat.at(p, j), mat.at(i, j)) < 0) p = i;
 			_swap_row(&inv, p, j);
 			_swap_row(&mat, p, j, j);
 			auto t = 1 / mat.at(j, j);
@@ -72,7 +71,7 @@ namespace algebra
 				s = {};
 				for (uint32_t k = 0; k < j; ++k) s += L.at(i, k) * L.at(j, k);
 				s = mat.at(i, j) - s;
-				L.at(i, j) = i == j ? mpfr::sqrt(s) : s / L.at(j, j);
+				L.at(i, j) = i == j ? mp::sqrt(s) : s / L.at(j, j);
 			}
 		}
 		return L;

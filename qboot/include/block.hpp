@@ -17,14 +17,14 @@ namespace qboot
 	class ConformalBlock
 	{
 		Operator op_;
-		mpfr::real d12_, d34_, d23h_, S_{}, P_{};
+		mp::real d12_, d34_, d23h_, S_{}, P_{};
 		// Odd  => type F (F_{-})
 		// Even => type H (F_{+})
 		algebra::FunctionSymmetry sym_;
 
 	public:
 		// sym must be Even or Odd (Mixed is not allowed)
-		ConformalBlock(const Operator& op, const mpfr::real& d12, const mpfr::real& d34, const mpfr::real& d23h,
+		ConformalBlock(const Operator& op, const mp::real& d12, const mp::real& d34, const mp::real& d23h,
 		               algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : op_(op), d12_(d12), d34_(d34), d23h_(d23h), sym_(sym)
 		{
@@ -32,8 +32,8 @@ namespace qboot
 			S_ = (d34_ - d12_) / 2;
 			P_ = d12_ * d34_ / (-2);
 		}
-		ConformalBlock(const Operator& op, const mpfr::real& d1, const mpfr::real& d2, const mpfr::real& d3,
-		               const mpfr::real& d4, algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
+		ConformalBlock(const Operator& op, const mp::real& d1, const mp::real& d2, const mp::real& d3,
+		               const mp::real& d4, algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : ConformalBlock(op, d1 - d2, d3 - d4, (d2 + d3) / 2, sym)
 		{
 		}
@@ -44,25 +44,25 @@ namespace qboot
 		{
 		}
 		template <class = std::enable_if<std::is_same_v<Operator, PrimaryOperator>>>
-		[[nodiscard]] const mpfr::real& delta() const
+		[[nodiscard]] const mp::real& delta() const
 		{
 			return op_.delta();
 		}
 		[[nodiscard]] uint32_t spin() const { return op_.spin(); }
-		[[nodiscard]] const mpfr::real& epsilon() const { return op_.epsilon(); }
-		[[nodiscard]] const mpfr::real& delta_half() const { return d23h_; }
-		[[nodiscard]] const mpfr::real& S() const { return S_; }
-		[[nodiscard]] const mpfr::real& P() const { return P_; }
+		[[nodiscard]] const mp::rational& epsilon() const { return op_.epsilon(); }
+		[[nodiscard]] const mp::real& delta_half() const { return d23h_; }
+		[[nodiscard]] const mp::real& S() const { return S_; }
+		[[nodiscard]] const mp::real& P() const { return P_; }
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
 		[[nodiscard]] const Operator& get_op() const { return op_; }
 		template <class = std::enable_if<!std::is_same_v<Operator, PrimaryOperator>>>
-		[[nodiscard]] PrimaryOperator get_op(const mpfr::real& delta) const
+		[[nodiscard]] PrimaryOperator get_op(const mp::real& delta) const
 		{
 			return op_.fix_delta(delta);
 		}
 		template <class = std::enable_if<!std::is_same_v<Operator, PrimaryOperator>>>
-		[[nodiscard]] ConformalBlock<PrimaryOperator> fix_delta(const mpfr::real& delta) const
+		[[nodiscard]] ConformalBlock<PrimaryOperator> fix_delta(const mp::real& delta) const
 		{
 			return ConformalBlock<PrimaryOperator>(op_.fix_delta(delta), d12_, d34_, d23h_, sym_);
 		}
@@ -70,14 +70,14 @@ namespace qboot
 	};
 	class GeneralConformalBlock
 	{
-		mpfr::real d12_, d34_, d23h_, S_{}, P_{};
+		mp::real d12_, d34_, d23h_, S_{}, P_{};
 		// Odd  => type F (F_{-})
 		// Even => type H (F_{+})
 		algebra::FunctionSymmetry sym_;
 
 	public:
 		// sym must be Even or Odd (Mixed is not allowed)
-		GeneralConformalBlock(const mpfr::real& d12, const mpfr::real& d34, const mpfr::real& d23h,
+		GeneralConformalBlock(const mp::real& d12, const mp::real& d34, const mp::real& d23h,
 		                      algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : d12_(d12), d34_(d34), d23h_(d23h), sym_(sym)
 		{
@@ -85,7 +85,7 @@ namespace qboot
 			S_ = (d34_ - d12_) / 2;
 			P_ = d12_ * d34_ / (-2);
 		}
-		GeneralConformalBlock(const mpfr::real& d1, const mpfr::real& d2, const mpfr::real& d3, const mpfr::real& d4,
+		GeneralConformalBlock(const mp::real& d1, const mp::real& d2, const mp::real& d3, const mp::real& d4,
 		                      algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
 		    : GeneralConformalBlock(d1 - d2, d3 - d4, (d2 + d3) / 2, sym)
 		{
@@ -96,9 +96,9 @@ namespace qboot
 		    : GeneralConformalBlock(op1.delta(), op2.delta(), op3.delta(), op4.delta(), sym)
 		{
 		}
-		[[nodiscard]] const mpfr::real& delta_half() const { return d23h_; }
-		[[nodiscard]] const mpfr::real& S() const { return S_; }
-		[[nodiscard]] const mpfr::real& P() const { return P_; }
+		[[nodiscard]] const mp::real& delta_half() const { return d23h_; }
+		[[nodiscard]] const mp::real& S() const { return S_; }
+		[[nodiscard]] const mp::real& P() const { return P_; }
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
 		template <class Operator>

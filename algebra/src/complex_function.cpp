@@ -3,7 +3,7 @@
 #include "real.hpp"  // for real, pow
 
 using algebra::ComplexFunction, algebra::FunctionSymmetry;
-using mpfr::real;
+using mp::real;
 using std::move;
 
 template <class Ring>
@@ -33,7 +33,7 @@ namespace algebra
 	template class ComplexFunction<Polynomial>;
 
 	template <>
-	ComplexFunction<mpfr::real> ComplexFunction<mpfr::real>::proj(FunctionSymmetry sym) &&
+	ComplexFunction<mp::real> ComplexFunction<mp::real>::proj(FunctionSymmetry sym) &&
 	{
 		return _proj(move(*this), sym);
 	}
@@ -49,7 +49,7 @@ namespace algebra
 		//            = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
 		// where lf(x, n) = x (x - 1) ... (x - (n - 1)) (falling factorial)
 		ComplexFunction<real> f(lambda);
-		f.at(0, 0) = mpfr::pow(4, -d);
+		f.at(0, 0) = mp::pow(4, -d);
 		for (uint32_t n = 0; n <= lambda / 2; ++n)
 		{
 			if (n > 0) f.at(0u, n) = f.at(0u, n - 1) * 4 * (-d + (n - 1)) / n;

@@ -6,7 +6,7 @@
 #include "hor_formula.hpp"  // for _get_rec_coeffs
 
 using algebra::RealFunction, algebra::RealFunctionWithPower, algebra::ComplexFunction;
-using mpfr::real;
+using mp::real;
 using std::move;
 
 namespace qboot
@@ -14,13 +14,13 @@ namespace qboot
 	RealFunction<real> hBlock_shifted(const PrimaryOperator& op, const real& S, const real& P, uint32_t n_Max)
 	{
 		RealFunction<real> b(n_Max);
-		b.at(0) = mpfr::pochhammer(op.epsilon() * 2, op.spin()) /
-		          (mpfr::pow(2, op.spin()) * mpfr::pochhammer(op.epsilon(), op.spin()));
+		b.at(0) = mp::pochhammer(op.epsilon() * 2, op.spin()) /
+		          (mp::pow(2, op.spin()) * mp::pochhammer(op.epsilon(), op.spin()));
 		if (op.spin() % 2 == 1) b.at(0).negate();
 		if (op.delta().iszero()) return b;
 		if (op.is_divergent_hor())
 		{
-			real small(1ul, -(3 * mpfr::global_prec) / 8 + 15);
+			real small(1ul, -(3 * mp::global_prec) / 8 + 15);
 			b = hBlock_shifted(op.get_shifted(small), S, P, n_Max);
 			b += hBlock_shifted(op.get_shifted(-small), S, P, n_Max);
 			b /= 2;
@@ -40,7 +40,7 @@ namespace qboot
 	RealFunction<real> gBlock_real(const PrimaryOperator& op, const real& S, const real& P, const Context& context)
 	{
 		auto h_at_0 = hBlock_shifted(op, S, P, context.n_Max());
-		h_at_0 *= mpfr::pow(4, op.delta());
+		h_at_0 *= mp::pow(4, op.delta());
 		const auto& rho = context.rho();
 		RealFunctionWithPower f_at_0(move(h_at_0), op.delta());
 		RealFunction<real> f_of_rho(context.lambda());

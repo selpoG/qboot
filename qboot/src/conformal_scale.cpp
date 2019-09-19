@@ -3,7 +3,7 @@
 #include <utility>  // for move
 
 using algebra::Vector, algebra::Polynomial, algebra::Matrix;
-using mpfr::real, mpfr::log, mpfr::gamma_inc;
+using mp::real, mp::log, mp::gamma_inc;
 using std::move;
 
 inline static Matrix<real> anti_band_to_inverse(const Vector<real>& ab)
@@ -25,8 +25,8 @@ inline static Matrix<real> anti_band_to_inverse(const Vector<real>& ab)
 inline static Vector<real> simple_pole_integral(uint32_t pole_order_max, const real& base, const real& pole_position)
 {
 	real incomplete_gamma = pole_position == 0
-	                            ? real(mpfr::global_prec)
-	                            : mpfr::pow(base, pole_position) * gamma_inc(real(0), pole_position * log(base));
+	                            ? real(mp::global_prec)
+	                            : mp::pow(base, pole_position) * gamma_inc(real(0), pole_position * log(base));
 	Vector<real> result(pole_order_max + 1);
 	result[0] = incomplete_gamma;
 	real tmp{}, pow = pole_position * incomplete_gamma;
@@ -77,7 +77,7 @@ namespace qboot
 		if (end_.has_value())
 		{
 			bilinear_bases_ = Vector<Polynomial>{max_degree() / 2 + 1};
-			for (uint32_t i = 0; i < bilinear_bases_->size(); ++i) bilinear_bases_->at(i) = Polynomial(i);
+			for (uint32_t i = 0; i < bilinear_bases_.value().size(); ++i) bilinear_bases_.value().at(i) = Polynomial(i);
 		}
 		else
 		{
@@ -90,14 +90,14 @@ namespace qboot
 			Vector<real> inner_prods(2 * deg + 1);
 			for (uint32_t i = 0; i < poles_.size(); ++i)
 				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * *rho_, shifted_poles[i]));
-			inner_prods *= mpfr::pow(4 * *rho_, gap_);
+			inner_prods *= mp::pow(4 * *rho_, gap_);
 			auto mat = anti_band_to_inverse(inner_prods);
 			bilinear_bases_ = Vector<Polynomial>{deg + 1};
 			for (uint32_t i = 0; i <= deg; ++i)
 			{
 				Vector<real> v(i + 1);
 				for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
-				bilinear_bases_->at(i) = Polynomial(move(v));
+				bilinear_bases_.value().at(i) = Polynomial(move(v));
 			}
 		}
 	}
@@ -117,7 +117,7 @@ namespace qboot
 		uint32_t pos = 0;
 		while (pos < cutoff)
 		{
-			poles_[pos++] = pole_seq.get();
+			poles_[pos++] = real(pole_seq.get());
 			pole_seq.next();
 		}
 	}

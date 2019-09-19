@@ -22,7 +22,7 @@ namespace algebra
 	// zero polynomial is represented by empty coeff_ (coeff_.size() = 0)
 	class Polynomial
 	{
-		Vector<mpfr::real> coeff_;
+		Vector<mp::real> coeff_;
 
 	public:
 		Polynomial() : coeff_(0) {}
@@ -32,9 +32,9 @@ namespace algebra
 		Polynomial& operator=(const Polynomial&) = delete;
 		~Polynomial() = default;
 		// pow(x, d)
-		explicit Polynomial(uint32_t degree) : coeff_(degree + 1) { coeff_[degree] = mpfr::real(1); }
+		explicit Polynomial(uint32_t degree) : coeff_(degree + 1) { coeff_[degree] = mp::real(1); }
 		// constant polynomial c
-		explicit Polynomial(const mpfr::real& c) : coeff_(1)
+		explicit Polynomial(const mp::real& c) : coeff_(1)
 		{
 			if (c.iszero())
 				coeff_ = {};
@@ -42,28 +42,28 @@ namespace algebra
 				coeff_[0] = c.clone();
 		}
 		// c x ^ d (c != 0)
-		Polynomial(const mpfr::real& c, uint32_t degree) : coeff_(degree + 1)
+		Polynomial(const mp::real& c, uint32_t degree) : coeff_(degree + 1)
 		{
 			assert(!c.iszero());
 			coeff_[degree] = c.clone();
 		}
-		explicit Polynomial(Vector<mpfr::real>&& coeffs);
-		Polynomial(std::initializer_list<mpfr::real> coeffs) : coeff_(uint32_t(coeffs.size()))
+		explicit Polynomial(Vector<mp::real>&& coeffs);
+		Polynomial(std::initializer_list<mp::real> coeffs) : coeff_(uint32_t(coeffs.size()))
 		{
 			uint32_t i = 0;
 			for (auto& v : coeffs) coeff_[i++] = v.clone();
 			assert(coeff_.size() == 0 || !coeff_[coeff_.size() - 1].iszero());
 		}
-		[[nodiscard]] const mpfr::real* begin() const& noexcept { return coeff_.begin(); }
-		[[nodiscard]] const mpfr::real* end() const& noexcept { return coeff_.end(); }
-		[[nodiscard]] mpfr::real abs() const { return mpfr::sqrt(norm()); }
-		[[nodiscard]] mpfr::real norm() const { return coeff_.norm(); }
+		[[nodiscard]] const mp::real* begin() const& noexcept { return coeff_.begin(); }
+		[[nodiscard]] const mp::real* end() const& noexcept { return coeff_.end(); }
+		[[nodiscard]] mp::real abs() const { return mp::sqrt(norm()); }
+		[[nodiscard]] mp::real norm() const { return coeff_.norm(); }
 		[[nodiscard]] bool iszero() const noexcept { return coeff_.size() == 0; }
 		[[nodiscard]] int32_t degree() const noexcept { return int32_t(coeff_.size()) - 1; }
 		template <class R>
-		[[nodiscard]] mpfr::real eval(const R& x) const
+		[[nodiscard]] mp::real eval(const R& x) const
 		{
-			if (iszero()) return mpfr::real{};
+			if (iszero()) return mp::real{};
 			auto d = uint32_t(degree());
 			auto s = coeff_[d];
 			for (uint32_t i = d - 1; i <= d; --i)
@@ -98,7 +98,7 @@ namespace algebra
 			return *this;
 		}
 		// coefficient of x ^ p
-		const mpfr::real& operator[](uint32_t p) const { return coeff_[p]; }
+		const mp::real& operator[](uint32_t p) const { return coeff_[p]; }
 		Polynomial operator+() const& { return clone(); }
 		Polynomial operator+() && { return std::move(*this); }
 		Polynomial operator-() const&
@@ -142,12 +142,12 @@ namespace algebra
 	template <>
 	struct evaluated<Polynomial>
 	{
-		using type = mpfr::real;
+		using type = mp::real;
 	};
 	template <class T>
 	using polynomialize_t = substitute_t<T, Polynomial>;
 	// schematically, to_pol(Vector<Ring>{a, b, c, ...}) = a + b x + c x ^ 2 + ...
-	inline auto to_pol(Vector<mpfr::real>* coeffs) { return Polynomial(coeffs->clone()); }
+	inline auto to_pol(Vector<mp::real>* coeffs) { return Polynomial(coeffs->clone()); }
 	template <class Ring>
 	Matrix<polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>* coeffs)
 	{
@@ -179,11 +179,11 @@ namespace algebra
 	// vals[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
 	// evals(polynomial_interpolate(vals, points), points) == vals (up to rounding errors)
 	template <class Ring>
-	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<mpfr::real>& points)
+	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<mp::real>& points)
 	{
 		assert(vals.size() == points.size() && points.size() > 0);
 		auto deg = points.size() - 1;
-		Matrix<mpfr::real> mat(deg + 1, deg + 1);
+		Matrix<mp::real> mat(deg + 1, deg + 1);
 		for (uint32_t i = 0; i <= deg; ++i)
 		{
 			mat.at(i, 0) = 1;
@@ -193,7 +193,7 @@ namespace algebra
 		return to_pol(&coeffs);
 	}
 	template <class Ring>
-	Vector<evaluated_t<Ring>> evals(const Ring& v, const Vector<mpfr::real>& xs)
+	Vector<evaluated_t<Ring>> evals(const Ring& v, const Vector<mp::real>& xs)
 	{
 		Vector<evaluated_t<Ring>> ans(xs.size());
 		for (uint32_t i = 0; i < xs.size(); ++i) ans[i] = v.eval(xs[i]);

@@ -10,6 +10,7 @@
 #include "complex_function.hpp"  // for ComplexFunction, FunctionSymmetry
 #include "hor_recursion.hpp"     // for gBlock
 #include "primary_op.hpp"        // for PrimaryOperator
+#include "rational.hpp"          // for rational
 #include "real.hpp"              // for real, sqrt
 #include "real_function.hpp"     // for RealFunction, RealConverter
 
@@ -17,13 +18,14 @@ namespace qboot
 {
 	// z = 4 r / (1 + r) ^ 2
 	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
-	algebra::RealFunction<mpfr::real> z_as_func_rho(uint32_t lambda);
+	algebra::RealFunction<mp::real> z_as_func_rho(uint32_t lambda);
 
 	// controls n_Max, lambda and dim
 	class Context
 	{
 		uint32_t n_Max_, lambda_, dim_;
-		mpfr::real epsilon_, rho_;
+		mp::rational epsilon_;
+		mp::real rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter rho_to_z_;
 
@@ -35,9 +37,9 @@ namespace qboot
 		// the dimension of the spacetime
 		[[nodiscard]] uint32_t dimension() const { return dim_; }
 		// (dim - 2) / 2
-		[[nodiscard]] const mpfr::real& epsilon() const { return epsilon_; }
+		[[nodiscard]] const mp::rational& epsilon() const { return epsilon_; }
 		// 3 - 2 sqrt(2)
-		[[nodiscard]] const mpfr::real& rho() const { return rho_; }
+		[[nodiscard]] const mp::real& rho() const { return rho_; }
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		[[nodiscard]] const algebra::RealConverter& rho_to_z() const { return rho_to_z_; }
 		[[nodiscard]] std::string str() const
@@ -52,63 +54,66 @@ namespace qboot
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 		~Context() = default;
-		[[nodiscard]] mpfr::real unitarity_bound(uint32_t spin) const { return qboot::unitarity_bound(epsilon_, spin); }
+		[[nodiscard]] mp::rational unitarity_bound(uint32_t spin) const
+		{
+			return qboot::unitarity_bound(epsilon_, spin);
+		}
 		// calculate v ^ d gBlock and project to sym-symmetric part
 		// F-type corresponds to sym = Odd, H-type to Even
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> F_block(const mpfr::real& d,
-		                                                           const algebra::ComplexFunction<mpfr::real>& gBlock,
-		                                                           algebra::FunctionSymmetry sym) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const mp::real& d,
+		                                                         const algebra::ComplexFunction<mp::real>& gBlock,
+		                                                         algebra::FunctionSymmetry sym) const
 		{
 			return mul(algebra::v_to_d(d, lambda_), gBlock).proj(sym);
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> evaluate(const ConformalBlock<PrimaryOperator>& block) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> evaluate(const ConformalBlock<PrimaryOperator>& block) const
 		{
 			assert(block.symmetry() != algebra::FunctionSymmetry::Mixed);
 			return F_block(block.delta_half(), gBlock(block.get_op(), block.S(), block.P(), *this), block.symmetry());
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> evaluate(const ConformalBlock<GeneralPrimaryOperator>& block,
-		                                                            const mpfr::real& delta) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> evaluate(const ConformalBlock<GeneralPrimaryOperator>& block,
+		                                                          const mp::real& delta) const
 		{
 			assert(block.symmetry() != algebra::FunctionSymmetry::Mixed);
 			return F_block(block.delta_half(), gBlock(block.get_op(delta), block.S(), block.P(), *this),
 			               block.symmetry());
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> F_block(const PrimaryOperator& op, const mpfr::real& d1,
-		                                                           const mpfr::real& d2, const mpfr::real& d3,
-		                                                           const mpfr::real& d4,
-		                                                           algebra::FunctionSymmetry sym) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const PrimaryOperator& op, const mp::real& d1,
+		                                                         const mp::real& d2, const mp::real& d3,
+		                                                         const mp::real& d4,
+		                                                         algebra::FunctionSymmetry sym) const
 		{
 			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4, *this), sym);
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> F_block(
-		    const mpfr::real& d2, const mpfr::real& d3, const algebra::ComplexFunction<mpfr::real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const mp::real& d2, const mp::real& d3,
+		                                                         const algebra::ComplexFunction<mp::real>& gBlock) const
 		{
 			return F_block((d2 + d3) / 2, gBlock);
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> F_block(
-		    const mpfr::real& d, const algebra::ComplexFunction<mpfr::real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const mp::real& d,
+		                                                         const algebra::ComplexFunction<mp::real>& gBlock) const
 		{
 			return F_block(d, gBlock, algebra::FunctionSymmetry::Odd);
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> F_block(const PrimaryOperator& op, const mpfr::real& d1,
-		                                                           const mpfr::real& d2, const mpfr::real& d3,
-		                                                           const mpfr::real& d4) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const PrimaryOperator& op, const mp::real& d1,
+		                                                         const mp::real& d2, const mp::real& d3,
+		                                                         const mp::real& d4) const
 		{
 			return F_block(op, d1, d2, d3, d4, algebra::FunctionSymmetry::Odd);
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> H_block(
-		    const mpfr::real& d2, const mpfr::real& d3, const algebra::ComplexFunction<mpfr::real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> H_block(const mp::real& d2, const mp::real& d3,
+		                                                         const algebra::ComplexFunction<mp::real>& gBlock) const
 		{
 			return H_block((d2 + d3) / 2, gBlock);
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> H_block(
-		    const mpfr::real& d, const algebra::ComplexFunction<mpfr::real>& gBlock) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> H_block(const mp::real& d,
+		                                                         const algebra::ComplexFunction<mp::real>& gBlock) const
 		{
 			return F_block(d, gBlock, algebra::FunctionSymmetry::Even);
 		}
-		[[nodiscard]] algebra::ComplexFunction<mpfr::real> H_block(const PrimaryOperator& op, const mpfr::real& d1,
-		                                                           const mpfr::real& d2, const mpfr::real& d3,
-		                                                           const mpfr::real& d4) const
+		[[nodiscard]] algebra::ComplexFunction<mp::real> H_block(const PrimaryOperator& op, const mp::real& d1,
+		                                                         const mp::real& d2, const mp::real& d3,
+		                                                         const mp::real& d4) const
 		{
 			return F_block(op, d1, d2, d3, d4, algebra::FunctionSymmetry::Even);
 		}
@@ -121,9 +126,9 @@ namespace qboot
 		//   h_{m, n} := (der a) ^ m (der b) ^ n g_{Delta, spin}
 		//             = (1 / 2) ^ {m + 2 n} (der x) ^ m (der y) ^ n g_{Delta, spin}
 		//   and h_{m, n} = m! n! f[m, n] / 2 ^ {m + 2 n}
-		algebra::ComplexFunction<mpfr::real> expand_off_diagonal(algebra::RealFunction<mpfr::real>&& realAxisResult,
-		                                                         const PrimaryOperator& op, const mpfr::real& S,
-		                                                         const mpfr::real& P) const;
+		algebra::ComplexFunction<mp::real> expand_off_diagonal(algebra::RealFunction<mp::real>&& realAxisResult,
+		                                                       const PrimaryOperator& op, const mp::real& S,
+		                                                       const mp::real& P) const;
 	};
 }  // namespace qboot
 

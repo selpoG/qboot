@@ -7,10 +7,10 @@
 #include <string_view>  // for string_view
 #include <utility>      // for move
 
-namespace fs = std::filesystem;
+namespace fs = qboot::fs;
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
-using mpfr::real;
+using mp::real;
 using std::move, std::make_unique, std::optional, fs::path, std::ostream, std::ofstream, std::string_view;
 
 class ScopedTag
@@ -99,13 +99,13 @@ namespace qboot
 	{
 		for (uint32_t i = 0; i < num_constraints_; ++i) assert(constraints_[i].has_value());
 		ofstream file(path);
-		file << std::defaultfloat << std::setprecision(3 + int32_t(double(mpfr::global_prec) * 0.302));
+		file << std::defaultfloat << std::setprecision(3 + int32_t(double(mp::global_prec) * 0.302));
 		ScopedTag sdp(file, "sdp");
 		write_vec(file, objectives_, "objective");
 		ScopedTag pvms(file, "polynomialVectorMatrices");
 		for (uint32_t j = 0; j < num_constraints_; ++j)
 		{
-			const auto& c = *constraints_[j];
+			const auto& c = constraints_[j].value();
 			ScopedTag pvm(file, "polynomialVectorMatrix");
 			{
 				ScopedTag tmp(file, "rows");
