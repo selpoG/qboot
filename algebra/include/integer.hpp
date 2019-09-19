@@ -699,10 +699,23 @@ namespace mp
 		{
 			return s >> z._x;
 		}
+		friend integer abs(const integer& r);
+		friend integer abs(integer&& r);
 		friend integer pow(const integer& op1, _ulong op2);
 		friend integer pow(integer&& op1, _ulong op2);
 		friend integer pow(_ulong op1, _ulong op2);
 	};
+	inline integer abs(const integer& r)
+	{
+		integer temp;
+		mpz_abs(temp._x, r._x);
+		return temp;
+	}
+	inline integer abs(integer&& r)
+	{
+		mpz_abs(r._x, r._x);
+		return std::move(r);
+	}
 	inline integer pow(const integer& op1, _ulong op2)
 	{
 		integer temp;

@@ -1,6 +1,8 @@
 #ifndef QBOOT_RATIONAL_HPP_
 #define QBOOT_RATIONAL_HPP_
 
+#include <array>        // for array
+#include <cassert>      // for assert
 #include <istream>      // for basic_istream
 #include <optional>     // for optional
 #include <ostream>      // for basic_ostream
@@ -9,6 +11,7 @@
 #include <string_view>  // for string_view
 #include <type_traits>  // for enable_if_t, is_same_v, is_integral_v, is_signed_v, is_unsigned_v
 #include <utility>      // for move
+#include <vector>       // for vector
 
 #include "gmpxx.h"
 #include "mpfr.h"
@@ -53,6 +56,9 @@ namespace mp
 		integer num() const { return integer(mpq_numref(_x)); }
 		// denominator
 		integer den() const { return integer(mpq_denref(_x)); }
+		// return {numerator, denominator}
+		std::array<integer, 2> numden() const { return std::array{integer(mpq_numref(_x)), integer(mpq_denref(_x))}; }
+		bool isinteger() const { return mpz_cmp_ui(mpq_denref(_x), 1) == 0; }
 
 		[[nodiscard]] std::string str() const { return std::string(mpq_get_str(nullptr, 10, _x)); }
 		static std::optional<rational> _parse(std::string_view str)
@@ -375,6 +381,8 @@ namespace mp
 			mpq_canonicalize(q._x);
 			return s;
 		}
+		friend rational abs(const rational& r);
+		friend rational abs(rational&& r);
 		friend rational pochhammer(const rational& x, _ulong n);
 	};
 	inline mpq_srcptr _mp_ops<rational>::data(const rational& op) { return op._x; }
@@ -383,6 +391,17 @@ namespace mp
 		rational q;
 		mpfr_get_q(q._x, rop);
 		return q;
+	}
+	inline rational abs(const rational& r)
+	{
+		rational temp;
+		mpq_abs(temp._x, r._x);
+		return temp;
+	}
+	inline rational abs(rational&& r)
+	{
+		mpq_abs(r._x, r._x);
+		return std::move(r);
 	}
 	inline rational pochhammer(const rational& x, _ulong n)
 	{
@@ -399,6 +418,57 @@ namespace mp
 				break;
 		}
 		return rational(num, den);
+	}
+	inline std::vector<integer> continued_fraction(const rational& r)
+	{
+		if (r < 0)
+		{
+			auto v = continued_fraction(-r);
+			for (auto& x : v) x.negate();
+			return v;
+		}
+		if (r.isinteger()) return {r.num()};
+		auto n = mp::floor(r);
+		std::vector v{n};
+		auto q = 1 / (r - n);
+		while (true)
+		{
+			if (q.isinteger())
+			{
+				v.push_back(q.num());
+				break;
+			}
+			n = mp::floor(q);
+			v.push_back(n);
+			q = 1 / (q - n);
+		}
+		return v;
+	}
+	// calculate simple rational y which approimates x
+	// y satisfies |x - y| < error if not use_relerr
+	// if use_relerr, |1 - y / x| < error
+	inline rational approx(const rational& x, const rational& error, bool use_relerr = false)
+	{
+		if (x.isinteger() || error.iszero()) return x;
+		if (x < 0) return -approx(-x, error, use_relerr);
+		assert(error > 0);
+		auto cf = continued_fraction(x);
+		auto [a, b] = x.numden();
+		// let x = a / b
+		// if use_relerr, |1 - p / (q x)| <= error means |a q - p b| <= q a error
+		// else, |x - p / q| <= error means |a q - p b| <= q b error
+		auto e = (use_relerr ? a : b) * error;
+		integer p = cf[0], q(1), p1(1), q1(0);
+		for (uint32_t i = 1; i < cf.size() && mp::abs(a * q - p * b) >= q * e; ++i)
+		{
+			auto np = cf[i] * p + p1;
+			auto nq = cf[i] * q + q1;
+			p1 = p;
+			q1 = q;
+			p = np;
+			q = nq;
+		}
+		return {p, q};
 	}
 	// read str as a rational, even it contains a floating point '.' or an exponential mark 'e' or 'E'.
 	// if parse fails, return std::nullopt.
