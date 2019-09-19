@@ -926,7 +926,7 @@ namespace mp
 	inline size_t _strlen(const std::string& s) { return s.length(); }
 
 	template <class Char, class Traits>
-	inline std::basic_ostream<Char, Traits>& helper_ostream_const(std::basic_ostream<Char, Traits>& s,
+	inline std::basic_ostream<Char, Traits>& _helper_ostream_const(std::basic_ostream<Char, Traits>& s,
 	                                                              std::string_view abs, bool is_negative)
 	{
 		auto flags = s.flags();
@@ -1023,9 +1023,9 @@ namespace mp
 	inline std::basic_ostream<Char, Traits>& _helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
 	                                                         mpfr_rnd_t rnd)
 	{
-		if (_is_nan(x)) return helper_ostream_const(s, "@NaN@", false);
-		if (_is_inf(x)) return helper_ostream_const(s, "@Inf@", _sgn(x) < 0);
-		if (_is_zero(x)) return helper_ostream_const(s, "0", _signbit(x) != 0);
+		if (_is_nan(x)) return _helper_ostream_const(s, "@NaN@", false);
+		if (_is_inf(x)) return _helper_ostream_const(s, "@Inf@", _sgn(x) < 0);
+		if (_is_zero(x)) return _helper_ostream_const(s, "0", _signbit(x) != 0);
 
 		auto style = _get_style(s.flags());
 		auto prec = _needed_precision(style, s.precision());
@@ -1055,11 +1055,11 @@ namespace mp
 		mpfr_free_str(ch);
 
 		if (style == _exp_style::SCIENTIFIC)
-			helper_ostream_const(s, _as_scientific(std::move(t), exp, s.flags()), is_negative);
+			_helper_ostream_const(s, _as_scientific(std::move(t), exp, s.flags()), is_negative);
 		else if (style == _exp_style::DEFAULT_FLOAT)
-			helper_ostream_const(s, _as_default(std::move(t), exp, s.flags(), prec), is_negative);
+			_helper_ostream_const(s, _as_default(std::move(t), exp, s.flags(), prec), is_negative);
 		else
-			helper_ostream_const(s, _as_fixed(std::move(t), exp, prec), is_negative);
+			_helper_ostream_const(s, _as_fixed(std::move(t), exp, prec), is_negative);
 
 		return s;
 	}
