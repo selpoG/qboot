@@ -503,7 +503,6 @@ namespace mp
 		friend real nan();
 		friend real const_log2();
 		friend real const_pi() noexcept;
-		friend real factorial(const _ulong n);
 		friend real sqrt(_ulong r);
 		friend bool iszero(const real& r);
 		friend int sgn(const real& r);
@@ -597,14 +596,6 @@ namespace mp
 	{
 		real temp;
 		mpfr_const_pi(temp._x, global_rnd);
-		return temp;
-	}
-
-	// return n! = Gamma(n + 1)
-	inline real factorial(const _ulong n)
-	{
-		real temp;
-		mpfr_fac_ui(temp._x, n, global_rnd);
 		return temp;
 	}
 
@@ -927,7 +918,7 @@ namespace mp
 
 	template <class Char, class Traits>
 	inline std::basic_ostream<Char, Traits>& _helper_ostream_const(std::basic_ostream<Char, Traits>& s,
-	                                                              std::string_view abs, bool is_negative)
+	                                                               std::string_view abs, bool is_negative)
 	{
 		auto flags = s.flags();
 		auto showpos = (flags & std::ios_base::showpos) != 0;

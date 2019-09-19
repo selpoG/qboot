@@ -23,7 +23,9 @@ namespace mp
 	template <class Tp>
 	inline constexpr bool _mpq_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer>;
 
+	inline integer ceil(const rational& z);
 	inline integer floor(const rational& z);
+	inline integer truncate(const rational& z);
 
 	class rational
 	{
@@ -59,6 +61,12 @@ namespace mp
 		// return {numerator, denominator}
 		std::array<integer, 2> numden() const { return std::array{integer(mpq_numref(_x)), integer(mpq_denref(_x))}; }
 		bool isinteger() const { return mpz_cmp_ui(mpq_denref(_x), 1) == 0; }
+
+		template <class T>
+		[[nodiscard]] rational eval([[maybe_unused]] const T& x) const
+		{
+			return *this;
+		}
 
 		[[nodiscard]] std::string str() const { return std::string(mpq_get_str(nullptr, 10, _x)); }
 		static std::optional<rational> _parse(std::string_view str)
@@ -365,7 +373,9 @@ namespace mp
 		}
 
 		friend std::optional<rational> parse(std::string_view str);
+		friend integer ceil(const rational& q) { return _mp_ops<integer>::ceil(q._x); }
 		friend integer floor(const rational& q) { return _mp_ops<integer>::get(q._x); }
+		friend integer truncate(const rational& q) { return _mp_ops<integer>::truncate(q._x); }
 		friend mpq_srcptr mp::_mp_ops<rational>::data(const rational& rop);
 		friend rational mp::_mp_ops<rational>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
@@ -381,10 +391,14 @@ namespace mp
 			mpq_canonicalize(q._x);
 			return s;
 		}
+		friend int sgn(const rational& x);
 		friend rational abs(const rational& r);
 		friend rational abs(rational&& r);
 		friend rational pochhammer(const rational& x, _ulong n);
 	};
+	inline bool isinteger(const rational& r) { return r.isinteger(); }
+	inline bool iszero(const rational& r) { return r.iszero(); }
+	inline int sgn(const rational& x) { return mpq_sgn(x._x); }
 	inline mpq_srcptr _mp_ops<rational>::data(const rational& op) { return op._x; }
 	inline rational _mp_ops<rational>::get(mpfr_srcptr rop, [[maybe_unused]] mpfr_rnd_t rnd)
 	{

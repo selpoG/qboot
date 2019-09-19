@@ -63,6 +63,8 @@ namespace mp
 			mpz_set(mpq_denref(rop), data(denop));
 		}
 		inline static void set(mpfr_ptr rop, const integer& op, mpfr_rnd_t rnd) { mpfr_set_z(rop, data(op), rnd); }
+		inline static integer ceil(mpq_srcptr rop);
+		inline static integer truncate(mpq_srcptr rop);
 		inline static integer get(mpq_srcptr rop);
 		inline static integer get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 		inline static void add(mpq_ptr rop, mpq_srcptr op1, const integer& op2)
@@ -458,6 +460,16 @@ namespace mp
 		[[nodiscard]] integer clone() const { return *this; }
 		[[nodiscard]] bool iszero() const { return mpz_sgn(_x) == 0; }
 		void negate() & { mpz_neg(_x, _x); }
+		bool iseven() const { return mpz_even_p(_x) != 0; }
+		bool isodd() const { return mpz_odd_p(_x) != 0; }
+		bool divisible_by(const integer& o) const { return mpz_divisible_p(_x, o._x) != 0; }
+		bool divisible_by(_ulong o) const { return mpz_divisible_ui_p(_x, o) != 0; }
+
+		template <class T>
+		[[nodiscard]] integer eval([[maybe_unused]] const T& x) const
+		{
+			return *this;
+		}
 
 		[[nodiscard]] std::string str() const { return std::string(mpz_get_str(nullptr, 10, _x)); }
 		static std::optional<integer> _parse(std::string_view str)
@@ -554,6 +566,27 @@ namespace mp
 			return *this;
 		}
 
+		integer& operator/=(const integer& o) &
+		{
+			mpz_fdiv_q(_x, _x, o._x);
+			return *this;
+		}
+		integer& operator%=(const integer& o) &
+		{
+			mpz_fdiv_r(_x, _x, o._x);
+			return *this;
+		}
+		integer& operator/=(_ulong o) &
+		{
+			mpz_fdiv_q_ui(_x, _x, o);
+			return *this;
+		}
+		integer& operator%=(_ulong o) &
+		{
+			mpz_fdiv_r_ui(_x, _x, o);
+			return *this;
+		}
+
 		friend integer mul(const integer& r1, const integer& r2) { return r1 * r2; }
 		friend integer mul(integer&& r1, const integer& r2) { return std::move(r1) * r2; }
 		friend integer mul(const integer& r1, integer&& r2) { return r1 * std::move(r2); }
@@ -596,6 +629,34 @@ namespace mp
 		friend integer operator*(integer&& a, const integer& b) { return a *= b; }
 		friend integer operator*(const integer& a, integer&& b) { return b *= a; }
 		friend integer operator*(integer&& a, integer&& b) { return a *= b; }
+
+		friend integer operator/(const integer& a, const integer& b)
+		{
+			integer z;
+			mpz_fdiv_q(z._x, a._x, b._x);
+			return z;
+		}
+		friend integer operator/(integer&& a, const integer& b) { return a /= b; }
+		friend integer operator/(const integer& a, integer&& b)
+		{
+			mpz_fdiv_q(b._x, a._x, b._x);
+			return std::move(b);
+		}
+		friend integer operator/(integer&& a, integer&& b) { return a /= b; }
+
+		friend integer operator%(const integer& a, const integer& b)
+		{
+			integer z;
+			mpz_fdiv_r(z._x, a._x, b._x);
+			return z;
+		}
+		friend integer operator%(integer&& a, const integer& b) { return a %= b; }
+		friend integer operator%(const integer& a, integer&& b)
+		{
+			mpz_fdiv_r(b._x, a._x, b._x);
+			return std::move(b);
+		}
+		friend integer operator%(integer&& a, integer&& b) { return a %= b; }
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator+(const integer& r1, const Tp& r2)
@@ -669,6 +730,33 @@ namespace mp
 			return r2 *= r1;
 		}
 
+		friend integer operator/(const integer& r1, _ulong r2)
+		{
+			integer temp;
+			mpz_fdiv_q_ui(temp._x, r1._x, r2);
+			return temp;
+		}
+		friend integer operator/(integer&& r1, _ulong r2) { return r1 /= r2; }
+		friend integer operator/(_ulong r1, const integer& r2)
+		{
+			if (r2 < 0) return r1 / -r2;
+			if (mpz_cmp_ui(r2._x, r1) > 0) return integer(0);
+			return integer(r1 / _ulong(r2));
+		}
+
+		friend _ulong operator%(const integer& r1, _ulong r2) { return mpz_fdiv_ui(r1._x, r2); }
+		friend _ulong operator%(_ulong r1, const integer& r2)
+		{
+			if (mpz_cmpabs_ui(r2._x, r1) > 0) return r1;
+			return r1 % _ulong(abs(r2));
+		}
+		friend _ulong operator%(_ulong r1, integer&& r2)
+		{
+			mpz_abs(r2._x, r2._x);
+			if (r2 > r1) return r1;
+			return r1 % _ulong(r2);
+		}
+
 		integer operator+() const& { return *this; }
 		integer operator+() && { return std::move(*this); }
 		integer operator-() const&
@@ -686,6 +774,8 @@ namespace mp
 		friend std::optional<rational> parse(std::string_view str);
 		friend std::optional<rational> _parse_mantisa(std::string_view str);
 		friend mpz_srcptr mp::_mp_ops<integer>::data(const integer& rop);
+		friend integer mp::_mp_ops<integer>::ceil(mpq_srcptr rop);
+		friend integer mp::_mp_ops<integer>::truncate(mpq_srcptr rop);
 		friend integer mp::_mp_ops<integer>::get(mpq_srcptr rop);
 		friend integer mp::_mp_ops<integer>::get(mpfr_srcptr rop, mpfr_rnd_t rnd);
 
@@ -699,12 +789,18 @@ namespace mp
 		{
 			return s >> z._x;
 		}
+		friend int iszero(const integer& x);
+		friend int sgn(const integer& x);
 		friend integer abs(const integer& r);
 		friend integer abs(integer&& r);
 		friend integer pow(const integer& op1, _ulong op2);
 		friend integer pow(integer&& op1, _ulong op2);
 		friend integer pow(_ulong op1, _ulong op2);
+		friend integer factorial(const _ulong n);
+		friend int cmpabs(const integer& r1, const integer& r2);
 	};
+	inline int iszero(const integer& x) { return mpz_sgn(x._x) == 0; }
+	inline int sgn(const integer& x) { return mpz_sgn(x._x); }
 	inline integer abs(const integer& r)
 	{
 		integer temp;
@@ -733,8 +829,28 @@ namespace mp
 		mpz_ui_pow_ui(temp._x, op1, op2);
 		return temp;
 	}
+	// return n!
+	inline integer factorial(const _ulong n)
+	{
+		integer temp;
+		mpz_fac_ui(temp._x, n);
+		return temp;
+	}
+	inline int cmpabs(const integer& r1, const integer& r2) { return mpz_cmpabs(r1._x, r2._x); }
 	inline _ulong _mp_ops<_ulong>::get(mpq_srcptr op) { return _ulong(_mp_ops<integer>::get(op)); }
 	inline _long _mp_ops<_long>::get(mpq_srcptr op) { return _long(_mp_ops<integer>::get(op)); }
+	inline integer _mp_ops<integer>::ceil(mpq_srcptr rop)
+	{
+		integer z;
+		mpz_cdiv_q(z._x, mpq_numref(rop), mpq_denref(rop));
+		return z;
+	}
+	inline integer _mp_ops<integer>::truncate(mpq_srcptr rop)
+	{
+		integer z;
+		mpz_tdiv_q(z._x, mpq_numref(rop), mpq_denref(rop));
+		return z;
+	}
 	inline integer _mp_ops<integer>::get(mpq_srcptr rop)
 	{
 		integer z;
