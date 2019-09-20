@@ -201,12 +201,11 @@ namespace qboot
 			const auto& scs = ineq->sample_scalings();
 			Vector<Matrix<real>> e_c(deg + 1);
 			Vector<Vector<Matrix<real>>> e_B(N_);
-			for (uint32_t k = 0; k <= deg; ++k) e_c[k] = mul_scalar(-scs[k], ineq->target_eval_without_scale(k));
+			for (uint32_t k = 0; k <= deg; ++k) e_c[k] = -ineq->target_eval_with_scale(k);
 			for (uint32_t n = 0; n < N_; ++n)
 			{
 				e_B[n] = Vector<Matrix<real>>{deg + 1};
-				for (uint32_t k = 0; k <= deg; ++k)
-					e_B[n][k] = mul_scalar(-scs[k], ineq->matrix_eval_without_scale(n, k));
+				for (uint32_t k = 0; k <= deg; ++k) e_B[n][k] = -ineq->matrix_eval_with_scale(n, k);
 			}
 			// Tr(A_p Y) + (e_B y)_p = (e_c)_p
 			// convert to Tr(A_p Z) + (d_B z)_p = (d_c)_p
