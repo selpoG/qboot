@@ -2,6 +2,7 @@
 
 using algebra::RealFunction, algebra::ComplexFunction, algebra::RealConverter;
 using mp::real, mp::rational;
+using std::make_unique;
 
 namespace qboot
 {
@@ -30,6 +31,10 @@ namespace qboot
 	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse())
 	{
 		assert(dim >= 3 && dim % 2 == 1);
+		v_to_d_ = make_unique<memoized<ComplexFunction<real>(real)>>(
+		    [this](const real& d) { return algebra::v_to_d(d, this->lambda_); });
+		gBlock_ = make_unique<memoized<ComplexFunction<real>(PrimaryOperator, real, real)>>(
+		    [this](const PrimaryOperator& op, const real& S, const real& P) { return qboot::gBlock(op, S, P, *this); });
 	}
 	ComplexFunction<real> Context::expand_off_diagonal(RealFunction<real>&& realAxisResult, const PrimaryOperator& op,
 	                                                   const real& S, const real& P) const

@@ -70,6 +70,21 @@ namespace qboot
 			       (spin_ > 0 && _is_positive_integer((1 + spin_) + 2 * epsilon_ - delta_));
 		}
 		[[nodiscard]] std::string str() const;
+		friend bool operator==(const PrimaryOperator& p, const PrimaryOperator& q)
+		{
+			assert(p.epsilon_ == q.epsilon_);
+			return p.spin_ == q.spin_ && p.delta_ == q.delta_;
+		}
+		friend bool operator!=(const PrimaryOperator& p, const PrimaryOperator& q) { return !(p == q); }
+		friend bool operator<(const PrimaryOperator& p, const PrimaryOperator& q)
+		{
+			assert(p.epsilon_ == q.epsilon_);
+			if (p.spin_ != q.spin_) return p.spin_ < q.spin_;
+			return p.delta_ < q.delta_;
+		}
+		friend bool operator>(const PrimaryOperator& p, const PrimaryOperator& q) { return q < p; }
+		friend bool operator>=(const PrimaryOperator& p, const PrimaryOperator& q) { return !(p < q); }
+		friend bool operator<=(const PrimaryOperator& p, const PrimaryOperator& q) { return !(p > q); }
 	};
 	class GeneralPrimaryOperator
 	{

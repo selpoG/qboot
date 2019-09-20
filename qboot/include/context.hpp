@@ -1,10 +1,14 @@
 #ifndef QBOOT_CONTEXT_HPP_
 #define QBOOT_CONTEXT_HPP_
 
-#include <cassert>  // for assert
-#include <cstdint>  // for uint32_t, int32_t
-#include <sstream>  // for ostringstream
-#include <string>   // for string
+#include <cassert>     // for assert
+#include <cstdint>     // for uint32_t, int32_t
+#include <functional>  // for function
+#include <map>         // for map
+#include <mutex>       // for mutex, lock_guard
+#include <sstream>     // for ostringstream
+#include <string>      // for string
+#include <tuple>       // for tuple
 
 #include "block.hpp"             // for ConformalBlock
 #include "complex_function.hpp"  // for ComplexFunction, FunctionSymmetry
@@ -20,6 +24,30 @@ namespace qboot
 	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
 	algebra::RealFunction<mp::real> z_as_func_rho(uint32_t lambda);
 
+	template <class T>
+	class memoized;
+	// create a thread-safe momoized function
+	// all types of arguments must be comparable
+	template <class T, class... TArgs>
+	class memoized<T(TArgs...)>
+	{
+		std::mutex mutex_{};
+		std::function<T(TArgs...)> f_;
+		std::map<std::tuple<TArgs...>, T> memo_{};
+
+	public:
+		memoized(std::function<T(TArgs...)> f) : f_(f) {}
+		const T& operator()(const TArgs&... args)
+		{
+			std::lock_guard<std::mutex> guard(mutex_);
+			auto key = std::tuple<TArgs...>(args...);
+			if (memo_.find(key) == memo_.end()) memo_.emplace(key, f_(args...));
+			return memo_.at(key);
+		}
+	};
+	template <class T, class... TArgs>
+	memoized(T (*)(TArgs...))->memoized<T(TArgs...)>;
+
 	// controls n_Max, lambda and dim
 	class Context
 	{
@@ -28,6 +56,14 @@ namespace qboot
 		mp::real rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter rho_to_z_;
+		std::unique_ptr<memoized<algebra::ComplexFunction<mp::real>(mp::real)>> v_to_d_{};
+		std::unique_ptr<memoized<algebra::ComplexFunction<mp::real>(PrimaryOperator, mp::real, mp::real)>> gBlock_{};
+		const algebra::ComplexFunction<mp::real>& v_to_d(const mp::real& d) const { return (*v_to_d_)(d); }
+		const algebra::ComplexFunction<mp::real>& gBlock(const PrimaryOperator& op, const mp::real& S,
+		                                                 const mp::real& P) const
+		{
+			return (*gBlock_)(op, S, P);
+		}
 
 	public:
 		// cutoff of the power series expansion of conformal blocks at rho = 0
@@ -64,26 +100,25 @@ namespace qboot
 		                                                         const algebra::ComplexFunction<mp::real>& gBlock,
 		                                                         algebra::FunctionSymmetry sym) const
 		{
-			return mul(algebra::v_to_d(d, lambda_), gBlock).proj(sym);
+			return mul(v_to_d(d), gBlock).proj(sym);
 		}
 		[[nodiscard]] algebra::ComplexFunction<mp::real> evaluate(const ConformalBlock<PrimaryOperator>& block) const
 		{
 			assert(block.symmetry() != algebra::FunctionSymmetry::Mixed);
-			return F_block(block.delta_half(), gBlock(block.get_op(), block.S(), block.P(), *this), block.symmetry());
+			return F_block(block.delta_half(), gBlock(block.get_op(), block.S(), block.P()), block.symmetry());
 		}
 		[[nodiscard]] algebra::ComplexFunction<mp::real> evaluate(const ConformalBlock<GeneralPrimaryOperator>& block,
 		                                                          const mp::real& delta) const
 		{
 			assert(block.symmetry() != algebra::FunctionSymmetry::Mixed);
-			return F_block(block.delta_half(), gBlock(block.get_op(delta), block.S(), block.P(), *this),
-			               block.symmetry());
+			return F_block(block.delta_half(), gBlock(block.get_op(delta), block.S(), block.P()), block.symmetry());
 		}
 		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const PrimaryOperator& op, const mp::real& d1,
 		                                                         const mp::real& d2, const mp::real& d3,
 		                                                         const mp::real& d4,
 		                                                         algebra::FunctionSymmetry sym) const
 		{
-			return F_block((d2 + d3) / 2, gBlock(op, d1, d2, d3, d4, *this), sym);
+			return F_block((d2 + d3) / 2, gBlock(op, delta_S(d1, d2, d3, d4), delta_P(d1, d2, d3, d4)), sym);
 		}
 		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const mp::real& d2, const mp::real& d3,
 		                                                         const algebra::ComplexFunction<mp::real>& gBlock) const
