@@ -36,7 +36,7 @@ namespace qboot
 		std::map<std::tuple<TArgs...>, T> memo_{};
 
 	public:
-		memoized(std::function<T(TArgs...)> f) : f_(f) {}
+		explicit memoized(std::function<T(TArgs...)> f) : f_(f) {}
 		const T& operator()(const TArgs&... args)
 		{
 			std::lock_guard<std::mutex> guard(mutex_);
@@ -58,9 +58,12 @@ namespace qboot
 		algebra::RealConverter rho_to_z_;
 		std::unique_ptr<memoized<algebra::ComplexFunction<mp::real>(mp::real)>> v_to_d_{};
 		std::unique_ptr<memoized<algebra::ComplexFunction<mp::real>(PrimaryOperator, mp::real, mp::real)>> gBlock_{};
-		const algebra::ComplexFunction<mp::real>& v_to_d(const mp::real& d) const { return (*v_to_d_)(d); }
-		const algebra::ComplexFunction<mp::real>& gBlock(const PrimaryOperator& op, const mp::real& S,
-		                                                 const mp::real& P) const
+		[[nodiscard]] const algebra::ComplexFunction<mp::real>& v_to_d(const mp::real& d) const
+		{
+			return (*v_to_d_)(d);
+		}
+		[[nodiscard]] const algebra::ComplexFunction<mp::real>& gBlock(const PrimaryOperator& op, const mp::real& S,
+		                                                               const mp::real& P) const
 		{
 			return (*gBlock_)(op, S, P);
 		}

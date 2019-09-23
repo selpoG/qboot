@@ -498,8 +498,8 @@ namespace mp
 			mpfr_neg(_x, _x, global_rnd);
 			return std::move(*this);
 		}
-		friend real zero(const int n);
-		friend real inf(const int n);
+		friend real zero(int n);
+		friend real inf(int n);
 		friend real nan();
 		friend real const_log2();
 		friend real const_pi() noexcept;
@@ -562,7 +562,7 @@ namespace mp
 
 	// if sign is nonnegative, return +0
 	// if sign is negative, return -0
-	inline real zero(const int n)
+	inline real zero(int n)
 	{
 		real temp;
 		mpfr_set_zero(temp._x, n);
@@ -571,7 +571,7 @@ namespace mp
 
 	// if sign is nonnegative, return +inf
 	// if sign is negative, return -inf
-	inline real inf(const int n)
+	inline real inf(int n)
 	{
 		real temp;
 		mpfr_set_inf(temp._x, n);

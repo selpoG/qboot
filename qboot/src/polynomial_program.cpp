@@ -101,7 +101,7 @@ namespace qboot
 	                                                               Vector<Polynomial>&& mat, Polynomial&& target)
 	    : PolynomialInequality(N, 1, move(scale))
 	{
-		auto deg = int32_t(PolynomialInequality::get_scale()->max_degree());
+		[[maybe_unused]] auto deg = int32_t(PolynomialInequality::get_scale()->max_degree());
 		assert(mat.size() == N);
 		mat_ = Vector<Matrix<Polynomial>>(N);
 		for (uint32_t i = 0; i < N; ++i)
@@ -121,7 +121,7 @@ namespace qboot
 	                                                               Matrix<Polynomial>&& target)
 	    : PolynomialInequality(N, sz, move(scale)), mat_(move(mat)), target_(move(target))
 	{
-		auto deg = int32_t(PolynomialInequality::get_scale()->max_degree());
+		[[maybe_unused]] auto deg = int32_t(PolynomialInequality::get_scale()->max_degree());
 		assert(mat_.size() == N);
 		for (uint32_t i = 0; i < N; ++i)
 		{

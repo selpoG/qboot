@@ -46,6 +46,13 @@ namespace mp
 	inline constexpr bool _long_convertible_v =
 	    std::conjunction_v<std::is_integral<Tp>, std::is_signed<Tp>, is_included<Tp, _long>>;
 
+	inline bool _is_even(mpz_srcptr p) { return mpz_even_p(p) != 0; }           // NOLINT
+	inline bool _is_odd(mpz_srcptr p) { return mpz_odd_p(p) != 0; }             // NOLINT
+	inline int _cmp_ui(mpz_srcptr p, _ulong o) { return mpz_cmp_ui(p, o); }     // NOLINT
+	inline int _cmp_ui(mpq_srcptr p, _ulong o) { return mpq_cmp_ui(p, o, 1); }  // NOLINT
+	inline int _cmp_si(mpz_srcptr p, _long o) { return mpz_cmp_si(p, o); }      // NOLINT
+	inline int _cmp_si(mpq_srcptr p, _long o) { return mpq_cmp_si(p, o, 1); }   // NOLINT
+
 	template <class Tp>
 	inline constexpr bool _mpz_is_other_operands = _long_convertible_v<Tp> || _ulong_convertible_v<Tp>;
 
@@ -241,8 +248,8 @@ namespace mp
 		inline static void addmul(mpz_ptr rop, mpz_srcptr op1, _ulong op2) { mpz_addmul_ui(rop, op1, op2); }
 		// rop -= op1 * op2
 		inline static void submul(mpz_ptr rop, mpz_srcptr op1, _ulong op2) { mpz_submul_ui(rop, op1, op2); }
-		inline static int cmp(mpz_srcptr op1, _ulong op2) { return mpz_cmp_ui(op1, op2); }
-		inline static int cmp(mpq_srcptr op1, _ulong op2) { return mpq_cmp_ui(op1, op2, 1); }
+		inline static int cmp(mpz_srcptr op1, _ulong op2) { return _cmp_ui(op1, op2); }
+		inline static int cmp(mpq_srcptr op1, _ulong op2) { return _cmp_ui(op1, op2); }
 		inline static int cmp(mpfr_srcptr op1, _ulong op2) { return mpfr_cmp_ui(op1, op2); }
 	};
 	template <>
@@ -345,8 +352,8 @@ namespace mp
 			else
 				mpz_addmul_ui(rop, op1, _ulong(-op2));
 		}
-		inline static int cmp(mpz_srcptr op1, _long op2) { return mpz_cmp_si(op1, op2); }
-		inline static int cmp(mpq_srcptr op1, _long op2) { return mpq_cmp_si(op1, op2, 1); }
+		inline static int cmp(mpz_srcptr op1, _long op2) { return _cmp_si(op1, op2); }
+		inline static int cmp(mpq_srcptr op1, _long op2) { return _cmp_si(op1, op2); }
 		inline static int cmp(mpfr_srcptr op1, _long op2) { return mpfr_cmp_si(op1, op2); }
 	};
 	template <>
@@ -460,10 +467,10 @@ namespace mp
 		[[nodiscard]] integer clone() const { return *this; }
 		[[nodiscard]] bool iszero() const { return mpz_sgn(_x) == 0; }
 		void negate() & { mpz_neg(_x, _x); }
-		bool iseven() const { return mpz_even_p(_x) != 0; }
-		bool isodd() const { return mpz_odd_p(_x) != 0; }
-		bool divisible_by(const integer& o) const { return mpz_divisible_p(_x, o._x) != 0; }
-		bool divisible_by(_ulong o) const { return mpz_divisible_ui_p(_x, o) != 0; }
+		[[nodiscard]] bool iseven() const { return _is_even(_x); }
+		[[nodiscard]] bool isodd() const { return _is_odd(_x); }
+		[[nodiscard]] bool divisible_by(const integer& o) const { return mpz_divisible_p(_x, o._x) != 0; }
+		[[nodiscard]] bool divisible_by(_ulong o) const { return mpz_divisible_ui_p(_x, o) != 0; }
 
 		template <class T>
 		[[nodiscard]] integer eval([[maybe_unused]] const T& x) const
@@ -740,7 +747,7 @@ namespace mp
 		friend integer operator/(_ulong r1, const integer& r2)
 		{
 			if (r2 < 0) return r1 / -r2;
-			if (mpz_cmp_ui(r2._x, r1) > 0) return integer(0);
+			if (_cmp_ui(r2._x, r1) > 0) return integer(0);
 			return integer(r1 / _ulong(r2));
 		}
 
@@ -796,7 +803,7 @@ namespace mp
 		friend integer pow(const integer& op1, _ulong op2);
 		friend integer pow(integer&& op1, _ulong op2);
 		friend integer pow(_ulong op1, _ulong op2);
-		friend integer factorial(const _ulong n);
+		friend integer factorial(_ulong n);
 		friend int cmpabs(const integer& r1, const integer& r2);
 	};
 	inline int iszero(const integer& x) { return mpz_sgn(x._x) == 0; }
@@ -830,7 +837,7 @@ namespace mp
 		return temp;
 	}
 	// return n!
-	inline integer factorial(const _ulong n)
+	inline integer factorial(_ulong n)
 	{
 		integer temp;
 		mpz_fac_ui(temp._x, n);

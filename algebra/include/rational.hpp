@@ -23,9 +23,9 @@ namespace mp
 	template <class Tp>
 	inline constexpr bool _mpq_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer>;
 
-	inline integer ceil(const rational& z);
-	inline integer floor(const rational& z);
-	inline integer truncate(const rational& z);
+	inline integer ceil(const rational& q);
+	inline integer floor(const rational& q);
+	inline integer truncate(const rational& q);
 
 	class rational
 	{
@@ -55,12 +55,15 @@ namespace mp
 		void negate() & { mpq_neg(_x, _x); }
 		void invert() & { mpq_inv(_x, _x); }
 		// numerator
-		integer num() const { return integer(mpq_numref(_x)); }
+		[[nodiscard]] integer num() const { return integer(mpq_numref(_x)); }
 		// denominator
-		integer den() const { return integer(mpq_denref(_x)); }
+		[[nodiscard]] integer den() const { return integer(mpq_denref(_x)); }
 		// return {numerator, denominator}
-		std::array<integer, 2> numden() const { return std::array{integer(mpq_numref(_x)), integer(mpq_denref(_x))}; }
-		bool isinteger() const { return mpz_cmp_ui(mpq_denref(_x), 1) == 0; }
+		[[nodiscard]] std::array<integer, 2> numden() const
+		{
+			return std::array{integer(mpq_numref(_x)), integer(mpq_denref(_x))};
+		}
+		[[nodiscard]] bool isinteger() const { return _cmp_ui(mpq_denref(_x), 1) == 0; }
 
 		template <class T>
 		[[nodiscard]] rational eval([[maybe_unused]] const T& x) const

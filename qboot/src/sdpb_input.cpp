@@ -33,7 +33,7 @@ namespace qboot
 	                               array<Matrix<real>, 2>&& bilinear)
 	    : dim_(dim), deg_(deg), constraint_B_(move(B)), constraint_c_(move(c)), bilinear_(move(bilinear))
 	{
-		uint32_t schur = schur_size();
+		[[maybe_unused]] auto schur = schur_size();
 		assert(constraint_B_.row() == schur);
 		assert(constraint_c_.size() == schur);
 		assert(bilinear_[0].row() == (deg_ / 2) + 1);
@@ -120,10 +120,12 @@ namespace qboot
 		for (uint32_t i = 0; i < num_constraints_; ++i) out << constraints_[i].value().schur_size() << "\n";
 		out << 2 * num_constraints_ << "\n";
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-			for (const auto& m : constraints_[i].value().bilinear()) out << m.row() * constraints_[i].value().dim() << "\n";
+			for (const auto& m : constraints_[i].value().bilinear())
+				out << m.row() * constraints_[i].value().dim() << "\n";
 		out << 2 * num_constraints_ << "\n";
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-			for (const auto& m : constraints_[i].value().bilinear()) out << m.column() * constraints_[i].value().dim() << "\n";
+			for (const auto& m : constraints_[i].value().bilinear())
+				out << m.column() * constraints_[i].value().dim() << "\n";
 	}
 	void SDPBInput::write(const path& root_) const
 	{
