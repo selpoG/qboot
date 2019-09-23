@@ -9,7 +9,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [cmake](https://cmake.org/) (`3.13.0+`)
 
-### Unix
+### Unix (or WSL)
 
 - [gmp](https://gmplib.org/) (You must configure `gmp` with `--enable-cxx`)
 
@@ -17,7 +17,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [gcc](http://gcc.gnu.org/) (`7.4.0+`) or [clang](http://clang.llvm.org/) (`8.0.0+`)
 
-### Windows
+### Windows (MSVC)
 
 - [mpir](https://github.com/BrianGladman/mpir.git) (You must build `lib_mpir_gc` (or `lib_mpir_{some_architecture}`) **and** `lib_mpir_cxx`)
 
@@ -25,11 +25,12 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [Visual Studio](https://visualstudio.microsoft.com/) (`2017+`)
 
-After building these libraries with Visual Studio,
-you will have `gmp.h`, `gmpxx.h`, `mpir.lib` and `mpirxx.lib` in, for example, `C:\somewhere\mpir\lib\x64\Debug\`
-and `mpfr.lib`, `mpfr.h` in, for example, `C:\somewhere\mpfr\lib\x64\Debug\`.
+Please build `mpir` and `mpfr` in both `Debug` and `Release` mode.
 
-If you are working with `WSL`, please follow the `Unix` section above.
+After building these libraries with Visual Studio,
+you will have `gmp.h`, `gmpxx.h`, `mpir.lib` and `mpirxx.lib`
+in, for example, `C:\somewhere\mpir\lib\x64\Debug\`, `C:\somewhere\mpir\lib\x64\Release\`
+and `mpfr.lib`, `mpfr.h` in, for example, `C:\somewhere\mpfr\lib\x64\Debug\`, `C:\somewhere\mpfr\lib\x64\Release\`.
 
 ## Build
 
@@ -41,6 +42,8 @@ If you are working with `WSL`, please follow the `Unix` section above.
 
 3. `make`
 
+To build in `Debug` or `Release` mode, call `cmake` with `-DCMAKE_BUILD_TYPE=Debug` or `-DCMAKE_BUILD_TYPE=Release`.
+
 If you installed requirements in custom location, You may need to tell `cmake` some paths.
 In Unix system, add options `-DMPFR_ROOT=/path/to/mpfr -DGMP_ROOT=/path/to/gmp`.
 
@@ -51,8 +54,8 @@ In Unix system, add options `-DMPFR_ROOT=/path/to/mpfr -DGMP_ROOT=/path/to/gmp`.
 In Windows, use cmake-gui to build.
 Options to cmake can be passed by `Add Entry` button.
 You have to add 2 `PATH`s,
-`GMP_ROOT` (must contain `gmp.h`, `gmpxx.h` and `mpir.lib`. Typical value is `C:\somewhere\mpir\lib\x64\Debug`) and
-`MPFR_ROOT` (must contain `mpfr.h` and `mpfr.lib`. Typical value is `C:\somewhere\mpfr\lib\x64\Debug`).
+`GMP_ROOT` (must contain `Debug` and `Release` folders which contain `gmp.h`, `gmpxx.h` and `mpir.lib`. Typical value is `C:\somewhere\mpir\lib\x64`) and
+`MPFR_ROOT` (must contain `Debug` and `Release` folders which contain `mpfr.h` and `mpfr.lib`. Typical value is `C:\somewhere\mpfr\lib\x64`).
 
 ## Data Structures
 

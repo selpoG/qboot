@@ -5,10 +5,20 @@ file(GLOB HEADERS "include/*.hpp" "include/*.h")
 
 add_library(${MY_TARGET} STATIC ${SOURCES} ${HEADERS})
 
-target_link_libraries(${MY_TARGET} INTERFACE ${MPFR_LIBRARY} ${GMP_LIBRARY} ${GMPXX_LIBRARY})
+target_link_libraries(
+	${MY_TARGET} INTERFACE
+	$<$<CONFIG:Debug>:${MPFR_LIBRARY_DEBUG}>
+	$<$<CONFIG:Release>:${MPFR_LIBRARY_RELEASE}>
+	$<$<CONFIG:Debug>:${GMP_LIBRARY_DEBUG}>
+	$<$<CONFIG:Release>:${GMP_LIBRARY_RELEASE}>
+	$<$<CONFIG:Debug>:${GMPXX_LIBRARY_DEBUG}>
+	$<$<CONFIG:Release>:${GMPXX_LIBRARY_RELEASE}>
+)
 target_include_directories(${MY_TARGET} PUBLIC
-	"${MPFR_INCLUDE_DIR}"
-	"${GMP_INCLUDE_DIR}"
+	$<$<CONFIG:Debug>:${MPFR_INCLUDE_DIR_DEBUG}>
+	$<$<CONFIG:Release>:${MPFR_INCLUDE_DIR_RELEASE}>
+	$<$<CONFIG:Debug>:${GMP_INCLUDE_DIR_DEBUG}>
+	$<$<CONFIG:Release>:${GMP_INCLUDE_DIR_RELEASE}>
 	include
 )
 
