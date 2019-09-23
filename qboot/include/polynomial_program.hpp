@@ -238,8 +238,8 @@ namespace qboot
 			assert(ineq->num_of_variables() == N_);
 			inequality_.push_back(std::move(ineq));
 		}
-		SDPBInput create_input() &&;
-		XMLInput create_xml() &&;
+		SDPBInput create_input(uint32_t parallel = 1) &&;
+		XMLInput create_xml(uint32_t parallel = 1) &&;
 	};
 }  // namespace qboot
 

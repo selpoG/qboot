@@ -137,9 +137,9 @@ void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax 
 	}
 	boot.finish();
 	auto root = fs::current_path() / name_mixed(deltas);
-	auto pmp = boot.ope_maximize("T", "unit", true);
+	auto pmp = boot.ope_maximize("T", "unit", 8, true);
 	// auto pmp = boot.find_contradiction("unit", true);
-	move(pmp).create_input().write(root);
+	move(pmp).create_input(8).write(root);
 }
 
 void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24)
@@ -169,8 +169,8 @@ void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax
 	boot.add_equation(move(eq));
 	boot.finish();
 	auto root = fs::current_path() / name_single(deltas);
-	auto pmp = boot.find_contradiction("unit");
-	move(pmp).create_input().write(root);
+	auto pmp = boot.find_contradiction("unit", 8);
+	move(pmp).create_input(8).write(root);
 }
 
 class TestScale : public qboot::ScaleFactor

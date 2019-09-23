@@ -1,13 +1,16 @@
 #include "bootstrap_equation.hpp"
 
+#include <future>    // for future
 #include <iostream>  // for cout, endl
 #include <memory>    // for unique_ptr
 #include <string>    // for string
 #include <utility>   // for move
 
+#include "task_queue.hpp"  // for TaskQueue
+
 using algebra::Vector, algebra::Matrix;
 using mp::real;
-using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view;
+using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view, std::vector;
 
 namespace qboot
 {
@@ -102,7 +105,7 @@ namespace qboot
 	}
 
 	[[nodiscard]] PolynomialProgram BootstrapEquation::ope_maximize(string_view target, string_view norm, real&& N,
-	                                                                bool verbose) const
+	                                                                uint32_t parallel, bool verbose) const
 	{
 		assert(N_ > 0);
 		PolynomialProgram prg(N_);
@@ -127,6 +130,8 @@ namespace qboot
 			for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
 			prg.add_equation(move(v), move(N));
 		}
+		TaskQueue q(parallel);
+		vector<std::future<unique_ptr<Ineq>>> ineqs;
 		for (const auto& [sec, id] : sector_id_)
 		{
 			if (sec == norm || sec == target) continue;
@@ -134,24 +139,26 @@ namespace qboot
 			auto sz = sector(id).size();
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
-					prg.add_inequality(make_unique<Ineq>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz)));
+					ineqs.push_back(q.push([this, id = id, sz]() {
+						return make_unique<Ineq>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
+					}));
 				else
-				{
-					auto m = make_disc_mat(id);
-					Vector<real> v(N_);
-					for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
-					prg.add_inequality(make_unique<Ineq>(N_, move(v), real(0)));
-				}
+					ineqs.push_back(q.push([this, id = id]() {
+						auto m = make_disc_mat(id);
+						Vector<real> v(N_);
+						for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
+						return make_unique<Ineq>(N_, move(v), real(0));
+					}));
 			else
 				for (const auto& op : sector(id).ops_)
-				{
-					if (verbose) cout << op.str() << endl;
-					auto ag = common_scale(id, op);
-					auto mat = make_cont_mat(id, op, &ag);
-					prg.add_inequality(make_unique<Ineq>(N_, sz, move(ag), move(mat),
-					                                     Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz})));
-				}
+					ineqs.push_back(q.push([this, id = id, sz, &op]() {
+						auto ag = common_scale(id, op);
+						auto mat = make_cont_mat(id, op, &ag);
+						return make_unique<Ineq>(N_, sz, move(ag), move(mat),
+						                         Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz}));
+					}));
 		}
+		for (auto&& x : ineqs) prg.add_inequality(x.get());
 		return prg;
 	}
 
@@ -160,7 +167,8 @@ namespace qboot
 		for (const auto& eq : eqs_) N_ += eq.dimension();
 	}
 
-	[[nodiscard]] PolynomialProgram BootstrapEquation::find_contradiction(string_view norm, bool verbose) const
+	[[nodiscard]] PolynomialProgram BootstrapEquation::find_contradiction(string_view norm, uint32_t parallel,
+	                                                                      bool verbose) const
 	{
 		assert(N_ > 0);
 		PolynomialProgram prg(N_);
@@ -176,6 +184,8 @@ namespace qboot
 			for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, mat[i]);
 			prg.add_equation(move(v), real(1));
 		}
+		TaskQueue q(parallel);
+		vector<std::future<unique_ptr<Ineq>>> ineqs;
 		for (const auto& [sec, id] : sector_id_)
 		{
 			if (sec == norm) continue;
@@ -183,24 +193,26 @@ namespace qboot
 			auto sz = sector(id).size();
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
-					prg.add_inequality(make_unique<Ineq>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz)));
+					ineqs.push_back(q.push([this, id = id, sz]() {
+						return make_unique<Ineq>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
+					}));
 				else
-				{
-					auto m = make_disc_mat(id);
-					Vector<real> v(N_);
-					for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
-					prg.add_inequality(make_unique<Ineq>(N_, move(v), real(0)));
-				}
+					ineqs.push_back(q.push([this, id = id]() {
+						auto m = make_disc_mat(id);
+						Vector<real> v(N_);
+						for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
+						return make_unique<Ineq>(N_, move(v), real(0));
+					}));
 			else
 				for (const auto& op : sector(id).ops_)
-				{
-					if (verbose) cout << op.str() << endl;
-					auto ag = common_scale(id, op);
-					auto mat = make_cont_mat(id, op, &ag);
-					prg.add_inequality(make_unique<Ineq>(N_, sz, move(ag), move(mat),
-					                                     Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz})));
-				}
+					ineqs.push_back(q.push([this, id = id, sz, &op]() {
+						auto ag = common_scale(id, op);
+						auto mat = make_cont_mat(id, op, &ag);
+						return make_unique<Ineq>(N_, sz, move(ag), move(mat),
+						                         Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz}));
+					}));
 		}
+		for (auto&& x : ineqs) prg.add_inequality(x.get());
 		return prg;
 	}
 }  // namespace qboot

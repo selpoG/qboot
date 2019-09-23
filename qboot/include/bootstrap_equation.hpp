@@ -177,7 +177,7 @@ namespace qboot
 		// alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
 		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm, mp::real&& N,
-		                                             bool verbose = false) const;
+		                                             uint32_t parallel, bool verbose = false) const;
 
 	public:
 		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
@@ -228,7 +228,8 @@ namespace qboot
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
 		// the size of matrices in norm sector must be 1
-		[[nodiscard]] PolynomialProgram find_contradiction(std::string_view norm, bool verbose = false) const;
+		[[nodiscard]] PolynomialProgram find_contradiction(std::string_view norm, uint32_t parallel = 1,
+		                                                   bool verbose = false) const;
 
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha maximizes alpha(norm)
@@ -236,9 +237,9 @@ namespace qboot
 		// the size of matrices in target, norm sector must be 1
 		// such a alpha gives an upper bound on lambda, lambda ^ 2 <= -alpha(norm)
 		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm,
-		                                             bool verbose = false) const
+		                                             uint32_t parallel = 1, bool verbose = false) const
 		{
-			return ope_maximize(target, norm, mp::real(1), verbose);
+			return ope_maximize(target, norm, mp::real(1), parallel, verbose);
 		}
 
 		// create a PolynomialProgram which finds a linear functional alpha
@@ -247,9 +248,9 @@ namespace qboot
 		// the size of matrices in target, norm sector must be 1
 		// such a alpha gives an lower bound on lambda, lambda ^ 2 >= alpha(norm)
 		[[nodiscard]] PolynomialProgram ope_minimize(std::string_view target, std::string_view norm,
-		                                             bool verbose = false) const
+		                                             uint32_t parallel = 1, bool verbose = false) const
 		{
-			return ope_maximize(target, norm, mp::real(-1), verbose);
+			return ope_maximize(target, norm, mp::real(-1), parallel, verbose);
 		}
 	};
 	using Externals = std::array<PrimaryOperator, 4>;
