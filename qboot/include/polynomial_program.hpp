@@ -10,6 +10,7 @@
 #include "real.hpp"          // for real
 #include "scale_factor.hpp"  // for ScaleFactor
 #include "sdpb_input.hpp"    // for SDPBInput
+#include "task_queue.hpp"    // for _event_base
 #include "xml_input.hpp"     // for XMLInput
 
 namespace qboot
@@ -238,8 +239,8 @@ namespace qboot
 			assert(ineq->num_of_variables() == N_);
 			inequality_.push_back(std::move(ineq));
 		}
-		SDPBInput create_input(uint32_t parallel = 1) &&;
-		XMLInput create_xml(uint32_t parallel = 1) &&;
+		SDPBInput create_input(uint32_t parallel = 1, _event_base* event = nullptr) &&;
+		XMLInput create_xml(uint32_t parallel = 1, _event_base* event = nullptr) &&;
 	};
 }  // namespace qboot
 

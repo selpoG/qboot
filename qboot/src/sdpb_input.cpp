@@ -1,10 +1,15 @@
 #include "sdpb_input.hpp"
 
+#include <future>  // for future
+#include <vector>  // for vector
+
+#include "task_queue.hpp"  // for QBOOT_scope, TaskQueue, _event_base
+
 namespace fs = qboot::fs;
 
 using algebra::Vector, algebra::Matrix;
 using mp::real;
-using std::array, std::move, std::optional, std::make_unique;
+using std::array, std::move, std::optional, std::make_unique, std::vector;
 using std::ostream, std::ofstream, std::string, std::to_string, fs::path, fs::create_directory;
 
 static ostream& write_mat(ostream& out, const Matrix<real>& v)
@@ -127,19 +132,36 @@ namespace qboot
 			for (const auto& m : constraints_[i].value().bilinear())
 				out << m.column() * constraints_[i].value().dim() << "\n";
 	}
-	void SDPBInput::write(const path& root_) const
+	void SDPBInput::write(const path& root_, uint32_t parallel, _event_base* event) const
 	{
 		for (uint32_t i = 0; i < num_constraints_; ++i) assert(constraints_[i].has_value());
 		// ensure root to be path to directory
 		auto root = root_ / "";
 		create_directory(root);
-		write_blocks(root);
-		write_objectives(root);
-		write_bilinear_bases(root);
+		TaskQueue q(parallel);
+		vector<std::future<bool>> tasks;
+		tasks.push_back(q.push([this, &root, event]() {
+			QBOOT_scope(scope, "write_blocks", event);
+			write_blocks(root);
+			return true;
+		}));
+		tasks.push_back(q.push([this, &root, event]() {
+			QBOOT_scope(scope, "write_objectives", event);
+			write_objectives(root);
+			return true;
+		}));
+		tasks.push_back(q.push([this, &root, event]() {
+			QBOOT_scope(scope, "write_bilinear_bases", event);
+			write_bilinear_bases(root);
+			return true;
+		}));
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-		{
-			write_free_var_matrix(root, i);
-			write_primal_objective_c(root, i);
-		}
+			tasks.push_back(q.push([this, &root, i, event]() {
+				QBOOT_scope(scope, "write constraint " + std::to_string(i), event);
+				write_free_var_matrix(root, i);
+				write_primal_objective_c(root, i);
+				return true;
+			}));
+		for (auto&& x : tasks) x.get();
 	}
 }  // namespace qboot

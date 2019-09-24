@@ -13,6 +13,7 @@
 #include "matrix.hpp"         // for Matrix, Vector
 #include "my_filesystem.hpp"  // for path, create_directory
 #include "real.hpp"           // for real
+#include "task_queue.hpp"     // for _event_base
 
 namespace qboot
 {
@@ -65,7 +66,7 @@ namespace qboot
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
 		// call this for index = 0, ..., num_constraints() - 1 before call of write
 		void register_constraint(uint32_t index, DualConstraint&& c) &;
-		void write(const fs::path& root_) const;
+		void write(const fs::path& root_, uint32_t parallel = 1, _event_base* event = nullptr) const;
 	};
 }  // namespace qboot
 

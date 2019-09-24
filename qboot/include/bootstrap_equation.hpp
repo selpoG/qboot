@@ -23,6 +23,7 @@
 #include "primary_op.hpp"          // for GeneralPrimaryOperator, PrimaryOperator
 #include "rational.hpp"            // for rational
 #include "real.hpp"                // for real
+#include "task_queue.hpp"          // for _event_base
 
 namespace qboot
 {
@@ -163,6 +164,13 @@ namespace qboot
 		// total dimension (index of equations, index of derivatives)
 		uint32_t N_ = 0;
 
+		[[nodiscard]] algebra::Vector<mp::real> make_disc_mat_v(uint32_t id) const
+		{
+			auto m = make_disc_mat(id);
+			algebra::Vector<mp::real> v(N_);
+			for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
+			return v;
+		}
 		[[nodiscard]] mp::real take_element(uint32_t id, const algebra::Matrix<mp::real>& m) const
 		{
 			const auto& ope = sector(id).ope();
@@ -177,7 +185,9 @@ namespace qboot
 		// alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
 		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm, mp::real&& N,
-		                                             uint32_t parallel, bool verbose = false) const;
+		                                             uint32_t parallel, _event_base* event) const;
+		void add_ineqs(PolynomialProgram* prg, const std::function<bool(const std::string&)>& filter, uint32_t parallel,
+		               _event_base* event) const;
 
 	public:
 		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
@@ -229,7 +239,7 @@ namespace qboot
 		// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
 		// the size of matrices in norm sector must be 1
 		[[nodiscard]] PolynomialProgram find_contradiction(std::string_view norm, uint32_t parallel = 1,
-		                                                   bool verbose = false) const;
+		                                                   _event_base* event = nullptr) const;
 
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha maximizes alpha(norm)
@@ -237,9 +247,9 @@ namespace qboot
 		// the size of matrices in target, norm sector must be 1
 		// such a alpha gives an upper bound on lambda, lambda ^ 2 <= -alpha(norm)
 		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm,
-		                                             uint32_t parallel = 1, bool verbose = false) const
+		                                             uint32_t parallel = 1, _event_base* event = nullptr) const
 		{
-			return ope_maximize(target, norm, mp::real(1), parallel, verbose);
+			return ope_maximize(target, norm, mp::real(1), parallel, event);
 		}
 
 		// create a PolynomialProgram which finds a linear functional alpha
@@ -248,9 +258,9 @@ namespace qboot
 		// the size of matrices in target, norm sector must be 1
 		// such a alpha gives an lower bound on lambda, lambda ^ 2 >= alpha(norm)
 		[[nodiscard]] PolynomialProgram ope_minimize(std::string_view target, std::string_view norm,
-		                                             uint32_t parallel = 1, bool verbose = false) const
+		                                             uint32_t parallel = 1, _event_base* event = nullptr) const
 		{
-			return ope_maximize(target, norm, mp::real(-1), parallel, verbose);
+			return ope_maximize(target, norm, mp::real(-1), parallel, event);
 		}
 	};
 	using Externals = std::array<PrimaryOperator, 4>;

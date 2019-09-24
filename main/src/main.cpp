@@ -21,6 +21,7 @@
 #include "real.hpp"
 #include "real_function.hpp"
 #include "sdpb_input.hpp"
+#include "task_queue.hpp"
 
 using algebra::Vector, algebra::Matrix, algebra::Polynomial;
 using mp::real, mp::rational, mp::parse;
@@ -39,12 +40,50 @@ constexpr auto ContinuousType = qboot::SectorType::Continuous;
 constexpr auto Odd = algebra::FunctionSymmetry::Odd;
 constexpr auto Even = algebra::FunctionSymmetry::Even;
 
+class WatchScope : public qboot::_event_base
+{
+#ifndef NDEBUG
+	vector<string> tags_{};
+	dict<std::chrono::system_clock::time_point> start_{};
+	dict<std::chrono::system_clock::time_point> end_{};
+	std::mutex mutex_{};
+	static constexpr double to_seconds(std::chrono::system_clock::duration dur)
+	{
+		return double(std::chrono::duration_cast<std::chrono::nanoseconds>(dur).count()) / 1e9;
+	}
+
+public:
+	WatchScope() = default;
+	WatchScope(const WatchScope&) = delete;
+	WatchScope(WatchScope&&) noexcept = delete;
+	WatchScope& operator=(const WatchScope&) = delete;
+	WatchScope& operator=(WatchScope&&) noexcept = delete;
+	~WatchScope() override;
+	void on_begin(std::string_view tag) override
+	{
+		std::lock_guard<std::mutex> guard(mutex_);
+		tags_.emplace_back(tag);
+		start_.emplace(tag, std::chrono::system_clock::now());
+	}
+	void on_end(std::string_view tag) override
+	{
+		std::lock_guard<std::mutex> guard(mutex_);
+		end_.emplace(tag, std::chrono::system_clock::now());
+		auto ss = std::string(tag);
+		std::cout << std::setw(25) << std::left << ("[" + ss + "] ") << to_seconds(end_[ss] - start_[ss]) << std::endl;
+	}
+#endif
+};
+#ifndef NDEBUG
+WatchScope::~WatchScope() = default;
+#endif
+
 [[maybe_unused]] static string name_single(const dict<rational>& deltas);
 [[maybe_unused]] static string name_mixed(const dict<rational>& deltas);
 [[maybe_unused]] static void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax,
-                                          uint32_t maxspin);
+                                          uint32_t maxspin, qboot::_event_base* event);
 [[maybe_unused]] static void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax,
-                                         uint32_t maxspin);
+                                         uint32_t maxspin, qboot::_event_base* event);
 [[maybe_unused]] static void test_sdpb();
 
 string name_single(const dict<rational>& deltas)
@@ -57,7 +96,8 @@ string name_mixed(const dict<rational>& deltas)
 	       deltas.at("e1").str('#');
 }
 
-void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24)
+void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24,
+                 qboot::_event_base* event = nullptr)
 {
 	dict<Op> ops;
 	ops.emplace("s", Op(real(deltas.at("s")), 0, c));
@@ -137,12 +177,13 @@ void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax 
 	}
 	boot.finish();
 	auto root = fs::current_path() / name_mixed(deltas);
-	auto pmp = boot.ope_maximize("T", "unit", 8, true);
-	// auto pmp = boot.find_contradiction("unit", true);
-	move(pmp).create_input(8).write(root);
+	auto pmp = boot.ope_maximize("T", "unit", 8, event);
+	// auto pmp = boot.find_contradiction("unit", 8, event);
+	move(pmp).create_input(8, event).write(root);
 }
 
-void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24)
+void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24,
+                  qboot::_event_base* event = nullptr)
 {
 	dict<Op> ops;
 	ops.emplace("s", Op(real(deltas.at("s")), 0, c));
@@ -169,8 +210,8 @@ void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax
 	boot.add_equation(move(eq));
 	boot.finish();
 	auto root = fs::current_path() / name_single(deltas);
-	auto pmp = boot.find_contradiction("unit", 8);
-	move(pmp).create_input(8).write(root);
+	auto pmp = boot.find_contradiction("unit", 8, event);
+	move(pmp).create_input(8, event).write(root);
 }
 
 class TestScale : public qboot::ScaleFactor
@@ -256,6 +297,11 @@ int main(int argc, char* argv[])
 		args.release();
 	}
 	Context c(n_Max, lambda, dim_);
-	mixed_ising(c, deltas, numax, maxspin);
+#ifndef NDEBUG
+	auto stopwatch = std::make_unique<WatchScope>();
+#else
+	unique_ptr<qboot::_event_base> stopwatch{};
+#endif
+	mixed_ising(c, deltas, numax, maxspin, stopwatch.get());
 	return 0;
 }

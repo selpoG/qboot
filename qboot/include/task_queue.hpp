@@ -7,8 +7,10 @@
 #include <memory>              // for unique_ptr
 #include <mutex>               // for mutex, unique_lock
 #include <queue>               // for queue
+#include <string>              // for string
+#include <string_view>         // for string_view
 #include <thread>              // for thread
-#include <utility>             // for declval
+#include <utility>             // for declval, move
 #include <vector>              // for vector
 
 namespace qboot
@@ -112,6 +114,46 @@ namespace qboot
 			return fut;
 		}
 	};
+
+	class _event_base
+	{
+#ifndef NDEBUG
+	public:
+		_event_base() = default;
+		_event_base(const _event_base&) = default;
+		_event_base(_event_base&&) noexcept = default;
+		_event_base& operator=(const _event_base&) = default;
+		_event_base& operator=(_event_base&&) noexcept = default;
+		virtual ~_event_base();
+		virtual void on_begin(std::string_view tag) = 0;
+		virtual void on_end(std::string_view tag) = 0;
+#endif
+	};
+
+#ifndef NDEBUG
+	class _scoped_event
+	{
+		std::string tag_;
+		_event_base* event_;
+
+	public:
+		explicit _scoped_event(std::string_view tag, _event_base* event = nullptr) : tag_(tag), event_(event)
+		{
+			if (event_ != nullptr) event_->on_begin(tag_);
+		}
+		_scoped_event(const _scoped_event&) = delete;
+		_scoped_event(_scoped_event&&) = delete;
+		_scoped_event& operator=(const _scoped_event&) = delete;
+		_scoped_event& operator=(_scoped_event&&) = delete;
+		~_scoped_event()
+		{
+			if (event_ != nullptr) event_->on_end(tag_);
+		}
+	};
+#define QBOOT_scope(varname, tag, event) _scoped_event varname(tag, event)
+#else
+#define QBOOT_scope(varname, tag, event) ((void)0)
+#endif
 }  // namespace qboot
 
 #endif  // QBOOT_TASK_QUEUE_HPP_
