@@ -1,10 +1,11 @@
 #include "bootstrap_equation.hpp"
 
-#include <future>    // for future
-#include <iostream>  // for cout, endl
-#include <memory>    // for unique_ptr
-#include <string>    // for string
-#include <utility>   // for move
+#include <algorithm>  // for any_of
+#include <future>     // for future
+#include <iostream>   // for cout, endl
+#include <memory>     // for unique_ptr
+#include <string>     // for string
+#include <utility>    // for move
 
 #include "task_queue.hpp"  // for TaskQueue
 
@@ -54,12 +55,9 @@ namespace qboot
 	{
 		auto include_odd = false;
 		for (uint32_t i = 0; !include_odd && i < eqs_.size(); ++i)
-			for (const auto& term : eqs_[i][id])
-				if (std::get<GeneralBlock>(term.block()).include_odd())
-				{
-					include_odd = true;
-					break;
-				}
+			include_odd |= std::any_of(eqs_[i][id].begin(), eqs_[i][id].end(), [](const auto& term) {
+				return std::get<GeneralBlock>(term.block()).include_odd();
+			});
 		auto ag = make_unique<ConformalScale>(op, cont_, include_odd);
 		ag->set_gap(op.lower_bound(), op.upper_bound_safe());
 		return ag;
