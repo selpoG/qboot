@@ -7,7 +7,7 @@ add_library(${MY_TARGET} STATIC ${SOURCES} ${HEADERS})
 
 target_link_libraries(${MY_TARGET} INTERFACE algebra)
 if(NOT MSVC)
-	target_link_libraries(${MY_TARGET} INTERFACE stdc++fs)
+	target_link_libraries(${MY_TARGET} INTERFACE stdc++fs pthread)
 endif()
 
 target_include_directories(${MY_TARGET} PUBLIC
