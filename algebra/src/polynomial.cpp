@@ -146,7 +146,7 @@ namespace algebra
 			}
 			else if (val == -1)
 				out << "-";
-			else if (val != -1)
+			else if (val != 1)
 				out << val << " * ";
 			out << "x";
 			if (i > 1) out << "^" << i;
