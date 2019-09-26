@@ -71,7 +71,12 @@ namespace mp
 			return *this;
 		}
 
-		[[nodiscard]] std::string str() const { return std::string(mpq_get_str(nullptr, 10, _x)); }
+		[[nodiscard]] std::string str() const
+		{
+			std::string s(mpz_sizeinbase(mpq_numref(_x), 10) + mpz_sizeinbase(mpq_denref(_x), 10) + 3, 0);
+			mpq_get_str(s.data(), 10, _x);
+			return s;
+		}
 		// replace '/' by slash, '-' by minus
 		// for example, rational(-17, 31u).str('#', '%') = "%17#31"
 		[[nodiscard]] std::string str(char slash, char minus = '-') const
@@ -97,7 +102,7 @@ namespace mp
 			rational x;
 			if (mpq_set_str(x._x, s.data(), 10) == -1) return {};
 			mpq_canonicalize(x._x);
-			return std::optional{x};
+			return {std::move(x)};
 		}
 
 		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T> || std::is_same_v<T, double>>>

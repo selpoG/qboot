@@ -478,17 +478,18 @@ namespace mp
 			return *this;
 		}
 
-		[[nodiscard]] std::string str() const { return std::string(mpz_get_str(nullptr, 10, _x)); }
+		[[nodiscard]] std::string str() const
+		{
+			std::string s(mpz_sizeinbase(_x, 10) + 2, 0);
+			mpz_get_str(s.data(), 10, _x);
+			return s;
+		}
 		static std::optional<integer> _parse(std::string_view str)
 		{
 			std::string s(str);
-			mpz_t x;
-			if (mpz_init_set_str(x, s.data(), 10) == -1)
-			{
-				mpz_clear(x);
-				return {};
-			}
-			return integer(x);
+			integer x;
+			if (mpz_set_str(x._x, s.data(), 10) == -1) return {};
+			return {std::move(x)};
 		}
 
 		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
