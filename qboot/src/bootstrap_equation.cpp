@@ -140,7 +140,7 @@ namespace qboot
 		prg.objective_constant() = real(0);
 		prg.objectives(Vector(N_, real(0)));
 		{
-			QBOOT_scope(scope, norm, event);
+			_scoped_event scope(norm, event);
 			auto id = sector_id_.find(norm)->second;
 			assert(!sector(id).is_matrix());
 			assert(sector(id).type() == SectorType::Discrete);
@@ -162,12 +162,12 @@ namespace qboot
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
 					ineqs.push_back(q.push([this, id = id, sz, sec = sec, event]() {
-						QBOOT_scope(scope, sec, event);
+						_scoped_event scope(sec, event);
 						return make_unique<Ineq>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
 					}));
 				else
 					ineqs.push_back(q.push([this, id = id, sec = sec, event]() {
-						QBOOT_scope(scope, sec, event);
+						_scoped_event scope(sec, event);
 						return make_unique<Ineq>(N_, make_disc_mat_v(id), real(0));
 					}));
 			else
@@ -176,7 +176,7 @@ namespace qboot
 						auto tag = op.str();
 						tag += " in ";
 						tag += sec;
-						QBOOT_scope(scope, tag, event);
+						_scoped_event scope(tag, event);
 						auto ag = common_scale(id, op);
 						auto mat = make_cont_mat(id, op, &ag);
 						return make_unique<Ineq>(N_, sz, move(ag), move(mat),

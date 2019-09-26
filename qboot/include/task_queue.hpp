@@ -150,9 +150,15 @@ namespace qboot
 			if (event_ != nullptr) event_->on_end(tag_);
 		}
 	};
-#define QBOOT_scope(varname, tag, event) _scoped_event varname(tag, event)
 #else
-#define QBOOT_scope(varname, tag, event) ((void)0)
+	class _scoped_event
+	{
+	public:
+		template <class T>
+		_scoped_event(std::string_view tag [[maybe_unused]], [[maybe_unused]] T&& event)
+		{
+		}
+	};
 #endif
 }  // namespace qboot
 

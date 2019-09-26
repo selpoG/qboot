@@ -141,23 +141,23 @@ namespace qboot
 		TaskQueue q(parallel);
 		vector<std::future<bool>> tasks;
 		tasks.push_back(q.push([this, &root, event]() {
-			QBOOT_scope(scope, "write_blocks", event);
+			_scoped_event scope("write_blocks", event);
 			write_blocks(root);
 			return true;
 		}));
 		tasks.push_back(q.push([this, &root, event]() {
-			QBOOT_scope(scope, "write_objectives", event);
+			_scoped_event scope("write_objectives", event);
 			write_objectives(root);
 			return true;
 		}));
 		tasks.push_back(q.push([this, &root, event]() {
-			QBOOT_scope(scope, "write_bilinear_bases", event);
+			_scoped_event scope("write_bilinear_bases", event);
 			write_bilinear_bases(root);
 			return true;
 		}));
 		for (uint32_t i = 0; i < num_constraints_; ++i)
 			tasks.push_back(q.push([this, &root, i, event]() {
-				QBOOT_scope(scope, "write constraint " + std::to_string(i), event);
+				_scoped_event scope("write constraint " + std::to_string(i), event);
 				write_free_var_matrix(root, i);
 				write_primal_objective_c(root, i);
 				return true;

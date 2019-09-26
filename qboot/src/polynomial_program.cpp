@@ -195,7 +195,7 @@ namespace qboot
 		std::vector<std::future<bool>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
 			tasks.push_back(q.push([this, &sdpb, j, M, eq_sz, event]() {
-				QBOOT_scope(scope, std::to_string(j), event);
+				_scoped_event scope(std::to_string(j), event);
 				auto&& ineq = inequality_[j];
 				// convert ineq to DualConstraint
 				uint32_t sz = ineq->size(), deg = ineq->max_degree(), schur_sz = (deg + 1) * sz * (sz + 1) / 2,
@@ -261,7 +261,7 @@ namespace qboot
 		std::vector<std::future<bool>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
 			tasks.push_back(q.push([this, &sdpb, j, M, eq_sz, event]() {
-				QBOOT_scope(scope, std::to_string(j), event);
+				_scoped_event scope(std::to_string(j), event);
 				auto&& ineq = inequality_[j];
 				uint32_t sz = ineq->size();
 				Matrix<Vector<Polynomial>> mat(sz, sz);
