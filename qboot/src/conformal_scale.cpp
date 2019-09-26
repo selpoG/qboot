@@ -30,7 +30,6 @@ inline static Vector<real> simple_pole_integral(uint32_t pole_order_max, const r
 	Vector<real> result(pole_order_max + 1);
 	result[0] = incomplete_gamma;
 	real tmp{}, pow = pole_position * incomplete_gamma;
-	real minus_pole_position = -pole_position;
 	real factorial(1);
 	real minus_log_base = -1 / log(base);
 	real log_base_power = minus_log_base;
