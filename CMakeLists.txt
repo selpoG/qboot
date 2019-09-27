@@ -1,96 +1,135 @@
 cmake_minimum_required(VERSION 3.13.0)
-project(qboot CXX)
+set(QBOOT_MAJOR_VERSION 0)
+set(QBOOT_MINOR_VERSION 6)
+set(QBOOT_PATCH_VERSION 0)
+set(QBOOT_VERSION ${QBOOT_MAJOR_VERSION}.${QBOOT_MINOR_VERSION}.${QBOOT_PATCH_VERSION})
+project(qboot LANGUAGES CXX VERSION ${QBOOT_VERSION})
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "Release")
-	message(STATUS "CMAKE_BUILD_TYPE not specified: Use Release by default.")
-endif()
-
-if (NOT((CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "Release")))
-	message(FATAL_ERROR "CMAKE_BUILD_TYPE must be 'Debug' or 'Release' (case-sensitive)")
-endif()
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD_REQUIRED on)
-
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_MODULE_PATH})
-
-if (MSVC)
-	set(MPFR_ROOT_DEBUG "${MPFR_ROOT}/Debug")
-	set(MPFR_ROOT_RELEASE "${MPFR_ROOT}/Release")
-	set(GMP_ROOT_DEBUG "${GMP_ROOT}/Debug")
-	set(GMP_ROOT_RELEASE "${GMP_ROOT}/Release")
-else()
-	set(MPFR_ROOT_DEBUG "${MPFR_ROOT}")
-	set(MPFR_ROOT_RELEASE "${MPFR_ROOT}")
-	set(GMP_ROOT_DEBUG "${GMP_ROOT}")
-	set(GMP_ROOT_RELEASE "${GMP_ROOT}")
-endif()
-
-find_package(MPFR REQUIRED)
+option(qboot_build_tests "Build test targets" OFF)
+mark_as_advanced(qboot_build_tests)
 
 if(MSVC)
-	string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-	string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-	string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /wd4068 /permissive- /MP /Zc:rvalueCast /sdl")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Gy /Oi")
-	if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.14)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /experimental:external /external:W0")
-		if (IS_DIRECTORY "${MPFR_INCLUDE_DIR_DEBUG}")
-			set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /external:I ${MPFR_INCLUDE_DIR_DEBUG}")
-			message(STATUS "set external mpfr debug: `${MPFR_INCLUDE_DIR_DEBUG}`")
-		endif()
-		if (IS_DIRECTORY "${MPFR_INCLUDE_DIR_RELEASE}")
-			set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /external:I ${MPFR_INCLUDE_DIR_RELEASE}")
-			message(STATUS "set external mpfr release: `${MPFR_INCLUDE_DIR_RELEASE}`")
-		endif()
-		if (IS_DIRECTORY "${GMP_INCLUDE_DIR_DEBUG}")
-			set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /external:I ${GMP_INCLUDE_DIR_DEBUG}")
-			message(STATUS "set external gmp debug: `${GMP_INCLUDE_DIR_DEBUG}`")
-		endif()
-		if (IS_DIRECTORY "${GMP_INCLUDE_DIR_RELEASE}")
-			set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /external:I ${GMP_INCLUDE_DIR_RELEASE}")
-			message(STATUS "set external gmp release: `${GMP_INCLUDE_DIR_RELEASE}`")
-		endif()
+	if(CMAKE_BUILD_TYPE)
+		message("CMAKE_BUILD_TYPE is set to `${CMAKE_BUILD_TYPE}`, but would be ignored.")
 	endif()
 else()
-	if (IS_DIRECTORY "${MPFR_INCLUDE_DIR_DEBUG}")
-		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -isystem ${MPFR_INCLUDE_DIR_DEBUG}")
+	if(NOT CMAKE_BUILD_TYPE)
+		set(CMAKE_BUILD_TYPE "Release")
+		message("CMAKE_BUILD_TYPE is not specified: Use Release by default.")
 	endif()
-	if (IS_DIRECTORY "${MPFR_INCLUDE_DIR_RELEASE}")
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -isystem ${MPFR_INCLUDE_DIR_RELEASE}")
-	endif()
-	if (IS_DIRECTORY "${GMP_INCLUDE_DIR_DEBUG}")
-		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -isystem ${GMP_INCLUDE_DIR_DEBUG}")
-	endif()
-	if (IS_DIRECTORY "${GMP_INCLUDE_DIR_RELEASE}")
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -isystem ${GMP_INCLUDE_DIR_RELEASE}")
-	endif()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Wno-padded -pthread")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3")
-	if(CMAKE_COMPILER_IS_GNUCXX)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weffc++ -Wno-noexcept -Walloca -Wcast-align -Wcast-qual -Wconditionally-supported -Wconversion -Wctor-dtor-privacy -Wdate-time -Wdisabled-optimization -Wdouble-promotion -Wduplicated-cond -Wfloat-conversion -Wfloat-equal -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wmultichar -Wmultiple-inheritance -Wnull-dereference -Wold-style-cast -Woverlength-strings -Woverloaded-virtual -Wpacked -Wredundant-decls -Wrestrict -Wsign-conversion -Wsign-promo -Wstrict-null-sentinel -Wsuggest-override -Wswitch-default -Wswitch-enum -Wuninitialized -Wunused-macros -Wunused-parameter -Wuseless-cast -Wvariadic-macros -Wvector-operation-performance -Wvirtual-inheritance")
-	else()
-		if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9.0.0)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ctad-maybe-unsupported")
-		endif()
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weverything -Wno-c++98-compat -Wno-shadow-field-in-constructor -Wno-c++98-compat-pedantic -Wno-global-constructors -Wno-exit-time-destructors -Wno-covered-switch-default")
+	if(NOT((CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "Release")))
+		message(FATAL_ERROR "CMAKE_BUILD_TYPE must be 'Debug' or 'Release' (case-sensitive)")
 	endif()
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ../bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ../bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ../lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ../lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ../lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ../lib)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+include(cmake/utils.cmake)  # for fix_default_cxx_flags, mark_external, set_flags, set_default_property
 
-add_subdirectory(algebra)
-add_subdirectory(qboot)
-add_subdirectory(main)
+find_package(GMP REQUIRED)
+find_package(MPFR REQUIRED)
 
-set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT main)
+fix_default_cxx_flags()
+mark_external(CMAKE_CXX_FLAGS ${MPFR_INCLUDE_DIR})
+mark_external(CMAKE_CXX_FLAGS ${GMP_INCLUDE_DIR})
+set_flags()
+
+set(MY_TARGET qboot)
+
+add_library(${MY_TARGET} STATIC
+	src/mp/integer.cpp
+	src/mp/rational.cpp
+	src/mp/real.cpp
+	src/algebra/complex_function.cpp
+	src/algebra/matrix.cpp
+	src/algebra/polynomial.cpp
+	src/algebra/real_function.cpp
+	src/block.cpp
+	src/bootstrap_equation.cpp
+	src/conformal_scale.cpp
+	src/context.cpp
+	src/hor_formula.cpp
+	src/hor_recursion.cpp
+	src/polynomial_program.cpp
+	src/primary_op.cpp
+	src/scale_factor.cpp
+	src/sdpb_input.cpp
+	src/task_queue.cpp
+	src/xml_input.cpp
+	include/qboot/mp/integer.hpp
+	include/qboot/mp/rational.hpp
+	include/qboot/mp/real.hpp
+	include/qboot/algebra/complex_function.hpp
+	include/qboot/algebra/matrix.hpp
+	include/qboot/algebra/polynomial.hpp
+	include/qboot/algebra/real_function.hpp
+	include/qboot/block.hpp
+	include/qboot/bootstrap_equation.hpp
+	include/qboot/conformal_scale.hpp
+	include/qboot/context.hpp
+	include/qboot/hor_formula.hpp
+	include/qboot/hor_recursion.hpp
+	include/qboot/my_filesystem.hpp
+	include/qboot/polynomial_program.hpp
+	include/qboot/primary_op.hpp
+	include/qboot/qboot.hpp
+	include/qboot/scale_factor.hpp
+	include/qboot/sdpb_input.hpp
+	include/qboot/task_queue.hpp
+	include/qboot/xml_input.hpp
+)
+
+find_package(Threads)
+target_link_libraries(${MY_TARGET} INTERFACE Threads::Threads)
+target_link_libraries(
+	${MY_TARGET} INTERFACE
+	${MPFR_LIBRARY}
+	${GMP_LIBRARY}
+	${GMPXX_LIBRARY}
+)
+if(NOT MSVC)
+	target_link_libraries(${MY_TARGET} INTERFACE stdc++fs)
+endif()
+
+target_include_directories(${MY_TARGET} PUBLIC
+	${MPFR_INCLUDE_DIR}
+	${GMP_INCLUDE_DIR}
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+set_default_property(${MY_TARGET} .)
+set_target_properties(${MY_TARGET} PROPERTIES
+	INTERFACE_INCLUDE_DIRECTORIES
+		$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
+)
+
+include(CMakePackageConfigHelpers)
+install(DIRECTORY "include/" DESTINATION include)
+set(cmake_package_name QBoot)
+set(targets_export_name ${cmake_package_name}Targets CACHE INTERNAL "")
+set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated" CACHE INTERNAL "")
+set(cmake_files_install_dir "lib/cmake/${cmake_package_name}")
+set(version_file "${generated_dir}/${cmake_package_name}ConfigVersion.cmake")
+write_basic_package_version_file(${version_file} VERSION ${QBOOT_VERSION} COMPATIBILITY AnyNewerVersion)
+install(EXPORT ${targets_export_name}
+	NAMESPACE ${cmake_package_name}::
+	DESTINATION ${cmake_files_install_dir}
+)
+set(config_file "${generated_dir}/${cmake_package_name}Config.cmake")
+configure_package_config_file("cmake/Config.cmake.in"
+	"${config_file}" INSTALL_DESTINATION ${cmake_files_install_dir})
+install(FILES ${version_file} ${config_file}
+	DESTINATION ${cmake_files_install_dir})
+install(TARGETS ${MY_TARGET}
+	EXPORT ${targets_export_name}
+	CONFIGURATIONS Debug Release
+	ARCHIVE DESTINATION lib
+	LIBRARY DESTINATION lib)
+
+if(qboot_build_tests)
+	add_subdirectory(test)
+	set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT test)
+else()
+	set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT qboot)
+endif()
