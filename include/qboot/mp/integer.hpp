@@ -482,6 +482,7 @@ namespace qboot::mp
 		{
 			std::string s(mpz_sizeinbase(_x, 10) + 2, 0);
 			mpz_get_str(s.data(), 10, _x);
+			s.resize(std::strlen(s.data()));
 			return s;
 		}
 		static std::optional<integer> _parse(std::string_view str)

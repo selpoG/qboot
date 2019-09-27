@@ -75,6 +75,7 @@ namespace qboot::mp
 		{
 			std::string s(mpz_sizeinbase(mpq_numref(_x), 10) + mpz_sizeinbase(mpq_denref(_x), 10) + 3, 0);
 			mpq_get_str(s.data(), 10, _x);
+			s.resize(std::strlen(s.data()));
 			return s;
 		}
 		// replace '/' by slash, '-' by minus
