@@ -27,53 +27,79 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 Please build `mpir` and `mpfr` in both `Debug` and `Release` mode.
 
-After building these libraries with Visual Studio,
-you will have `gmp.h`, `gmpxx.h`, `mpir.lib` and `mpirxx.lib`
-in, for example, `C:\somewhere\mpir\lib\x64\Debug\`, `C:\somewhere\mpir\lib\x64\Release\`
-and `mpfr.lib`, `mpfr.h` in, for example, `C:\somewhere\mpfr\lib\x64\Debug\`, `C:\somewhere\mpfr\lib\x64\Release\`.
+If you cloned `mpir` and `mpfr` in `C:\somewhere\mpir` and `C:\somewhere\mpfr`,
+you will have
 
-## Build
+- `C:\somewhere\mpir\lib\x64\Debug\gmpxx.h`
+- `C:\somewhere\mpir\lib\x64\Release\gmpxx.h`
+- `C:\somewhere\mpfr\lib\x64\Debug\mpfr.h`
+- `C:\somewhere\mpir\lib\x64\Release\gmpxx.h`
+
+## Install
 
 ### Unix
 
-1. `mkdir qboot/build && cd qboot/build`
-
-2. `cmake ..`
-
-3. `make`
+```sh
+mkdir qboot/build && cd qboot/build
+cmake .. -DMPFR_ROOT=/path/to/mpfr -DGMP_ROOT=/path/to/gmp -DCMAKE_INSTALL_PREFIX=/somewhere/you/like
+make
+make install
+```
 
 To build in `Debug` or `Release` mode, call `cmake` with `-DCMAKE_BUILD_TYPE=Debug` or `-DCMAKE_BUILD_TYPE=Release`.
 
-If you installed requirements in custom location, You may need to tell `cmake` some paths.
-In Unix system, add options `-DMPFR_ROOT=/path/to/mpfr -DGMP_ROOT=/path/to/gmp`.
+You have to ensure the exsistence of:
 
-(For developers: If you want to use `clang-tidy`, add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to `cmake` options.)
+- `MPFR_ROOT/include/mpfr.h`
+- `MPFR_ROOT/lib/libmpfr.a`
+- `GMP_ROOT/include/gmpxx.h`
+- `GMP_ROOT/lib/libgmpxx.a`
 
 ### Windows
 
 In Windows, use cmake-gui to build.
-Options to cmake can be passed by `Add Entry` button.
-You have to add 2 `PATH`s,
-`GMP_ROOT` (must contain `Debug` and `Release` folders which contain `gmp.h`, `gmpxx.h` and `mpir.lib`. Typical value is `C:\somewhere\mpir\lib\x64`) and
-`MPFR_ROOT` (must contain `Debug` and `Release` folders which contain `mpfr.h` and `mpfr.lib`. Typical value is `C:\somewhere\mpfr\lib\x64`).
 
-## Data Structures
+1. Create `qboot\build` folder.
+2. Set "Where is the source code:" to the path of `qboot` folder,
+"Where to build the binaries:" to the path of `qboot\build` folder.
+3. Push `Add Entry` to set `GMP_ROOT`, `MPFR_ROOT` and `CMAKE_INSTALL_PREFIX`.
+4. Push `Configure` button and `Generate` button.
+5. Open `qboot.sln` in `qboot\build` folder and build `INSTALL` project.
 
-A Polynomial Matrix Program (PMP) is a problem
-to maximize `b[N] + \sum_{n = 0}^{N - 1} b[n] y[n]`
-over free real variables `y[0], ..., y[N - 1]`
-such that for all `0 <= j < J` and `x >= 0`, `\sum_{n = 0}^{N - 1} y[n] M_j[n](x) \succeq M_j[N](x)`.
+You have to ensure the exsistence of:
 
-`b[0], ..., b[N]` are real constants
-and `M_j[0], ..., M_j[N]` are symmetric matrices whose elements `P_j[n][r, c]` are real polynomials of `x`.
+- `MPFR_ROOT\Debug\mpfr.h`, `MPFR_ROOT\Release\mpfr.h`
+- `MPFR_ROOT\Debug\mpfr.lib`, `MPFR_ROOT\Release\mpfr.lib`
+- `GMP_ROOT\Debug\gmpxx.h`, `GMP_ROOT\Release\gmpxx.h`
+- `GMP_ROOT\Debug\mpirxx.lib`, `GMP_ROOT\Release\mpirxx.lib`
 
-We generalize a PMP to a Function Matrix Program (FMP),
-which allows each elements in `M_j[0], ..., M_j[N]` to be in the form `\chi_j(x) Q_j[n][r, c](x)`
-in which `Q_j[n][r, c](x)` is a real polynomial of `x`
-and `\chi_j(x)` is an arbitrary real function of `x` which is positive in `x >= 0`.
-For example, in the conformal bootstrap, the typical from of `\chi_j(x)` is `exp(-A x) / ((x + a) ... (x + z))`
-(`A, a, ..., z >= 0`).
+The typical value for `GMP_ROOT` is `C:\somewhere\mpir\lib\x64`
+and for `MPFR_ROOT` `C:\somewhere\mpfr\lib\x64`.
+You can set `CMAKE_INSTALL_PREFIX` to anywhere you like.
 
-This generalization seems to be redundant, because we can divide inequality by `\chi_j(x)` to get a PMP.
-But, as discussed in section 3.3 in [arXiv:1502.02033](https://arxiv.org/abs/1502.02033),
-preserving these factors contributes to numerical stability of [SDPB](https://github.com/davidsd/sdpb.git).
+## Use installed `qboot`
+
+`sample` folder is a sample project which use installed `qboot`.
+You can copy this folder to anywhere you like.
+
+Once you have installed `qboot` with `-DCMAKE_INSTALL_PREFIX=/some/where`, you can build this sample by:
+
+```sh
+cd sample
+mkdir build
+cd build
+cmake .. -DQBoot_DIR=/some/where -DCMAKE_BUILD_TYPE=Debug
+make
+```
+
+And you can execute `bin/sample`.
+
+Of course, you can build also in Windows.
+
+1. Create `sample\build` folder.
+2. Set "Where is the source code:" to the path of `sample` folder,
+"Where to build the binaries:" to the path of `sample\build` folder.
+3. Push `Add Entry` to set `QBoot_DIR` to `/some/where`.
+4. Push `Configure` button and `Generate` button.
+
+You can build `sample.sln` in `sample\build` folder.
