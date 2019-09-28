@@ -7,7 +7,7 @@ project(qboot LANGUAGES CXX VERSION ${QBOOT_VERSION})
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 
-option(qboot_build_tests "Build test targets" OFF)
+option(qboot_build_tests "Build test targets (for developers)" OFF)
 mark_as_advanced(qboot_build_tests)
 
 if(MSVC)
@@ -26,6 +26,9 @@ endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(cmake/utils.cmake)  # for fix_default_cxx_flags, mark_external, set_flags, set_default_property
+
+set(GMP_ROOT "" CACHE PATH "path of GMP. If you have gmp.h in /some/where/include/ and libgmp.a in /some/where/lib/, please set `/some/where`")
+set(MPFR_ROOT "" CACHE PATH "path of MPFR. If you have mpfr.h in /some/where/include/ and libmpfr.a in /some/where/lib/, please set `/some/where`")
 
 find_package(GMP REQUIRED)
 find_package(MPFR REQUIRED)
@@ -93,16 +96,16 @@ if(NOT MSVC)
 endif()
 
 target_include_directories(${MY_TARGET} PUBLIC
-	${MPFR_INCLUDE_DIR}
-	${GMP_INCLUDE_DIR}
+	$<BUILD_INTERFACE:${MPFR_INCLUDE_DIR}>
+	$<BUILD_INTERFACE:${GMP_INCLUDE_DIR}>
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	INTERFACE
+	$<INSTALL_INTERFACE:${MPFR_INCLUDE_DIR}>
+	$<INSTALL_INTERFACE:${GMP_INCLUDE_DIR}>
+	$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
 )
 
 set_default_property(${MY_TARGET} .)
-set_target_properties(${MY_TARGET} PROPERTIES
-	INTERFACE_INCLUDE_DIRECTORIES
-		$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
-)
 
 include(CMakePackageConfigHelpers)
 install(DIRECTORY "include/" DESTINATION include)
