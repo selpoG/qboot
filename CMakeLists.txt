@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8.2)
+cmake_minimum_required(VERSION 3.12.4)
 set(QBOOT_MAJOR_VERSION 0)
 set(QBOOT_MINOR_VERSION 6)
 set(QBOOT_PATCH_VERSION 0)

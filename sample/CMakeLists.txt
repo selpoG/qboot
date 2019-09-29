@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 3.13.0)
+cmake_minimum_required(VERSION 3.12.4)
 project(sample CXX)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
-set(CMAKE_PREFIX_PATH ${QBoot_DIR} ${CMAKE_PREFIX_PATH})
 find_package(QBoot 0.5.0 REQUIRED)
 
 add_executable(sample main.cpp)

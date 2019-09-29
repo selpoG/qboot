@@ -7,7 +7,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 ## Requirements
 
-- [cmake](https://cmake.org/) (`3.13.0+`)
+- [cmake](https://cmake.org/) (`3.12.4+`)
 
 ### Unix (or WSL)
 
@@ -88,7 +88,7 @@ Once you have installed `qboot` with `-DCMAKE_INSTALL_PREFIX=/some/where`, you c
 cd sample
 mkdir build
 cd build
-cmake .. -DQBoot_DIR=/some/where -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DQBoot_ROOT=/some/where -DCMAKE_BUILD_TYPE=Debug
 make
 ```
 
