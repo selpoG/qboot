@@ -1,9 +1,9 @@
 #include "qboot/sdpb_input.hpp"
 
-#include <future>  // for future
-#include <vector>  // for vector
+#include <functional>  // for function
+#include <vector>      // for vector
 
-#include "qboot/task_queue.hpp"  // for QBOOT_scope, TaskQueue, _event_base
+#include "qboot/task_queue.hpp"  // for parallel_evaluate, _event_base
 
 namespace fs = qboot::fs;
 
@@ -138,30 +138,25 @@ namespace qboot
 		// ensure root to be path to directory
 		auto root = root_ / "";
 		create_directory(root);
-		TaskQueue q(parallel);
-		vector<std::future<bool>> tasks;
-		tasks.push_back(q.push([this, &root, event]() {
+		vector<std::function<void()>> tasks;
+		tasks.emplace_back([this, &root, event]() {
 			_scoped_event scope("write_blocks", event);
 			write_blocks(root);
-			return true;
-		}));
-		tasks.push_back(q.push([this, &root, event]() {
+		});
+		tasks.emplace_back([this, &root, event]() {
 			_scoped_event scope("write_objectives", event);
 			write_objectives(root);
-			return true;
-		}));
-		tasks.push_back(q.push([this, &root, event]() {
+		});
+		tasks.emplace_back([this, &root, event]() {
 			_scoped_event scope("write_bilinear_bases", event);
 			write_bilinear_bases(root);
-			return true;
-		}));
+		});
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-			tasks.push_back(q.push([this, &root, i, event]() {
+			tasks.emplace_back([this, &root, i, event]() {
 				_scoped_event scope("write constraint " + std::to_string(i), event);
 				write_free_var_matrix(root, i);
 				write_primal_objective_c(root, i);
-				return true;
-			}));
-		for (auto&& x : tasks) x.get();
+			});
+		parallel_evaluate(tasks, parallel);
 	}
 }  // namespace qboot

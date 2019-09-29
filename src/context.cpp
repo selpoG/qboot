@@ -22,19 +22,21 @@ namespace qboot
 		// z - 1 / 2 = g1 + g2
 		return g1 + g2;
 	}
-	Context::Context(uint32_t n_Max, uint32_t lambda, uint32_t dim)
+	Context::Context(uint32_t n_Max, uint32_t lambda, uint32_t dim, uint32_t p)
 	    : n_Max_(n_Max),
 	      lambda_(lambda),
 	      dim_(dim),
+	      parallel_(p),
 	      epsilon_(dim - 2, 2u),
 	      rho_(3 - mp::sqrt(8)),
 	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse())
 	{
 		assert(dim >= 3 && dim % 2 == 1);
 		v_to_d_ = make_unique<memoized<ComplexFunction<real>(real)>>(
-		    [this](const real& d) { return algebra::v_to_d(d, this->lambda_); });
+		    [this](const real& d) { return algebra::v_to_d(d, this->lambda_); }, parallel_);
 		gBlock_ = make_unique<memoized<ComplexFunction<real>(PrimaryOperator, real, real)>>(
-		    [this](const PrimaryOperator& op, const real& S, const real& P) { return qboot::gBlock(op, S, P, *this); });
+		    [this](const PrimaryOperator& op, const real& S, const real& P) { return qboot::gBlock(op, S, P, *this); },
+		    parallel_);
 	}
 	ComplexFunction<real> Context::expand_off_diagonal(RealFunction<real>&& realAxisResult, const PrimaryOperator& op,
 	                                                   const real& S, const real& P) const

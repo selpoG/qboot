@@ -177,9 +177,9 @@ void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax 
 	}
 	boot.finish();
 	auto root = fs::current_path() / name_mixed(deltas);
-	auto pmp = boot.ope_maximize("T", "unit", 8, event);
+	auto pmp = boot.ope_maximize("T", "unit", c.parallel(), event);
 	// auto pmp = boot.find_contradiction("unit", 8, event);
-	move(pmp).create_input(8, event).write(root);
+	move(pmp).create_input(c.parallel(), event).write(root, c.parallel());
 }
 
 void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24,
@@ -210,8 +210,8 @@ void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax
 	boot.add_equation(move(eq));
 	boot.finish();
 	auto root = fs::current_path() / name_single(deltas);
-	auto pmp = boot.find_contradiction("unit", 8, event);
-	move(pmp).create_input(8, event).write(root);
+	auto pmp = boot.find_contradiction("unit", c.parallel(), event);
+	move(pmp).create_input(c.parallel(), event).write(root, c.parallel());
 }
 
 class TestScale : public qboot::ScaleFactor
@@ -277,7 +277,7 @@ int main(int argc, char* argv[])
 {
 	qboot::mp::global_prec = 1000;
 	qboot::mp::global_rnd = MPFR_RNDN;
-	constexpr uint32_t n_Max = 400, lambda = 14, dim_ = 3, maxspin = 24;
+	constexpr uint32_t n_Max = 400, lambda = 14, dim = 3, maxspin = 24, parallel = 8;
 	[[maybe_unused]] constexpr uint32_t numax = 6;
 	if (argc != 1 && argc != 4)
 	{
@@ -296,7 +296,7 @@ int main(int argc, char* argv[])
 		deltas["e1"] = parse(args[3]).value();
 		args.release();
 	}
-	Context c(n_Max, lambda, dim_);
+	Context c(n_Max, lambda, dim, parallel);
 #ifndef NDEBUG
 	auto stopwatch = std::make_unique<WatchScope>();
 #else

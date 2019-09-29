@@ -1,11 +1,11 @@
 #include "qboot/polynomial_program.hpp"
 
-#include <future>   // for future, promise
-#include <memory>   // for unique_ptr
-#include <utility>  // for move
-#include <vector>   // for vector
+#include <functional>  // for function
+#include <memory>      // for unique_ptr
+#include <utility>     // for move
+#include <vector>      // for vector
 
-#include "qboot/task_queue.hpp"  // for TaskQueue
+#include "qboot/task_queue.hpp"  // for parallel_evaluate, _event_base
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real;
@@ -191,10 +191,9 @@ namespace qboot
 			obj_const_ += equation_targets_[e] * t;
 		}
 		SDPBInput sdpb(move(obj_const_), move(obj_new), uint32_t(inequality_.size()));
-		TaskQueue q(parallel);
-		std::vector<std::future<bool>> tasks;
+		std::vector<std::function<void()>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
-			tasks.push_back(q.push([this, &sdpb, j, M, eq_sz, event]() {
+			tasks.emplace_back([this, &sdpb, j, M, eq_sz, event]() {
 				_scoped_event scope(std::to_string(j), event);
 				auto&& ineq = inequality_[j];
 				// convert ineq to DualConstraint
@@ -240,9 +239,8 @@ namespace qboot
 						q1.at(m, k) = ineq->bilinear_bases()[m].eval(xs[k]) * mp::sqrt(scs[k] * xs[k]);
 				sdpb.register_constraint(
 				    j, DualConstraint(ineq->size(), ineq->max_degree(), move(d_B), move(d_c), {move(q0), move(q1)}));
-				return true;
-			}));
-		for (auto&& x : tasks) x.get();
+			});
+		parallel_evaluate(tasks, parallel);
 		return sdpb;
 	}
 	XMLInput PolynomialProgram::create_xml(uint32_t parallel, _event_base* event) &&
@@ -257,10 +255,9 @@ namespace qboot
 			obj_const_ += equation_targets_[e] * t;
 		}
 		XMLInput sdpb(move(obj_const_), move(obj_new), uint32_t(inequality_.size()));
-		TaskQueue q(parallel);
-		std::vector<std::future<bool>> tasks;
+		std::vector<std::function<void()>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
-			tasks.push_back(q.push([this, &sdpb, j, M, eq_sz, event]() {
+			tasks.emplace_back([this, &sdpb, j, M, eq_sz, event]() {
 				_scoped_event scope(std::to_string(j), event);
 				auto&& ineq = inequality_[j];
 				uint32_t sz = ineq->size();
@@ -285,8 +282,8 @@ namespace qboot
 				sdpb.register_constraint(
 				    j, PVM(move(mat), ineq->sample_points(), ineq->sample_scalings(), ineq->bilinear_bases()));
 				return true;
-			}));
-		for (auto&& x : tasks) x.get();
+			});
+		parallel_evaluate(tasks, parallel);
 		return sdpb;
 	}
 }  // namespace qboot

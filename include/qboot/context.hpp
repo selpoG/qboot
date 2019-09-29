@@ -4,11 +4,12 @@
 #include <cassert>     // for assert
 #include <cstdint>     // for uint32_t, int32_t
 #include <functional>  // for function
+#include <future>      // for shared_future
 #include <map>         // for map
 #include <mutex>       // for mutex, lock_guard
 #include <sstream>     // for ostringstream
 #include <string>      // for string
-#include <tuple>       // for tuple
+#include <tuple>       // for tuple, apply
 
 #include "qboot/algebra/complex_function.hpp"  // for ComplexFunction, FunctionSymmetry
 #include "qboot/algebra/real_function.hpp"     // for RealFunction, RealConverter
@@ -17,6 +18,7 @@
 #include "qboot/mp/rational.hpp"               // for rational
 #include "qboot/mp/real.hpp"                   // for real, sqrt
 #include "qboot/primary_op.hpp"                // for PrimaryOperator
+#include "qboot/task_queue.hpp"                // for TaskQueue
 
 namespace qboot
 {
@@ -33,25 +35,30 @@ namespace qboot
 	{
 		std::mutex mutex_{};
 		std::function<T(TArgs...)> f_;
-		std::map<std::tuple<TArgs...>, T> memo_{};
+		std::map<std::tuple<TArgs...>, std::shared_future<T>> memo_{};
+		TaskQueue tq_;
 
 	public:
-		explicit memoized(std::function<T(TArgs...)> f) : f_(f) {}
+		explicit memoized(std::function<T(TArgs...)> f, uint32_t p = 1) : f_(f), tq_(p) {}
 		const T& operator()(const TArgs&... args)
 		{
-			std::lock_guard<std::mutex> guard(mutex_);
 			auto key = std::tuple<TArgs...>(args...);
-			if (memo_.find(key) == memo_.end()) memo_.emplace(key, f_(args...));
-			return memo_.at(key);
+			{
+				std::lock_guard<std::mutex> guard(mutex_);
+				if (memo_.find(key) == memo_.end())
+					memo_.emplace(key, tq_.push([this, key] { return std::apply(f_, key); }).share());
+			}
+			return memo_.at(key).get();
 		}
 	};
 	template <class T, class... TArgs>
 	memoized(T (*)(TArgs...))->memoized<T(TArgs...)>;
 
 	// controls n_Max, lambda and dim
+	// all gBlocks are evaluated in parallel and memoized
 	class Context
 	{
-		uint32_t n_Max_, lambda_, dim_;
+		uint32_t n_Max_, lambda_, dim_, parallel_;
 		mp::rational epsilon_;
 		mp::real rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
@@ -75,6 +82,8 @@ namespace qboot
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		// the dimension of the spacetime
 		[[nodiscard]] uint32_t dimension() const { return dim_; }
+		// the dimension of the spacetime
+		[[nodiscard]] uint32_t parallel() const { return parallel_; }
 		// (dim - 2) / 2
 		[[nodiscard]] const mp::rational& epsilon() const { return epsilon_; }
 		// 3 - 2 sqrt(2)
@@ -87,7 +96,7 @@ namespace qboot
 			os << "Context(nMax=" << n_Max_ << ", lambda=" << lambda_ << ", dim=" << dim_ << ")";
 			return os.str();
 		}
-		Context(uint32_t n_Max, uint32_t lambda, uint32_t dim);
+		Context(uint32_t n_Max, uint32_t lambda, uint32_t dim, uint32_t p = 1);
 		Context(Context&&) noexcept = default;
 		Context& operator=(Context&&) noexcept = default;
 		Context(const Context&) = delete;

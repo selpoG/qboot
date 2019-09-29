@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 {
 	qboot::mp::global_prec = 1000;
 	qboot::mp::global_rnd = MPFR_RNDN;
-	constexpr uint32_t n_Max = 400, lambda = 16, dim_ = 3, maxspin = 28, numax = 12;
+	constexpr uint32_t n_Max = 400, lambda = 16, dim = 3, maxspin = 28, numax = 12, parallel = 8;
 	if (argc != 1 && argc != 3)
 	{
 		cout << "usage: ./program [delta_s delta_e]" << endl;
@@ -78,10 +78,11 @@ int main(int argc, char* argv[])
 		deltas["e"] = parse(args[2]).value();
 		args.release();
 	}
-	Context c(n_Max, lambda, dim_);
+	Context c(n_Max, lambda, dim, parallel);
 	auto eqn = create(c, deltas, numax, maxspin);
-	auto pmp = eqn.find_contradiction("unit", 8);
+	auto pmp = eqn.find_contradiction("unit", parallel);
 	auto root = fs::current_path() / name(deltas);
-	move(pmp).create_input(8).write(root);
+	cout << root << endl;
+	move(pmp).create_input(parallel).write(root, parallel);
 	return 0;
 }

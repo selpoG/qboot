@@ -1,13 +1,14 @@
 #include "qboot/bootstrap_equation.hpp"
 
-#include <algorithm>  // for any_of
-#include <future>     // for future
-#include <iostream>   // for cout, endl
-#include <memory>     // for unique_ptr
-#include <string>     // for string
-#include <utility>    // for move
+#include <algorithm>   // for any_of
+#include <functional>  // for function
+#include <iostream>    // for cout, endl
+#include <memory>      // for unique_ptr
+#include <string>      // for string
+#include <utility>     // for move
+#include <vector>      // for vector
 
-#include "qboot/task_queue.hpp"  // for TaskQueue
+#include "qboot/task_queue.hpp"  // for parallel_evaluate, _event_base
 
 using qboot::algebra::Vector, qboot::algebra::Matrix;
 using qboot::mp::real;
@@ -151,26 +152,25 @@ namespace qboot
 	void BootstrapEquation::add_ineqs(PolynomialProgram* prg, const std::function<bool(const std::string&)>& filter,
 	                                  uint32_t parallel, _event_base* event) const
 	{
-		TaskQueue q(parallel);
-		vector<std::future<unique_ptr<Ineq>>> ineqs;
+		vector<std::function<unique_ptr<Ineq>()>> ineqs;
 		for (const auto& [sec, id] : sector_id_)
 		{
 			if (!filter(sec)) continue;
 			auto sz = sector(id).size();
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
-					ineqs.push_back(q.push([this, id = id, sz, sec = sec, event]() {
+					ineqs.emplace_back([this, id = id, sz, sec = sec, event]() {
 						_scoped_event scope(sec, event);
 						return make_unique<Ineq>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
-					}));
+					});
 				else
-					ineqs.push_back(q.push([this, id = id, sec = sec, event]() {
+					ineqs.emplace_back([this, id = id, sec = sec, event]() {
 						_scoped_event scope(sec, event);
 						return make_unique<Ineq>(N_, make_disc_mat_v(id), real(0));
-					}));
+					});
 			else
 				for (const auto& op : sector(id).ops_)
-					ineqs.push_back(q.push([this, id = id, sz, &op, sec = sec, event]() {
+					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, event]() {
 						auto tag = op.str();
 						tag += " in ";
 						tag += sec;
@@ -179,8 +179,8 @@ namespace qboot
 						auto mat = make_cont_mat(id, op, &ag);
 						return make_unique<Ineq>(N_, sz, move(ag), move(mat),
 						                         Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz}));
-					}));
+					});
 		}
-		for (auto&& x : ineqs) prg->add_inequality(x.get());
+		for (auto&& x : parallel_evaluate(ineqs, parallel)) prg->add_inequality(move(x));
 	}
 }  // namespace qboot
