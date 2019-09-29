@@ -1,7 +1,7 @@
 # qboot
 
-Converter from Conformal Bootstrap Equations to Semidefinite Programming,
-which admits Mobius transformation of Delta.
+Converter from Conformal Bootstrap Equations to Semidefinite Programming.
+Sum of operators may run over not only infinite range `[lb, infty)` but also finite one `[lb, ub)`.
 
 Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
@@ -11,7 +11,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 ### Unix (or WSL)
 
-- [gmp](https://gmplib.org/) (You must configure `gmp` with `--enable-cxx`)
+- [gmp](https://gmplib.org/) (configured with `--enable-cxx`)
 
 - [mpfr](http://mpfr.org/)
 
@@ -19,7 +19,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 ### Windows (MSVC)
 
-- [mpir](https://github.com/BrianGladman/mpir.git) (You must build `lib_mpir_gc` (or `lib_mpir_{some_architecture}`) **and** `lib_mpir_cxx`)
+- [mpir](https://github.com/BrianGladman/mpir.git) (You must build `lib_mpir_gc` **and** `lib_mpir_cxx`)
 
 - [mpfr](https://github.com/BrianGladman/mpfr.git)
 
@@ -79,7 +79,7 @@ You can set `CMAKE_INSTALL_PREFIX` to anywhere you like.
 
 ## Use installed `qboot`
 
-`sample` folder is a sample project which use installed `qboot`.
+[sample](/sample) folder is a sample project which use installed `qboot`.
 You can copy this folder to anywhere you like.
 
 Once you have installed `qboot` with `-DCMAKE_INSTALL_PREFIX=/some/where`, you can build this sample by:
@@ -92,7 +92,7 @@ cmake .. -DQBoot_DIR=/some/where -DCMAKE_BUILD_TYPE=Debug
 make
 ```
 
-And you can execute `bin/sample`.
+And you can execute `sample/build/bin/sample`.
 
 Of course, you can build also in Windows.
 
