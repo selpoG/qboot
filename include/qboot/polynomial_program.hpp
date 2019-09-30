@@ -33,17 +33,30 @@ namespace qboot
 	{
 		uint32_t N_, sz_;
 		std::unique_ptr<ScaleFactor> chi_;
+		// mat[n]: evaluated values of M[n]
+		// mat[n][k]: M[n] evaluated at x = x[k]
+		algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>> mat_;
+		// M[N]
+		algebra::Vector<algebra::Matrix<mp::real>> target_{};
+
+		// get M[n] / chi or M[N] / chi as a polynomial matrix
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial> as_polynomial(
+		    const algebra::Vector<algebra::Matrix<mp::real>>& vals);
 
 	public:
-		PolynomialInequality(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor>&& chi)
-		    : N_(N), sz_(sz), chi_(std::move(chi))
-		{
-		}
+		PolynomialInequality(uint32_t N, std::unique_ptr<ScaleFactor>&& scale,
+		                     algebra::Vector<algebra::Vector<mp::real>>&& mat, algebra::Vector<mp::real>&& target);
+		PolynomialInequality(uint32_t N, algebra::Vector<mp::real>&& mat, mp::real&& target);
+		PolynomialInequality(uint32_t N, uint32_t sz, algebra::Vector<algebra::Matrix<mp::real>>&& mat,
+		                     algebra::Matrix<mp::real>&& target);
+		PolynomialInequality(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor>&& scale,
+		                     algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>>&& mat,
+		                     algebra::Vector<algebra::Matrix<mp::real>>&& target);
 		PolynomialInequality(const PolynomialInequality&) = delete;
 		PolynomialInequality& operator=(const PolynomialInequality&) = delete;
 		PolynomialInequality(PolynomialInequality&&) noexcept = default;
 		PolynomialInequality& operator=(PolynomialInequality&&) noexcept = default;
-		virtual ~PolynomialInequality();
+		~PolynomialInequality() = default;
 		[[nodiscard]] const std::unique_ptr<ScaleFactor>& get_scale() const& { return chi_; }
 		[[nodiscard]] std::unique_ptr<ScaleFactor> get_scale() && { return std::move(chi_); }
 		// number of free variables N
@@ -65,123 +78,35 @@ namespace qboot
 		[[nodiscard]] algebra::Vector<mp::real> sample_scalings() { return chi_->sample_scalings(); }
 
 		// M[n] / chi (0 <= n < N)
-		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n) = 0;
-
-		// M[N] / chi
-		[[nodiscard]] virtual algebra::Matrix<algebra::Polynomial> target_polynomial() = 0;
-
-		// evaluate M[n] at x = x_k (0 <= n < N, 0 <= k <= D)
-		[[nodiscard]] virtual algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k) = 0;
-
-		// evaluate M[N] at x = x_k
-		[[nodiscard]] virtual algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) = 0;
-
-		// evaluate M[n] / chi at x = x_k (0 <= n < N, 0 <= k <= D)
-		[[nodiscard]] virtual algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k) = 0;
-
-		// evaluate M[N] / chi at x = x_k
-		[[nodiscard]] virtual algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k) = 0;
-	};
-
-	class PolynomialInequalityEvaluated : public PolynomialInequality
-	{
-		// mat[n]: evaluated values of M[n]
-		// mat[n][k]: M[n] evaluated at x = x[k]
-		algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>> mat_;
-		// M[N]
-		algebra::Vector<algebra::Matrix<mp::real>> target_{};
-
-		// get M[n] / chi or M[N] / chi as a polynomial matrix
-		[[nodiscard]] algebra::Matrix<algebra::Polynomial> as_polynomial(
-		    const algebra::Vector<algebra::Matrix<mp::real>>& vals);
-
-	public:
-		PolynomialInequalityEvaluated(uint32_t N, std::unique_ptr<ScaleFactor>&& scale,
-		                              algebra::Vector<algebra::Vector<mp::real>>&& mat,
-		                              algebra::Vector<mp::real>&& target);
-		PolynomialInequalityEvaluated(uint32_t N, algebra::Vector<mp::real>&& mat, mp::real&& target);
-		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, algebra::Vector<algebra::Matrix<mp::real>>&& mat,
-		                              algebra::Matrix<mp::real>&& target);
-		PolynomialInequalityEvaluated(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor>&& scale,
-		                              algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>>&& mat,
-		                              algebra::Vector<algebra::Matrix<mp::real>>&& target);
-		PolynomialInequalityEvaluated(const PolynomialInequalityEvaluated&) = delete;
-		PolynomialInequalityEvaluated& operator=(const PolynomialInequalityEvaluated&) = delete;
-		PolynomialInequalityEvaluated(PolynomialInequalityEvaluated&&) noexcept = default;
-		PolynomialInequalityEvaluated& operator=(PolynomialInequalityEvaluated&&) noexcept = default;
-		~PolynomialInequalityEvaluated() override;
-		[[nodiscard]] algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n) override
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n)
 		{
 			return as_polynomial(mat_[n]);
 		}
-		[[nodiscard]] algebra::Matrix<algebra::Polynomial> target_polynomial() override
-		{
-			return as_polynomial(target_);
-		}
-		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k) override
+
+		// M[N] / chi
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial> target_polynomial() { return as_polynomial(target_); }
+
+		// evaluate M[n] at x = x_k (0 <= n < N, 0 <= k <= D)
+		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k)
 		{
 			return mat_[n][k].clone();
 		}
-		[[nodiscard]] algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) override
-		{
-			return target_[k].clone();
-		}
-		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k) override
+
+		// evaluate M[N] at x = x_k
+		[[nodiscard]] algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) { return target_[k].clone(); }
+
+		// evaluate M[n] / chi at x = x_k (0 <= n < N, 0 <= k <= D)
+		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k)
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			return mat_[n][k] / chi->eval(chi->sample_point(k));
 		}
-		[[nodiscard]] algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k) override
+
+		// evaluate M[N] / chi at x = x_k
+		[[nodiscard]] algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k)
 		{
 			const auto& chi = PolynomialInequality::get_scale();
 			return target_[k] / chi->eval(chi->sample_point(k));
-		}
-	};
-
-	class PolynomialInequalityWithCoeffs : public PolynomialInequality
-	{
-		// M[n] / chi
-		algebra::Vector<algebra::Matrix<algebra::Polynomial>> mat_{};
-		// M[N] / chi
-		algebra::Matrix<algebra::Polynomial> target_{};
-
-	public:
-		PolynomialInequalityWithCoeffs(uint32_t N, std::unique_ptr<ScaleFactor>&& scale,
-		                               algebra::Vector<algebra::Polynomial>&& mat, algebra::Polynomial&& target);
-		PolynomialInequalityWithCoeffs(uint32_t N, uint32_t sz, std::unique_ptr<ScaleFactor>&& scale,
-		                               algebra::Vector<algebra::Matrix<algebra::Polynomial>>&& mat,
-		                               algebra::Matrix<algebra::Polynomial>&& target);
-		PolynomialInequalityWithCoeffs(const PolynomialInequalityWithCoeffs&) = delete;
-		PolynomialInequalityWithCoeffs& operator=(const PolynomialInequalityWithCoeffs&) = delete;
-		PolynomialInequalityWithCoeffs(PolynomialInequalityWithCoeffs&&) noexcept = default;
-		PolynomialInequalityWithCoeffs& operator=(PolynomialInequalityWithCoeffs&&) noexcept = default;
-		~PolynomialInequalityWithCoeffs() override;
-		[[nodiscard]] algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n) override
-		{
-			return mat_[n].clone();
-		}
-		[[nodiscard]] algebra::Matrix<algebra::Polynomial> target_polynomial() override { return target_.clone(); }
-		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k) override
-		{
-			const auto& chi = PolynomialInequality::get_scale();
-			auto x = chi->sample_point(k);
-			return mul_scalar(chi->eval(x), mat_[n].eval(x));
-		}
-		[[nodiscard]] algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) override
-		{
-			const auto& chi = PolynomialInequality::get_scale();
-			auto x = chi->sample_point(k);
-			return mul_scalar(chi->eval(x), target_.eval(x));
-		}
-		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k) override
-		{
-			const auto& chi = PolynomialInequality::get_scale();
-			return mat_[n].eval(chi->sample_point(k));
-		}
-		[[nodiscard]] algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k) override
-		{
-			const auto& chi = PolynomialInequality::get_scale();
-			return target_.eval(chi->sample_point(k));
 		}
 	};
 
@@ -212,7 +137,6 @@ namespace qboot
 		// indices which are not eliminated
 		// union of leading_indices_ and free_indices_ is always {0, ..., N - 1}
 		std::vector<uint32_t> free_indices_{};
-		// TODO(selpo): unique_ptr is the best choice?
 		std::vector<std::unique_ptr<PolynomialInequality>> inequality_{};
 
 	public:

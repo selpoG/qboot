@@ -35,7 +35,6 @@ template <class T>
 using dict = map<string, T, std::less<>>;
 using Op = qboot::PrimaryOperator;
 using Eq = qboot::Equation;
-using PolIneq = qboot::PolynomialInequalityWithCoeffs;
 constexpr auto ContinuousType = qboot::SectorType::Continuous;
 constexpr auto Odd = qboot::algebra::FunctionSymmetry::Odd;
 constexpr auto Even = qboot::algebra::FunctionSymmetry::Even;
@@ -84,7 +83,6 @@ WatchScope::~WatchScope() = default;
                                           uint32_t maxspin, qboot::_event_base* event);
 [[maybe_unused]] static void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax,
                                          uint32_t maxspin, qboot::_event_base* event);
-[[maybe_unused]] static void test_sdpb();
 
 string name_single(const dict<rational>& deltas)
 {
@@ -212,65 +210,6 @@ void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax
 	auto root = fs::current_path() / name_single(deltas);
 	auto pmp = boot.find_contradiction("unit", c.parallel(), event);
 	move(pmp).create_input(c.parallel(), event).write(root, c.parallel());
-}
-
-class TestScale : public qboot::ScaleFactor
-{
-	static constexpr uint32_t deg_ = 4;
-	Vector<real> xs_;
-
-public:
-	TestScale() : xs_(qboot::sample_points(deg_)) {}
-	TestScale(const TestScale&) = delete;
-	TestScale& operator=(const TestScale&) = delete;
-	TestScale(TestScale&&) noexcept = default;
-	TestScale& operator=(TestScale&&) noexcept = default;
-	~TestScale() override;
-	[[nodiscard]] uint32_t max_degree() const override { return deg_; }
-	[[nodiscard]] real eval(const real& v) const override { return qboot::mp::exp(-v); }
-	[[nodiscard]] Vector<real> sample_scalings() override
-	{
-		Vector<real> sc(deg_ + 1);
-		for (uint32_t i = 0; i <= deg_; ++i) sc[i] = eval(xs_[i]);
-		return sc;
-	}
-	[[nodiscard]] real sample_point(uint32_t k) override { return xs_[k]; }
-	[[nodiscard]] Vector<real> sample_points() override { return xs_.clone(); }
-	[[nodiscard]] Polynomial bilinear_base(uint32_t m) override
-	{
-		assert(m <= deg_ / 2);
-		switch (m)
-		{
-		case 0: return {real(1)};                        // 1
-		case 1: return {real(-1), real(1)};              // -1 + x
-		default: return {real(1), real(-2), real(0.5)};  // 1 - 2 x + x ^ 2 / 2
-		}
-	}
-	[[nodiscard]] Vector<Polynomial> bilinear_bases() override
-	{
-		Vector<Polynomial> q(deg_ / 2 + 1);
-		for (uint32_t i = 0; i <= deg_ / 2; ++i) q[i] = bilinear_base(i);
-		return q;
-	}
-};
-TestScale::~TestScale() = default;
-
-void test_sdpb()
-{
-	// https://github.com/davidsd/sdpb/blob/master/test/test.xml
-	// {1 + x ^ 4, x ^ 2 + x ^ 4 / 12}
-	Vector<Polynomial> elm{{real(1), real(0), real(0), real(0), real(1)},
-	                       {real(0), real(0), real(1), real(0), real(1) / 12}};
-
-	PolynomialProgram prg(1);
-	prg.objective_constant() = real(0);
-	prg.objectives({real(-1)});
-	auto ineq = make_unique<PolIneq>(1u, make_unique<TestScale>(), Vector{elm[1].clone()}, -elm[0]);
-	prg.add_inequality(move(ineq));
-
-	auto sdpb = move(prg).create_input();
-	auto root = fs::current_path() / "test";
-	sdpb.write(root);
 }
 
 int main(int argc, char* argv[])

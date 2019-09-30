@@ -18,7 +18,6 @@ namespace qboot
 {
 	using FixedBlock = ConformalBlock<PrimaryOperator>;
 	using GeneralBlock = GeneralConformalBlock;
-	using Ineq = PolynomialInequalityEvaluated;
 	[[nodiscard]] Vector<Matrix<real>> BootstrapEquation::make_disc_mat(uint32_t id) const
 	{
 		auto sz = sector(id).size();
@@ -152,7 +151,7 @@ namespace qboot
 	void BootstrapEquation::add_ineqs(PolynomialProgram* prg, const std::function<bool(const std::string&)>& filter,
 	                                  uint32_t parallel, _event_base* event) const
 	{
-		vector<std::function<unique_ptr<Ineq>()>> ineqs;
+		vector<std::function<unique_ptr<PolynomialInequality>()>> ineqs;
 		for (const auto& [sec, id] : sector_id_)
 		{
 			if (!filter(sec)) continue;
@@ -161,12 +160,12 @@ namespace qboot
 				if (sector(id).is_matrix())
 					ineqs.emplace_back([this, id = id, sz, sec = sec, event]() {
 						_scoped_event scope(sec, event);
-						return make_unique<Ineq>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
+						return make_unique<PolynomialInequality>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
 					});
 				else
 					ineqs.emplace_back([this, id = id, sec = sec, event]() {
 						_scoped_event scope(sec, event);
-						return make_unique<Ineq>(N_, make_disc_mat_v(id), real(0));
+						return make_unique<PolynomialInequality>(N_, make_disc_mat_v(id), real(0));
 					});
 			else
 				for (const auto& op : sector(id).ops_)
@@ -177,8 +176,9 @@ namespace qboot
 						_scoped_event scope(tag, event);
 						auto ag = common_scale(id, op);
 						auto mat = make_cont_mat(id, op, &ag);
-						return make_unique<Ineq>(N_, sz, move(ag), move(mat),
-						                         Vector<Matrix<real>>(ag->max_degree() + 1, {sz, sz}));
+						auto deg = ag->max_degree();
+						return make_unique<PolynomialInequality>(N_, sz, move(ag), move(mat),
+						                                         Vector<Matrix<real>>(deg + 1, {sz, sz}));
 					});
 		}
 		for (auto&& x : parallel_evaluate(ineqs, parallel)) prg->add_inequality(move(x));
