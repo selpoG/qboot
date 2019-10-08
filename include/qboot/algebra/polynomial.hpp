@@ -119,6 +119,8 @@ namespace qboot::algebra
 			negate();
 			return std::move(*this);
 		}
+		// this *= a + x
+		void _mul_linear(const mp::real& a) &;
 		friend Polynomial mul(const Polynomial& p, const Polynomial& q);
 		template <class R>
 		friend Polynomial mul_scalar(const R& c, const Polynomial& p)
