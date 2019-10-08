@@ -157,7 +157,7 @@ namespace qboot
 		SDPBInput sdpb(move(obj_const_), move(obj_new), uint32_t(inequality_.size()));
 		std::vector<std::function<void()>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
-			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event]() {
+			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event] {
 				_scoped_event scope(std::to_string(j), event);
 				auto ineq = std::move(inequality_[j]);
 				// convert ineq to DualConstraint
@@ -231,7 +231,7 @@ namespace qboot
 		XMLInput sdpb(move(obj_const_), move(obj_new), uint32_t(inequality_.size()));
 		std::vector<std::function<void()>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
-			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event]() {
+			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event] {
 				_scoped_event scope(std::to_string(j), event);
 				auto ineq = std::move(inequality_[j]);
 				uint32_t sz = ineq->size();

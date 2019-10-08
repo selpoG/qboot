@@ -46,7 +46,7 @@ namespace qboot
 		for (uint32_t m = 0; m <= lambda_; ++m) f.at(m, 0u).swap(realAxisResult.at(m));
 		move(realAxisResult)._reset();
 
-		real val{}, term{}, quad_casimir = op.quadratic_casimir();
+		real val{}, term{}, quad_casimir4 = 4 * op.quadratic_casimir();
 
 		for (int32_t n = 1; uint32_t(n) <= lambda_ / 2; ++n)
 		{
@@ -68,7 +68,7 @@ namespace qboot
 				term += m * (m + 8 * n - 5) + n * (4 * n - 2) - 2;
 				term += 2 * P;
 				term += S * (8 * n + 4 * m - 8);
-				term += 4 * quad_casimir;
+				term += quad_casimir4;
 				term *= 4;
 				term *= f.at(uint32_t(m), uint32_t(n - 1));
 				val += term;

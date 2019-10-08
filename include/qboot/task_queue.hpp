@@ -42,7 +42,7 @@ namespace qboot
 		uint32_t now = 0;
 		std::vector<std::thread> worker;
 		for (uint32_t i = 0; i < p; ++i)
-			worker.emplace_back([&mtx, &now, N, &fs, &ans]() {
+			worker.emplace_back([&mtx, &now, N, &fs, &ans] {
 				while (true)
 				{
 					uint32_t now_local;
@@ -66,7 +66,7 @@ namespace qboot
 		if (p <= 1) return _seq_eval(fs);
 		std::vector<std::function<bool()>> fs_dummy;
 		for (const auto& f : fs)
-			fs_dummy.emplace_back([&f]() {
+			fs_dummy.emplace_back([&f] {
 				f();
 				return true;
 			});
@@ -98,7 +98,16 @@ namespace qboot
 		_task& operator=(const _task&) = default;
 		_task& operator=(_task&&) noexcept = default;
 		~_task() override = default;
-		void run() override { p_.set_value(f_()); }
+		void run() override
+		{
+			if constexpr (std::is_same_v<T, void>)
+			{
+				f_();
+				p_.set_value();
+			}
+			else
+				p_.set_value(f_());
+		}
 	};
 
 	class TaskQueue

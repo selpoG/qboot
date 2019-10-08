@@ -159,18 +159,18 @@ namespace qboot
 			auto sz = sector(id).size();
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
-					ineqs.emplace_back([this, id = id, sz, sec = sec, &event]() {
+					ineqs.emplace_back([this, id = id, sz, sec = sec, &event] {
 						_scoped_event scope(sec, event);
 						return make_unique<PolynomialInequality>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
 					});
 				else
-					ineqs.emplace_back([this, id = id, sec = sec, &event]() {
+					ineqs.emplace_back([this, id = id, sec = sec, &event] {
 						_scoped_event scope(sec, event);
 						return make_unique<PolynomialInequality>(N_, make_disc_mat_v(id), real(0));
 					});
 			else
 				for (const auto& op : sector(id).ops_)
-					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, &event]() {
+					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, &event] {
 						auto tag = op.str();
 						tag += " in ";
 						tag += sec;

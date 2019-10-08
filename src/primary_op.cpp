@@ -14,13 +14,13 @@ namespace qboot
 	[[nodiscard]] string PrimaryOperator::str() const
 	{
 		ostringstream os;
-		os << "PrimaryOperator(delta=" << delta_ << ", spin=" << spin_ << ", epsilon=" << epsilon_ << ")";
+		os << "operator(spin=" << spin_ << ", dim=" << 2 * epsilon_ + 2 << ", delta=" << delta_ << ")";
 		return os.str();
 	}
 	[[nodiscard]] string GeneralPrimaryOperator::str() const
 	{
 		ostringstream os;
-		os << "GeneralPrimaryOperator(spin=" << spin_ << ", epsilon=" << epsilon_ << ", delta in [" << from_ << ", "
+		os << "operator(spin=" << spin_ << ", dim=" << 2 * epsilon_ + 2 << ", delta in [" << from_ << ", "
 		   << (to_.has_value() ? to_.value().str() : "infty") << "))";
 		return os.str();
 	}
