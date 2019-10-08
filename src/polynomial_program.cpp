@@ -199,8 +199,9 @@ namespace qboot
 								for (uint32_t e = 0; e < eq_sz; ++e)
 								{
 									auto t = -move(e_B[leading_indices_[e]][k].at(r, c));
-									for (uint32_t m = 0; m < M; ++m) d_B.at(p, m) += equation_[e][free_indices_[m]] * t;
-									d_c.at(p) += equation_targets_[e] * move(t);
+									for (uint32_t m = 0; m < M; ++m)
+										mp::fma(d_B.at(p, m), equation_[e][free_indices_[m]], t, d_B.at(p, m));
+									mp::fma(d_c.at(p), equation_targets_[e], t, d_c.at(p));
 								}
 								++p;
 							}

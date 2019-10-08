@@ -69,8 +69,13 @@ namespace qboot::algebra
 			auto s = coeff_[d];
 			for (uint32_t i = d - 1; i <= d; --i)
 			{
-				s *= x;
-				s += coeff_[i];
+				if constexpr (std::is_same_v<R, mp::real>)
+					mp::fma(s, s, x, coeff_[i]);
+				else
+				{
+					s *= x;
+					s += coeff_[i];
+				}
 			}
 			return s;
 		}

@@ -32,7 +32,7 @@ namespace qboot
 		{
 			sum = 0;
 			for (uint32_t i = 1; i < p.size(); ++i)
-				if (i <= n) sum += p[i].eval(n) * b.at(n - i);
+				if (i <= n) mp::fma(sum, p[i].eval(n), b.at(n - i), sum);
 			b.at(n) = -sum / p[0].eval(n);
 		}
 		return b;

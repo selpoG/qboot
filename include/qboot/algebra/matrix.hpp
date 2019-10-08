@@ -355,7 +355,7 @@ namespace qboot::algebra
 			assert(is_square() && row_ == v.size());
 			mp::real s{};
 			for (uint32_t r = 0; r < row_; ++r)
-				for (uint32_t c = 0; c < row_; ++c) s += mul(mul(v[r], v[c]), at(r, c));
+				for (uint32_t c = 0; c < row_; ++c) mp::fma(s, mul(v[r], v[c]), at(r, c), s);
 			return s;
 		}
 		friend Matrix operator+(const Matrix& x, const Matrix& y)

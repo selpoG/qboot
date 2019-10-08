@@ -540,6 +540,10 @@ namespace qboot::mp
 		friend void cot(real& ans, const real& r);
 		friend void log(real& ans, const real& r);
 		friend void sqrt(real& ans, const real& r);
+		friend void fma(real& ans, const real& r1, const real& r2, const real& r3);
+		friend void fms(real& ans, const real& r1, const real& r2, const real& r3);
+		friend void fmma(real& ans, const real& r1, const real& r2, const real& r3, const real& r4);
+		friend void fmms(real& ans, const real& r1, const real& r2, const real& r3, const real& r4);
 		friend real gamma_inc(real&& r1, real&& r2);
 		friend void gamma_inc(real& ans, const real& r1, const real& r2);
 		friend real fdim(real&& r1, real&& r2);
@@ -705,6 +709,28 @@ namespace qboot::mp
 	/////////////////////////////////////////////////////////////////
 	// mathematical functions (definitions for multiple "real" arguments)
 	/////////////////////////////////////////////////////////////////
+
+	// ans = r1 r2 + r3
+	inline void fma(real& ans, const real& r1, const real& r2, const real& r3)
+	{
+		mpfr_fma(ans._x, r1._x, r2._x, r3._x, global_rnd);
+	}
+	// ans = r1 r2 - r3
+	inline void fms(real& ans, const real& r1, const real& r2, const real& r3)
+	{
+		mpfr_fms(ans._x, r1._x, r2._x, r3._x, global_rnd);
+	}
+
+	// ans = r1 r2 + r3 r4
+	inline void fmma(real& ans, const real& r1, const real& r2, const real& r3, const real& r4)
+	{
+		mpfr_fmma(ans._x, r1._x, r2._x, r3._x, r4._x, global_rnd);
+	}
+	// ans = r1 r2 - r3 r4
+	inline void fmms(real& ans, const real& r1, const real& r2, const real& r3, const real& r4)
+	{
+		mpfr_fmms(ans._x, r1._x, r2._x, r3._x, r4._x, global_rnd);
+	}
 
 	inline void gamma_inc(real& ans, const real& r1, const real& r2)
 	{

@@ -251,8 +251,13 @@ namespace qboot::algebra
 			mp::real s{};
 			for (uint32_t i = f_.lambda(); i <= f_.lambda(); --i)
 			{
-				s *= x;
-				s += f_.at(i);
+				if constexpr (std::is_same_v<R, mp::real>)
+					mp::fma(s, s, x, f_.at(i));
+				else
+				{
+					s *= x;
+					s += f_.at(i);
+				}
 			}
 			s *= mp::pow(x, pow_);
 			return s;
