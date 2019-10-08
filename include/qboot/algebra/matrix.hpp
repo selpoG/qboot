@@ -86,7 +86,12 @@ namespace qboot::algebra
 		uint32_t sz_;
 
 	public:
-		Vector() : Vector(0) {}
+		void _reset() &&
+		{
+			arr_.reset();
+			sz_ = 0;
+		}
+		Vector() : arr_{}, sz_(0) {}
 		explicit Vector(uint32_t len) : arr_(std::make_unique<Ring[]>(len)), sz_(len) {}
 		Vector(uint32_t len, const Ring& val) : Vector(len)
 		{
@@ -172,7 +177,12 @@ namespace qboot::algebra
 		}
 		friend Vector operator+(Vector&& x, const Vector& y) { return std::move(x += y); }
 		friend Vector operator+(const Vector& x, Vector&& y) { return std::move(y += x); }
-		friend Vector operator+(Vector&& x, Vector&& y) { return std::move(x += y); }
+		friend Vector operator+(Vector&& x, Vector&& y)
+		{
+			x += y;
+			std::move(y)._reset();
+			return std::move(x);
+		}
 		friend Vector operator-(const Vector& x, const Vector& y)
 		{
 			assert(x.sz_ == y.sz_);
@@ -187,7 +197,12 @@ namespace qboot::algebra
 			for (uint32_t i = 0; i < x.sz_; ++i) y.arr_[i] = x.arr_[i] - y.arr_[i];
 			return std::move(y);
 		}
-		friend Vector operator-(Vector&& x, Vector&& y) { return std::move(x -= y); }
+		friend Vector operator-(Vector&& x, Vector&& y)
+		{
+			x -= y;
+			std::move(y)._reset();
+			return std::move(x);
+		}
 		template <class R>
 		friend Vector mul_scalar(const R& r, const Vector& x)
 		{
@@ -260,6 +275,11 @@ namespace qboot::algebra
 		Matrix(Vector<Ring>&& v, uint32_t r, uint32_t c) : arr_(std::move(v)), row_(r), col_(c) {}
 
 	public:
+		void _reset() &&
+		{
+			std::move(arr_)._reset();
+			row_ = col_ = 0;
+		}
 		Matrix() : Matrix(0, 0) {}
 		Matrix(uint32_t r, uint32_t c) : arr_(r * c), row_(r), col_(c) {}
 		Matrix(Matrix&& v) noexcept = default;
@@ -333,7 +353,7 @@ namespace qboot::algebra
 		[[nodiscard]] Ring inner_product(const Vector<Ring>& v) const
 		{
 			assert(is_square() && row_ == v.size());
-			Ring s = {};
+			mp::real s{};
 			for (uint32_t r = 0; r < row_; ++r)
 				for (uint32_t c = 0; c < row_; ++c) s += mul(mul(v[r], v[c]), at(r, c));
 			return s;
@@ -345,7 +365,12 @@ namespace qboot::algebra
 		}
 		friend Matrix operator+(Matrix&& x, const Matrix& y) { return std::move(x += y); }
 		friend Matrix operator+(const Matrix& x, Matrix&& y) { return std::move(y += x); }
-		friend Matrix operator+(Matrix&& x, Matrix&& y) { return std::move(x += y); }
+		friend Matrix operator+(Matrix&& x, Matrix&& y)
+		{
+			x += y;
+			std::move(y)._reset();
+			return std::move(x);
+		}
 		friend Matrix operator-(const Matrix& x, const Matrix& y)
 		{
 			assert(x.row_ == y.row_ && x.col_ == y.col_);
@@ -358,7 +383,12 @@ namespace qboot::algebra
 			y.arr_ = x.arr_ - std::move(y.arr_);
 			return std::move(y);
 		}
-		friend Matrix operator-(Matrix&& x, Matrix&& y) { return std::move(x -= y); }
+		friend Matrix operator-(Matrix&& x, Matrix&& y)
+		{
+			x -= y;
+			std::move(y)._reset();
+			return std::move(x);
+		}
 		template <class R>
 		friend Matrix mul_scalar(const R& r, const Matrix& x)
 		{

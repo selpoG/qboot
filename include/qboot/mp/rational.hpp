@@ -30,11 +30,22 @@ namespace qboot::mp
 	class rational
 	{
 		mpq_t _x;
+		void reset()
+		{
+			qboot::mp::_reset(mpq_numref(_x));
+			qboot::mp::_reset(mpq_denref(_x));
+		}
 
 	public:
+		void _reset() && { reset(); }
 		rational() { mpq_init(_x); }
 		rational(const rational& o) : rational() { mpq_set(_x, o._x); }
-		rational(rational&& o) noexcept : rational() { mpq_swap(_x, o._x); }
+		rational(rational&& o) noexcept
+		{
+			mpq_numref(_x)->_mp_d = nullptr;
+			mpq_denref(_x)->_mp_d = nullptr;
+			mpq_swap(_x, o._x);
+		}
 		rational& operator=(const rational& o)
 		{
 			if (this != &o) mpq_set(_x, o._x);
@@ -42,10 +53,17 @@ namespace qboot::mp
 		}
 		rational& operator=(rational&& o) noexcept
 		{
-			if (this != &o) mpq_swap(_x, o._x);
+			if (this != &o)
+			{
+				mpq_swap(_x, o._x);
+				o.reset();
+			}
 			return *this;
 		}
-		~rational() { mpq_clear(_x); }
+		~rational()
+		{
+			if (mpq_numref(_x)->_mp_d != nullptr) mpq_clear(_x);
+		}
 		void swap(rational& o) & { mpq_swap(_x, o._x); }
 
 		explicit rational(mpq_srcptr o) : rational() { mpq_set(_x, o); }
@@ -230,11 +248,11 @@ namespace qboot::mp
 		friend rational mul(const rational& r1, const rational& r2) { return r1 * r2; }
 		friend rational mul(rational&& r1, const rational& r2) { return std::move(r1) * r2; }
 		friend rational mul(const rational& r1, rational&& r2) { return r1 * std::move(r2); }
-		friend rational mul(rational&& r1, rational&& r2) { return std::move(r1) * r2; }
+		friend rational mul(rational&& r1, rational&& r2) { return std::move(r1) * std::move(r2); }
 		friend rational mul_scalar(const rational& r1, const rational& r2) { return r1 * r2; }
 		friend rational mul_scalar(rational&& r1, const rational& r2) { return std::move(r1) * r2; }
 		friend rational mul_scalar(const rational& r1, rational&& r2) { return r1 * std::move(r2); }
-		friend rational mul_scalar(rational&& r1, rational&& r2) { return std::move(r1) * r2; }
+		friend rational mul_scalar(rational&& r1, rational&& r2) { return std::move(r1) * std::move(r2); }
 
 		friend rational operator+(const rational& a, const rational& b)
 		{
@@ -242,9 +260,14 @@ namespace qboot::mp
 			mpq_add(z._x, a._x, b._x);
 			return z;
 		}
-		friend rational operator+(rational&& a, const rational& b) { return a += b; }
-		friend rational operator+(const rational& a, rational&& b) { return b += a; }
-		friend rational operator+(rational&& a, rational&& b) { return a += b; }
+		friend rational operator+(rational&& a, const rational& b) { return std::move(a += b); }
+		friend rational operator+(const rational& a, rational&& b) { return std::move(b += a); }
+		friend rational operator+(rational&& a, rational&& b)
+		{
+			a += b;
+			b.reset();
+			return std::move(a);
+		}
 
 		friend rational operator-(const rational& a, const rational& b)
 		{
@@ -252,13 +275,18 @@ namespace qboot::mp
 			mpq_sub(z._x, a._x, b._x);
 			return z;
 		}
-		friend rational operator-(rational&& a, const rational& b) { return a -= b; }
+		friend rational operator-(rational&& a, const rational& b) { return std::move(a -= b); }
 		friend rational operator-(const rational& a, rational&& b)
 		{
 			mpq_sub(b._x, a._x, b._x);
 			return std::move(b);
 		}
-		friend rational operator-(rational&& a, rational&& b) { return a -= b; }
+		friend rational operator-(rational&& a, rational&& b)
+		{
+			a -= b;
+			b.reset();
+			return std::move(a);
+		}
 
 		friend rational operator*(const rational& a, const rational& b)
 		{
@@ -266,9 +294,14 @@ namespace qboot::mp
 			mpq_mul(z._x, a._x, b._x);
 			return z;
 		}
-		friend rational operator*(rational&& a, const rational& b) { return a *= b; }
-		friend rational operator*(const rational& a, rational&& b) { return b *= a; }
-		friend rational operator*(rational&& a, rational&& b) { return a *= b; }
+		friend rational operator*(rational&& a, const rational& b) { return std::move(a *= b); }
+		friend rational operator*(const rational& a, rational&& b) { return std::move(b *= a); }
+		friend rational operator*(rational&& a, rational&& b)
+		{
+			a *= b;
+			b.reset();
+			return std::move(a);
+		}
 
 		friend rational operator/(const rational& a, const rational& b)
 		{
@@ -276,13 +309,18 @@ namespace qboot::mp
 			mpq_div(z._x, a._x, b._x);
 			return z;
 		}
-		friend rational operator/(rational&& a, const rational& b) { return a /= b; }
+		friend rational operator/(rational&& a, const rational& b) { return std::move(a /= b); }
 		friend rational operator/(const rational& a, rational&& b)
 		{
 			mpq_div(b._x, a._x, b._x);
 			return std::move(b);
 		}
-		friend rational operator/(rational&& a, rational&& b) { return a /= b; }
+		friend rational operator/(rational&& a, rational&& b)
+		{
+			a /= b;
+			b.reset();
+			return std::move(a);
+		}
 
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator+(const rational& r1, const Tp& r2)
@@ -294,7 +332,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator+(rational&& r1, const Tp& r2)
 		{
-			return r1 += r2;
+			return std::move(r1 += r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator+(const Tp& r1, const rational& r2)
@@ -304,7 +342,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator+(const Tp& r1, rational&& r2)
 		{
-			return r2 += r1;
+			return std::move(r2 += r1);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
@@ -317,7 +355,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator-(rational&& r1, const Tp& r2)
 		{
-			return r1 -= r2;
+			return std::move(r1 -= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator-(const Tp& r1, const rational& r2)
@@ -344,17 +382,17 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator*(rational&& r1, const Tp& r2)
 		{
-			return r1 *= r2;
+			return std::move(r1 *= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator*(const Tp& r1, const rational& r2) noexcept
 		{
-			return r2 * r1;
+			return std::move(r2 * r1);
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator*(const Tp& r1, rational&& r2)
 		{
-			return r2 *= r1;
+			return std::move(r2 *= r1);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
@@ -368,7 +406,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator/(rational&& r1, const Tp& r2)
 		{
-			return r1 /= r2;
+			return std::move(r1 /= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator/(const Tp& r1, const rational& r2)

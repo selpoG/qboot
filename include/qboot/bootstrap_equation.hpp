@@ -46,6 +46,12 @@ namespace qboot
 		Block block_;
 
 	public:
+		void _reset() &&
+		{
+			r_ = c_ = 0;
+			std::move(coeff_)._reset();
+			std::visit([](auto&& v) { std::move(v)._reset(); }, std::move(block_));
+		}
 		Entry(uint32_t r, uint32_t c, const mp::real& coeff, const Block& block)
 		    : r_(r), c_(c), coeff_(coeff), block_(block)
 		{
@@ -94,6 +100,15 @@ namespace qboot
 		}
 
 	public:
+		void _reset() &&
+		{
+			std::string{}.swap(name_);
+			sz_ = 0;
+			type_ = SectorType::Continuous;
+			std::vector<std::tuple<uint32_t, std::optional<mp::real>, std::optional<mp::real>>>{}.swap(op_args_);
+			std::vector<GeneralPrimaryOperator>{}.swap(ops_);
+			ope_.reset();
+		}
 		Sector(std::string_view name, uint32_t size, SectorType type = SectorType::Discrete)
 		    : name_(name), sz_(size), type_(type)
 		{
@@ -154,6 +169,8 @@ namespace qboot
 	// each term must tell its sector name and its position in the matrix.
 	// each section contains a discrete or continuous sprectrum.
 	// for discrete spectrum,
+	// an instance of BootstrapEquation refers to Context,
+	// so you must gurantee that Context survives longer than BootstrapEquation
 	class BootstrapEquation
 	{
 		const Context& cont_;
@@ -168,14 +185,14 @@ namespace qboot
 		{
 			auto m = make_disc_mat(id);
 			algebra::Vector<mp::real> v(N_);
-			for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, m[i]);
+			for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, std::move(m[i]));
 			return v;
 		}
-		[[nodiscard]] mp::real take_element(uint32_t id, const algebra::Matrix<mp::real>& m) const
+		[[nodiscard]] mp::real take_element(uint32_t id, algebra::Matrix<mp::real>&& m) const
 		{
 			const auto& ope = sector(id).ope();
 			if (ope) return m.inner_product(ope.value());
-			return m.at(0, 0);
+			return std::move(m.at(0, 0));
 		}
 		[[nodiscard]] algebra::Vector<algebra::Matrix<mp::real>> make_disc_mat(uint32_t id) const;
 		[[nodiscard]] std::unique_ptr<ConformalScale> common_scale(uint32_t id, const GeneralPrimaryOperator& op) const;
@@ -190,6 +207,13 @@ namespace qboot
 		               _event_base* event) const;
 
 	public:
+		void _reset() &&
+		{
+			std::vector<Sector>{}.swap(sectors_);
+			std::map<std::string, uint32_t, std::less<>>{}.swap(sector_id_);
+			std::vector<Equation>{}.swap(eqs_);
+			N_ = 0;
+		}
 		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
 		    : BootstrapEquation(cont, sectors, PoleSelector(numax))
 		{
@@ -273,6 +297,12 @@ namespace qboot
 		std::vector<std::vector<Entry>> terms_{};
 
 	public:
+		void _reset() &&
+		{
+			sym_ = algebra::FunctionSymmetry::Mixed;
+			dim_ = 0;
+			std::vector<std::vector<Entry>>{}.swap(terms_);
+		}
 		Equation(const BootstrapEquation& boot, algebra::FunctionSymmetry sym)
 		    : boot_(boot), sym_(sym), dim_(algebra::function_dimension(boot.lambda(), sym)), terms_(boot_.num_sectors())
 		{

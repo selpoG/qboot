@@ -41,9 +41,16 @@ namespace qboot
 
 		// get M[n] / chi or M[N] / chi as a polynomial matrix
 		[[nodiscard]] algebra::Matrix<algebra::Polynomial> as_polynomial(
-		    const algebra::Vector<algebra::Matrix<mp::real>>& vals);
+		    algebra::Vector<algebra::Matrix<mp::real>>&& vals);
 
 	public:
+		void _reset() &&
+		{
+			N_ = sz_ = 0;
+			chi_.reset();
+			std::move(mat_)._reset();
+			std::move(target_)._reset();
+		}
 		PolynomialInequality(uint32_t N, std::unique_ptr<ScaleFactor>&& scale,
 		                     algebra::Vector<algebra::Vector<mp::real>>&& mat, algebra::Vector<mp::real>&& target);
 		PolynomialInequality(uint32_t N, algebra::Vector<mp::real>&& mat, mp::real&& target);
@@ -61,6 +68,14 @@ namespace qboot
 		[[nodiscard]] std::unique_ptr<ScaleFactor> get_scale() && { return std::move(chi_); }
 		// number of free variables N
 		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
+		[[nodiscard]] uint32_t _total_memory() const
+		{
+			uint32_t sum = 0;
+			for (const auto& x : mat_)
+				for (const auto& y : x) sum += y.row() * y.column();
+			for (const auto& x : target_) sum += x.row() * x.column();
+			return sum;
+		}
 
 		// size of matrix
 		[[nodiscard]] uint32_t size() const { return sz_; }
@@ -80,20 +95,23 @@ namespace qboot
 		// M[n] / chi (0 <= n < N)
 		[[nodiscard]] algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n)
 		{
-			return as_polynomial(mat_[n]);
+			return as_polynomial(std::move(mat_[n]));
 		}
 
 		// M[N] / chi
-		[[nodiscard]] algebra::Matrix<algebra::Polynomial> target_polynomial() { return as_polynomial(target_); }
+		[[nodiscard]] algebra::Matrix<algebra::Polynomial> target_polynomial()
+		{
+			return as_polynomial(std::move(target_));
+		}
 
 		// evaluate M[n] at x = x_k (0 <= n < N, 0 <= k <= D)
 		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_with_scale(uint32_t n, uint32_t k)
 		{
-			return mat_[n][k].clone();
+			return std::move(mat_[n][k]);
 		}
 
 		// evaluate M[N] at x = x_k
-		[[nodiscard]] algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) { return target_[k].clone(); }
+		[[nodiscard]] algebra::Matrix<mp::real> target_eval_with_scale(uint32_t k) { return std::move(target_[k]); }
 
 		// evaluate M[n] / chi at x = x_k (0 <= n < N, 0 <= k <= D)
 		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k)
@@ -140,11 +158,30 @@ namespace qboot
 		std::vector<std::unique_ptr<PolynomialInequality>> inequality_{};
 
 	public:
+		void _reset() &&
+		{
+			N_ = 0;
+			std::move(obj_const_)._reset();
+			std::move(obj_)._reset();
+			std::vector<algebra::Vector<mp::real>>{}.swap(equation_);
+			std::vector<mp::real>{}.swap(equation_targets_);
+			std::vector<uint32_t>{}.swap(leading_indices_);
+			std::vector<uint32_t>{}.swap(free_indices_);
+			std::vector<std::unique_ptr<PolynomialInequality>>{}.swap(inequality_);
+		}
 		explicit PolynomialProgram(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
 		{
 			for (uint32_t i = 0; i < N_; ++i) free_indices_.push_back(i);
 		}
 		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
+		[[nodiscard]] uint32_t _total_memory() const
+		{
+			uint32_t sum = 1 + obj_.size();
+			for (const auto& x : inequality_)
+				if (x) sum += x->_total_memory();
+			for (const auto& x : equation_) sum += x.size() + 1;
+			return sum;
+		}
 		[[nodiscard]] mp::real& objective_constant() { return obj_const_; }
 		[[nodiscard]] const mp::real& objective_constant() const { return obj_const_; }
 		[[nodiscard]] const algebra::Vector<mp::real>& objectives() const { return obj_; }

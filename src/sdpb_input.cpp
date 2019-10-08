@@ -132,31 +132,66 @@ namespace qboot
 			for (const auto& m : constraints_[i].value().bilinear())
 				out << m.column() * constraints_[i].value().dim() << "\n";
 	}
-	void SDPBInput::write(const path& root_, uint32_t parallel, _event_base* event) const
+	void SDPBInput::write(const path& root_, uint32_t parallel, _event_base* event) const&
 	{
 		for (uint32_t i = 0; i < num_constraints_; ++i) assert(constraints_[i].has_value());
 		// ensure root to be path to directory
 		auto root = root_ / "";
 		create_directory(root);
 		vector<std::function<void()>> tasks;
-		tasks.emplace_back([this, &root, event]() {
+		tasks.emplace_back([this, &root, event] {
 			_scoped_event scope("write_blocks", event);
 			write_blocks(root);
 		});
-		tasks.emplace_back([this, &root, event]() {
-			_scoped_event scope("write_objectives", event);
-			write_objectives(root);
-		});
-		tasks.emplace_back([this, &root, event]() {
+		tasks.emplace_back([this, &root, event] {
 			_scoped_event scope("write_bilinear_bases", event);
 			write_bilinear_bases(root);
 		});
+		tasks.emplace_back([this, &root, event] {
+			_scoped_event scope("write_objectives", event);
+			write_objectives(root);
+		});
 		for (uint32_t i = 0; i < num_constraints_; ++i)
-			tasks.emplace_back([this, &root, i, event]() {
+			tasks.emplace_back([this, &root, i, event] {
 				_scoped_event scope("write constraint " + std::to_string(i), event);
 				write_free_var_matrix(root, i);
 				write_primal_objective_c(root, i);
 			});
 		parallel_evaluate(tasks, parallel);
+	}
+	void SDPBInput::write(const path& root_, uint32_t parallel, _event_base* event) &&
+	{
+		for (uint32_t i = 0; i < num_constraints_; ++i) assert(constraints_[i].has_value());
+		// ensure root to be path to directory
+		auto root = root_ / "";
+		create_directory(root);
+		{
+			vector<std::function<void()>> tasks;
+			tasks.emplace_back([this, &root, event] {
+				_scoped_event scope("write_blocks", event);
+				write_blocks(root);
+			});
+			tasks.emplace_back([this, &root, event] {
+				_scoped_event scope("write_bilinear_bases", event);
+				write_bilinear_bases(root);
+			});
+			parallel_evaluate(tasks, parallel);
+		}
+		{
+			vector<std::function<void()>> tasks;
+			tasks.emplace_back([this, &root, event] {
+				_scoped_event scope("write_objectives", event);
+				write_objectives(root);
+				move(objectives_)._reset();
+			});
+			for (uint32_t i = 0; i < num_constraints_; ++i)
+				tasks.emplace_back([this, &root, i, event] {
+					_scoped_event scope("write constraint " + std::to_string(i), event);
+					write_free_var_matrix(root, i);
+					write_primal_objective_c(root, i);
+					constraints_[i].reset();
+				});
+			parallel_evaluate(tasks, parallel);
+		}
 	}
 }  // namespace qboot

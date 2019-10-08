@@ -87,6 +87,7 @@ namespace qboot
 	{
 		objectives_[0] = move(constant);
 		for (uint32_t i = 0; i < obj.size(); ++i) objectives_[i + 1] = move(obj[i]);
+		move(obj)._reset();
 	}
 	void XMLInput::register_constraint(uint32_t index, PVM&& c) &
 	{

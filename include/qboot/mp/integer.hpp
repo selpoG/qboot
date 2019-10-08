@@ -437,16 +437,24 @@ namespace qboot::mp
 	inline std::optional<rational> parse(std::string_view str);
 	inline std::optional<rational> _parse_mantisa(std::string_view str);
 
+	inline void _reset(mpz_ptr x)
+	{
+		if (x->_mp_d != nullptr) mpz_clear(x);
+		x->_mp_d = nullptr;
+	}
+
 	class integer
 	{
 		mpz_t _x;
+		void reset() { qboot::mp::_reset(_x); }
 
 	public:
+		void _reset() && { reset(); }
 		integer() { mpz_init(_x); }
 		integer(const integer& o) { mpz_init_set(_x, o._x); }
 		integer(integer&& o) noexcept
 		{
-			mpz_init(_x);
+			_x->_mp_d = nullptr;
 			mpz_swap(_x, o._x);
 		}
 		integer& operator=(const integer& o) &
@@ -456,10 +464,17 @@ namespace qboot::mp
 		}
 		integer& operator=(integer&& o) & noexcept
 		{
-			if (this != &o) mpz_swap(_x, o._x);
+			if (this != &o)
+			{
+				mpz_swap(_x, o._x);
+				o.reset();
+			}
 			return *this;
 		}
-		~integer() { mpz_clear(_x); }
+		~integer()
+		{
+			if (_x->_mp_d != nullptr) mpz_clear(_x);
+		}
 		void swap(integer& o) & { mpz_swap(_x, o._x); }
 
 		explicit integer(mpz_srcptr o) { mpz_init_set(_x, o); }
@@ -599,11 +614,11 @@ namespace qboot::mp
 		friend integer mul(const integer& r1, const integer& r2) { return r1 * r2; }
 		friend integer mul(integer&& r1, const integer& r2) { return std::move(r1) * r2; }
 		friend integer mul(const integer& r1, integer&& r2) { return r1 * std::move(r2); }
-		friend integer mul(integer&& r1, integer&& r2) { return std::move(r1) * r2; }
+		friend integer mul(integer&& r1, integer&& r2) { return std::move(r1) * std::move(r2); }
 		friend integer mul_scalar(const integer& r1, const integer& r2) { return r1 * r2; }
 		friend integer mul_scalar(integer&& r1, const integer& r2) { return std::move(r1) * r2; }
 		friend integer mul_scalar(const integer& r1, integer&& r2) { return r1 * std::move(r2); }
-		friend integer mul_scalar(integer&& r1, integer&& r2) { return std::move(r1) * r2; }
+		friend integer mul_scalar(integer&& r1, integer&& r2) { return std::move(r1) * std::move(r2); }
 
 		friend integer operator+(const integer& a, const integer& b)
 		{
@@ -611,9 +626,14 @@ namespace qboot::mp
 			mpz_add(z._x, a._x, b._x);
 			return z;
 		}
-		friend integer operator+(integer&& a, const integer& b) { return a += b; }
-		friend integer operator+(const integer& a, integer&& b) { return b += a; }
-		friend integer operator+(integer&& a, integer&& b) { return a += b; }
+		friend integer operator+(integer&& a, const integer& b) { return std::move(a += b); }
+		friend integer operator+(const integer& a, integer&& b) { return std::move(b += a); }
+		friend integer operator+(integer&& a, integer&& b)
+		{
+			a += b;
+			b.reset();
+			return std::move(a);
+		}
 
 		friend integer operator-(const integer& a, const integer& b)
 		{
@@ -621,13 +641,18 @@ namespace qboot::mp
 			mpz_sub(z._x, a._x, b._x);
 			return z;
 		}
-		friend integer operator-(integer&& a, const integer& b) { return a -= b; }
+		friend integer operator-(integer&& a, const integer& b) { return std::move(a -= b); }
 		friend integer operator-(const integer& a, integer&& b)
 		{
 			mpz_sub(b._x, a._x, b._x);
 			return std::move(b);
 		}
-		friend integer operator-(integer&& a, integer&& b) { return a -= b; }
+		friend integer operator-(integer&& a, integer&& b)
+		{
+			a -= b;
+			b.reset();
+			return std::move(a);
+		}
 
 		friend integer operator*(const integer& a, const integer& b)
 		{
@@ -635,9 +660,14 @@ namespace qboot::mp
 			mpz_mul(z._x, a._x, b._x);
 			return z;
 		}
-		friend integer operator*(integer&& a, const integer& b) { return a *= b; }
-		friend integer operator*(const integer& a, integer&& b) { return b *= a; }
-		friend integer operator*(integer&& a, integer&& b) { return a *= b; }
+		friend integer operator*(integer&& a, const integer& b) { return std::move(a *= b); }
+		friend integer operator*(const integer& a, integer&& b) { return std::move(b *= a); }
+		friend integer operator*(integer&& a, integer&& b)
+		{
+			a *= b;
+			b.reset();
+			return std::move(a);
+		}
 
 		friend integer operator/(const integer& a, const integer& b)
 		{
@@ -645,13 +675,18 @@ namespace qboot::mp
 			mpz_fdiv_q(z._x, a._x, b._x);
 			return z;
 		}
-		friend integer operator/(integer&& a, const integer& b) { return a /= b; }
+		friend integer operator/(integer&& a, const integer& b) { return std::move(a /= b); }
 		friend integer operator/(const integer& a, integer&& b)
 		{
 			mpz_fdiv_q(b._x, a._x, b._x);
 			return std::move(b);
 		}
-		friend integer operator/(integer&& a, integer&& b) { return a /= b; }
+		friend integer operator/(integer&& a, integer&& b)
+		{
+			a /= b;
+			b.reset();
+			return std::move(a);
+		}
 
 		friend integer operator%(const integer& a, const integer& b)
 		{
@@ -659,13 +694,18 @@ namespace qboot::mp
 			mpz_fdiv_r(z._x, a._x, b._x);
 			return z;
 		}
-		friend integer operator%(integer&& a, const integer& b) { return a %= b; }
+		friend integer operator%(integer&& a, const integer& b) { return std::move(a %= b); }
 		friend integer operator%(const integer& a, integer&& b)
 		{
 			mpz_fdiv_r(b._x, a._x, b._x);
 			return std::move(b);
 		}
-		friend integer operator%(integer&& a, integer&& b) { return a %= b; }
+		friend integer operator%(integer&& a, integer&& b)
+		{
+			a %= b;
+			b.reset();
+			return std::move(a);
+		}
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator+(const integer& r1, const Tp& r2)
@@ -677,7 +717,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator+(integer&& r1, const Tp& r2)
 		{
-			return r1 += r2;
+			return std::move(r1 += r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator+(const Tp& r1, const integer& r2)
@@ -687,7 +727,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator+(const Tp& r1, integer&& r2)
 		{
-			return r2 += r1;
+			return std::move(r2 += r1);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
@@ -700,7 +740,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator-(integer&& r1, const Tp& r2)
 		{
-			return r1 -= r2;
+			return std::move(r1 -= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator-(const Tp& r1, const integer& r2)
@@ -726,7 +766,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator*(integer&& r1, const Tp& r2)
 		{
-			return r1 *= r2;
+			return std::move(r1 *= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator*(const Tp& r1, const integer& r2)
@@ -736,7 +776,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator*(const Tp& r1, integer&& r2)
 		{
-			return r2 *= r1;
+			return std::move(r2 *= r1);
 		}
 
 		friend integer operator/(const integer& r1, _ulong r2)
@@ -745,7 +785,7 @@ namespace qboot::mp
 			mpz_fdiv_q_ui(temp._x, r1._x, r2);
 			return temp;
 		}
-		friend integer operator/(integer&& r1, _ulong r2) { return r1 /= r2; }
+		friend integer operator/(integer&& r1, _ulong r2) { return std::move(r1 /= r2); }
 		friend integer operator/(_ulong r1, const integer& r2)
 		{
 			if (r2 < 0) return r1 / -r2;
@@ -763,7 +803,9 @@ namespace qboot::mp
 		{
 			mpz_abs(r2._x, r2._x);
 			if (r2 > r1) return r1;
-			return r1 % _ulong(r2);
+			auto ret = r1 % _ulong(r2);
+			r2.reset();
+			return ret;
 		}
 
 		integer operator+() const& { return *this; }

@@ -33,6 +33,16 @@ namespace qboot
 		algebra::FunctionSymmetry sym_;
 
 	public:
+		void _reset() &&
+		{
+			std::move(op_)._reset();
+			std::move(d12_)._reset();
+			std::move(d34_)._reset();
+			std::move(d23h_)._reset();
+			std::move(S_)._reset();
+			std::move(P_)._reset();
+			sym_ = algebra::FunctionSymmetry::Mixed;
+		}
 		// sym must be Even or Odd (Mixed is not allowed)
 		ConformalBlock(const Operator& op, const mp::real& d12, const mp::real& d34, const mp::real& d23h,
 		               algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
@@ -86,6 +96,15 @@ namespace qboot
 		algebra::FunctionSymmetry sym_;
 
 	public:
+		void _reset() &&
+		{
+			std::move(d12_)._reset();
+			std::move(d34_)._reset();
+			std::move(d23h_)._reset();
+			std::move(S_)._reset();
+			std::move(P_)._reset();
+			sym_ = algebra::FunctionSymmetry::Mixed;
+		}
 		// sym must be Even or Odd (Mixed is not allowed)
 		GeneralConformalBlock(const mp::real& d12, const mp::real& d34, const mp::real& d23h,
 		                      algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)

@@ -50,6 +50,13 @@ namespace qboot
 			}
 			return memo_.at(key).get();
 		}
+		[[nodiscard]] uint32_t _total_memory()
+		{
+			std::lock_guard<std::mutex> guard(mutex_);
+			uint32_t sum = 0;
+			for (const auto& [k, f] : memo_) sum += f.get().size();
+			return sum;
+		}
 	};
 	template <class T, class... TArgs>
 	memoized(T (*)(TArgs...))->memoized<T(TArgs...)>;
@@ -76,6 +83,15 @@ namespace qboot
 		}
 
 	public:
+		void _reset() &&
+		{
+			n_Max_ = lambda_ = dim_ = parallel_ = 0;
+			std::move(epsilon_)._reset();
+			std::move(rho_)._reset();
+			std::move(rho_to_z_)._reset();
+			v_to_d_.reset();
+			gBlock_.reset();
+		}
 		// cutoff of the power series expansion of conformal blocks at rho = 0
 		[[nodiscard]] uint32_t n_Max() const { return n_Max_; }
 		// passed to the constructor of ComplexFunction<Ring>
@@ -102,6 +118,10 @@ namespace qboot
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 		~Context() = default;
+		[[nodiscard]] uint32_t _total_memory() const
+		{
+			return 1 + v_to_d_->_total_memory() + gBlock_->_total_memory() + rho_to_z_._total_memory();
+		}
 		[[nodiscard]] mp::rational unitarity_bound(uint32_t spin) const
 		{
 			return qboot::unitarity_bound(epsilon_, spin);

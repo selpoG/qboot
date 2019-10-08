@@ -83,8 +83,8 @@ namespace qboot
 	{
 		bool odd_included_;
 		uint32_t spin_, lambda_;
-		const mp::rational* epsilon_;
-		const mp::real* rho_;
+		mp::rational epsilon_;
+		mp::real rho_;
 		mp::real unitarity_bound_{}, gap_{};
 		std::optional<mp::real> end_{};
 		// pole at Delta = poles_[i]
@@ -94,6 +94,18 @@ namespace qboot
 		void _set_bilinear_bases() &;
 
 	public:
+		void _reset() &&
+		{
+			odd_included_ = false;
+			spin_ = lambda_ = 0;
+			std::move(epsilon_)._reset();
+			std::move(rho_)._reset();
+			std::move(unitarity_bound_)._reset();
+			std::move(gap_)._reset();
+			end_.reset();
+			std::move(poles_)._reset();
+			bilinear_bases_.reset();
+		}
 		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, const mp::real& d1, const mp::real& d2,
 		               const mp::real& d3, const mp::real& d4)
 		    : ConformalScale(cutoff, spin, context, d1 - d2, d3 - d4)
@@ -121,7 +133,7 @@ namespace qboot
 		// evaluate at delta
 		[[nodiscard]] mp::real eval_d(const mp::real& delta) const
 		{
-			mp::real ans = mp::pow(4 * *rho_, delta);
+			mp::real ans = mp::pow(4 * rho_, delta);
 			if (end_.has_value()) ans *= mp::pow(get_x(delta) + end_.value(), -int32_t(max_degree()));
 			for (const auto& p : poles_) ans /= delta - p;
 			return ans;

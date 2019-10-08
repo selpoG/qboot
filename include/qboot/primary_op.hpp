@@ -28,6 +28,12 @@ namespace qboot
 		uint32_t spin_;
 
 	public:
+		void _reset() &&
+		{
+			std::move(delta_)._reset();
+			std::move(epsilon_)._reset();
+			spin_ = 0;
+		}
 		// unit operator
 		explicit PrimaryOperator(const Context& c);
 		// unit operator
@@ -94,6 +100,13 @@ namespace qboot
 		uint32_t spin_, num_poles_;
 
 	public:
+		void _reset() &&
+		{
+			std::move(epsilon_)._reset();
+			std::move(from_)._reset();
+			to_.reset();
+			spin_ = num_poles_ = 0;
+		}
 		// primary operator whose dimension runs over unitarity bound
 		GeneralPrimaryOperator(uint32_t spin, uint32_t num_poles, const mp::rational& epsilon)
 		    : epsilon_(epsilon), from_(unitarity_bound(epsilon, spin)), spin_(spin), num_poles_(num_poles)

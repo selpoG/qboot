@@ -16,9 +16,14 @@ namespace qboot::algebra
 		}
 		int32_t deg = int32_t(coeffs.size()) - 1;
 		while (deg >= 0 && coeffs[uint32_t(deg)].iszero()) deg--;
-		if (deg < 0) return;
+		if (deg < 0)
+		{
+			move(coeffs)._reset();
+			return;
+		}
 		coeff_ = Vector<real>{uint32_t(deg + 1)};
 		for (uint32_t i = 0; i <= uint32_t(deg); ++i) coeff_[i].swap(coeffs[i]);
+		move(coeffs)._reset();
 	}
 	Polynomial& Polynomial::operator+=(const Polynomial& p) &
 	{

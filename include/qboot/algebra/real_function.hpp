@@ -28,7 +28,13 @@ namespace qboot::algebra
 
 	public:
 		friend class RealConverter;
-		RealFunction() : RealFunction(0) {}
+		void _reset() &&
+		{
+			lambda_ = 0;
+			std::move(coeffs_)._reset();
+		}
+		// make an uninitialized object
+		RealFunction() : lambda_(0), coeffs_{} {}
 		explicit RealFunction(uint32_t lambda) : lambda_(lambda), coeffs_(lambda + 1) {}
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		[[nodiscard]] uint32_t size() const { return coeffs_.size(); }
@@ -90,7 +96,12 @@ namespace qboot::algebra
 		}
 		friend RealFunction operator+(RealFunction&& x, const RealFunction& y) { return std::move(x += y); }
 		friend RealFunction operator+(const RealFunction& x, RealFunction&& y) { return std::move(y += x); }
-		friend RealFunction operator+(RealFunction&& x, RealFunction&& y) { return std::move(x += y); }
+		friend RealFunction operator+(RealFunction&& x, RealFunction&& y)
+		{
+			x += y;
+			std::move(y)._reset();
+			return std::move(x);
+		}
 		friend RealFunction operator-(const RealFunction& x, const RealFunction& y)
 		{
 			return RealFunction(x.coeffs_ - y.coeffs_);
@@ -101,7 +112,12 @@ namespace qboot::algebra
 			y.coeffs_ = x.coeffs_ - std::move(y.coeffs_);
 			return std::move(y);
 		}
-		friend RealFunction operator-(RealFunction&& x, RealFunction&& y) { return std::move(x -= y); }
+		friend RealFunction operator-(RealFunction&& x, RealFunction&& y)
+		{
+			x -= y;
+			std::move(y)._reset();
+			return std::move(x);
+		}
 		friend RealFunction mul(const RealFunction& x, const RealFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
@@ -179,6 +195,11 @@ namespace qboot::algebra
 		Matrix<mp::real> mat_;
 
 	public:
+		void _reset() &&
+		{
+			lambda_ = 0;
+			std::move(mat_)._reset();
+		}
 		// x = func(y)
 		// this converts a functino of x to a function of y
 		explicit RealConverter(const RealFunction<mp::real>& func);
@@ -190,6 +211,7 @@ namespace qboot::algebra
 			assert(lambda_ == f.lambda());
 			return RealFunction<R>(dot(f.coeffs_, mat_));
 		}
+		[[nodiscard]] uint32_t _total_memory() const { return mat_.row() * mat_.column(); }
 	};
 	// real function multiplied by x ^ {pow} of x at x = 0
 	// take derivatives (der x) ^ k upto k <= lambda
@@ -201,6 +223,11 @@ namespace qboot::algebra
 		mp::real pow_;
 
 	public:
+		void _reset() &&
+		{
+			std::move(f_)._reset();
+			std::move(pow_)._reset();
+		}
 		RealFunctionWithPower(const RealFunction<mp::real>& f, const mp::real& p) : f_(f.clone()), pow_(p) {}
 		RealFunctionWithPower(RealFunction<mp::real>&& f, const mp::real& p) : f_(std::move(f)), pow_(p) {}
 		[[nodiscard]] const RealFunction<mp::real>& func() const { return f_; }

@@ -88,8 +88,8 @@ namespace qboot
 			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
 			Vector<real> inner_prods(2 * deg + 1);
 			for (uint32_t i = 0; i < poles_.size(); ++i)
-				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * *rho_, shifted_poles[i]));
-			inner_prods *= mp::pow(4 * *rho_, gap_);
+				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho_, shifted_poles[i]));
+			inner_prods *= mp::pow(4 * rho_, gap_);
 			auto mat = anti_band_to_inverse(inner_prods);
 			bilinear_bases_ = Vector<Polynomial>{deg + 1};
 			for (uint32_t i = 0; i <= deg; ++i)
@@ -104,13 +104,13 @@ namespace qboot
 	    : odd_included_(include_odd),
 	      spin_(spin),
 	      lambda_(context.lambda()),
-	      epsilon_(&context.epsilon()),
-	      rho_(&context.rho()),
+	      epsilon_(context.epsilon()),
+	      rho_(context.rho()),
 	      poles_(cutoff)
 	{
 		// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
 		auto get_pols = [this, include_odd](uint32_t type) {
-			return PoleSequence(type, this->spin_, *this->epsilon_, include_odd);
+			return PoleSequence(type, this->spin_, this->epsilon_, include_odd);
 		};
 		auto pole_seq = Merged(Merged(get_pols(1), get_pols(2)), get_pols(3));
 		uint32_t pos = 0;

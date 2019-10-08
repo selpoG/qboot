@@ -23,6 +23,7 @@ ComplexFunction<Ring> _proj(ComplexFunction<Ring>&& f, FunctionSymmetry sym)
 			for (uint32_t dx = 0; dx + 2 * dy <= f.lambda(); ++dx)
 				if (matches(f.symmetry(), dx)) z.at(dx, dy).swap(f.at(dx, dy));
 	}
+	move(f)._reset();
 	// otherwise (even to odd or odd to even), proj is vanishing
 	return z;
 }

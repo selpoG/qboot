@@ -77,11 +77,20 @@ namespace qboot::mp
 	inline constexpr bool _mpfr_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer> ||
 	                                                std::is_same_v<Tp, rational> || std::is_same_v<Tp, double>;
 
+	inline void _reset(mpfr_ptr x)
+	{
+		if (x->_mpfr_d != nullptr) mpfr_clear(x);
+		x->_mpfr_d = nullptr;
+	}
+
 	class real
 	{
 		mpfr_t _x;
+		void reset() { qboot::mp::_reset(_x); }
 
 	public:
+		void _reset() && { reset(); }
+
 		/////////////////////////////////////////////////////////////////
 		// default and copy constructors, default assignment operator, destructor
 		/////////////////////////////////////////////////////////////////
@@ -102,7 +111,7 @@ namespace qboot::mp
 
 		real(real&& o) noexcept
 		{
-			mpfr_init2(_x, global_prec);
+			_x->_mpfr_d = nullptr;
 			mpfr_swap(_x, o._x);
 		}
 
@@ -119,12 +128,16 @@ namespace qboot::mp
 		{
 			if (this == &o) return *this;
 			mpfr_swap(_x, o._x);
+			std::move(o).reset();
 			return *this;
 		}
 
 		// destructor
 
-		~real() { mpfr_clear(_x); }
+		~real()
+		{
+			if (_x->_mpfr_d != nullptr) mpfr_clear(_x);
+		}
 
 		void swap(real& o) & { mpfr_swap(_x, o._x); }
 
@@ -137,7 +150,11 @@ namespace qboot::mp
 		void negate() & { *this *= -1; }
 
 		[[nodiscard]] real norm() const& { return *this * *this; }
-		[[nodiscard]] real norm() && { return std::move(*this) * *this; }
+		[[nodiscard]] real norm() &&
+		{
+			*this *= *this;
+			return std::move(*this);
+		}
 
 		template <class T>
 		[[nodiscard]] real eval([[maybe_unused]] const T& x) const
@@ -168,7 +185,9 @@ namespace qboot::mp
 		template <class Char, class Traits>
 		friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& s, real&& r)
 		{
-			return _helper_ostream(s, r._x, global_rnd);
+			_helper_ostream(s, r._x, global_rnd);
+			std::move(r).reset();
+			return s;
 		}
 
 		[[nodiscard]] std::string str() const
@@ -314,11 +333,11 @@ namespace qboot::mp
 		friend real mul(const real& r1, const real& r2) { return r1 * r2; }
 		friend real mul(real&& r1, const real& r2) { return std::move(r1) * r2; }
 		friend real mul(const real& r1, real&& r2) { return r1 * std::move(r2); }
-		friend real mul(real&& r1, real&& r2) { return std::move(r1) * r2; }
+		friend real mul(real&& r1, real&& r2) { return std::move(r1) * std::move(r2); }
 		friend real mul_scalar(const real& r1, const real& r2) { return r1 * r2; }
 		friend real mul_scalar(real&& r1, const real& r2) { return std::move(r1) * r2; }
 		friend real mul_scalar(const real& r1, real&& r2) { return r1 * std::move(r2); }
-		friend real mul_scalar(real&& r1, real&& r2) { return std::move(r1) * r2; }
+		friend real mul_scalar(real&& r1, real&& r2) { return std::move(r1) * std::move(r2); }
 
 		friend real operator+(const real& r1, const real& r2)
 		{
@@ -326,9 +345,9 @@ namespace qboot::mp
 			mpfr_add(temp._x, r1._x, r2._x, global_rnd);
 			return temp;
 		}
-		friend real operator+(real&& r1, const real& r2) { return r1 += r2; }
-		friend real operator+(const real& r1, real&& r2) { return r2 += r1; }
-		friend real operator+(real&& r1, real&& r2) { return r1 += r2; }
+		friend real operator+(real&& r1, const real& r2) { return std::move(r1 += r2); }
+		friend real operator+(const real& r1, real&& r2) { return std::move(r2 += r1); }
+		friend real operator+(real&& r1, real&& r2) { return std::move(r1 += r2); }
 
 		friend real operator-(const real& r1, const real& r2)
 		{
@@ -336,13 +355,13 @@ namespace qboot::mp
 			mpfr_sub(temp._x, r1._x, r2._x, global_rnd);
 			return temp;
 		}
-		friend real operator-(real&& r1, const real& r2) { return r1 -= r2; }
+		friend real operator-(real&& r1, const real& r2) { return std::move(r1 -= r2); }
 		friend real operator-(const real& r1, real&& r2)
 		{
 			mpfr_sub(r2._x, r1._x, r2._x, global_rnd);
 			return std::move(r2);
 		}
-		friend real operator-(real&& r1, real&& r2) { return r1 -= r2; }
+		friend real operator-(real&& r1, real&& r2) { return std::move(r1 -= r2); }
 
 		friend real operator*(const real& r1, const real& r2)
 		{
@@ -350,9 +369,9 @@ namespace qboot::mp
 			mpfr_mul(temp._x, r1._x, r2._x, global_rnd);
 			return temp;
 		}
-		friend real operator*(real&& r1, const real& r2) { return r1 *= r2; }
-		friend real operator*(const real& r1, real&& r2) { return r2 *= r1; }
-		friend real operator*(real&& r1, real&& r2) { return r1 *= r2; }
+		friend real operator*(real&& r1, const real& r2) { return std::move(r1 *= r2); }
+		friend real operator*(const real& r1, real&& r2) { return std::move(r2 *= r1); }
+		friend real operator*(real&& r1, real&& r2) { return std::move(r1 *= r2); }
 
 		friend real operator/(const real& r1, const real& r2)
 		{
@@ -360,13 +379,13 @@ namespace qboot::mp
 			mpfr_div(temp._x, r1._x, r2._x, global_rnd);
 			return temp;
 		}
-		friend real operator/(real&& r1, const real& r2) { return r1 /= r2; }
+		friend real operator/(real&& r1, const real& r2) { return std::move(r1 /= r2); }
 		friend real operator/(const real& r1, real&& r2)
 		{
 			mpfr_div(r2._x, r1._x, r2._x, global_rnd);
 			return std::move(r2);
 		}
-		friend real operator/(real&& r1, real&& r2) { return r1 /= r2; }
+		friend real operator/(real&& r1, real&& r2) { return std::move(r1 /= r2); }
 
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator+(const real& r1, const Tp& r2)
@@ -378,7 +397,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator+(real&& r1, const Tp& r2)
 		{
-			return r1 += r2;
+			return std::move(r1 += r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator+(const Tp& r1, const real& r2)
@@ -388,7 +407,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator+(const Tp& r1, real&& r2)
 		{
-			return r2 += r1;
+			return std::move(r2 += r1);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
@@ -401,7 +420,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator-(real&& r1, const Tp& r2)
 		{
-			return r1 -= r2;
+			return std::move(r1 -= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator-(const Tp& r1, const real& r2)
@@ -427,17 +446,17 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator*(real&& r1, const Tp& r2)
 		{
-			return r1 *= r2;
+			return std::move(r1 *= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator*(const Tp& r1, const real& r2) noexcept
 		{
-			return r2 * r1;
+			return std::move(r2 * r1);
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator*(const Tp& r1, real&& r2)
 		{
-			return r2 *= r1;
+			return std::move(r2 *= r1);
 		}
 
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
@@ -450,7 +469,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator/(real&& r1, const Tp& r2)
 		{
-			return r1 /= r2;
+			return std::move(r1 /= r2);
 		}
 		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
 		friend real operator/(const Tp& r1, const real& r2)
@@ -506,44 +525,31 @@ namespace qboot::mp
 		friend real sqrt(_ulong r);
 		friend bool iszero(const real& r);
 		friend int sgn(const real& r);
-		friend real ceil(const real& r);
-		friend real ceil(real&& r);
-		friend real round(const real& r);
-		friend real round(real&& r);
-		friend real floor(const real& r);
-		friend real floor(real&& r);
 		friend bool isinteger(const real& r);
-		friend real exp(const real& r);
-		friend real exp(real&& r);
-		friend real abs(const real& r);
-		friend real abs(real&& r);
-		friend real sin(const real& r);
-		friend real sin(real&& r);
-		friend real cos(const real& r);
-		friend real cos(real&& r);
-		friend real tan(const real& r);
-		friend real tan(real&& r);
-		friend real sec(const real& r);
-		friend real sec(real&& r);
-		friend real csc(const real& r);
-		friend real csc(real&& r);
-		friend real cot(const real& r);
-		friend real cot(real&& r);
-		friend real log(const real& r);
-		friend real log(real&& r);
-		friend real sqrt(const real& r);
-		friend real sqrt(real&& r);
-		friend real gamma_inc(const real& r1, const real& r2);
-		friend real gamma_inc(real&& r1, const real& r2);
-		friend real gamma_inc(const real& r1, real&& r2);
+		// f(ans, r): set ans to f(r)
+		friend void ceil(real& ans, const real& r);
+		friend void round(real& ans, const real& r);
+		friend void floor(real& ans, const real& r);
+		friend void exp(real& ans, const real& r);
+		friend void abs(real& ans, const real& r);
+		friend void sin(real& ans, const real& r);
+		friend void cos(real& ans, const real& r);
+		friend void tan(real& ans, const real& r);
+		friend void sec(real& ans, const real& r);
+		friend void csc(real& ans, const real& r);
+		friend void cot(real& ans, const real& r);
+		friend void log(real& ans, const real& r);
+		friend void sqrt(real& ans, const real& r);
 		friend real gamma_inc(real&& r1, real&& r2);
-		friend real fdim(const real& r1, const real& r2);
-		friend real fmax(const real& r1, const real& r2);
-		friend real fmin(const real& r1, const real& r2);
-		friend real pow(const real& r1, const real& r2);
-		friend real pow(real&& r1, const real& r2);
-		friend real pow(const real& r1, real&& r2);
+		friend void gamma_inc(real& ans, const real& r1, const real& r2);
+		friend real fdim(real&& r1, real&& r2);
+		friend void fdim(real& ans, const real& r1, const real& r2);
+		friend real fmax(real&& r1, real&& r2);
+		friend void fmax(real& ans, const real& r1, const real& r2);
+		friend real fmin(real&& r1, real&& r2);
+		friend void fmin(real& ans, const real& r1, const real& r2);
 		friend real pow(real&& r1, real&& r2);
+		friend void pow(real& ans, const real& r1, const real& r2);
 		friend real pow(const real& op1, _ulong op2);
 		friend real pow(real&& op1, _ulong op2);
 		friend real pow(const real& op1, unsigned int op2);
@@ -559,6 +565,55 @@ namespace qboot::mp
 		template <class Char, class Traits>
 		friend std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& in, real& r);
 	};
+
+#define MP_R_UNARY_L(func)          \
+	inline real func(const real& r) \
+	{                               \
+		real temp;                  \
+		func(temp, r);              \
+		return temp;                \
+	}
+
+#define MP_R_UNARY_R(func)     \
+	inline real func(real&& r) \
+	{                          \
+		func(r, r);            \
+		return std::move(r);   \
+	}
+
+#define MP_R_UNARY(func) MP_R_UNARY_L(func) MP_R_UNARY_R(func)
+
+#define MP_R_BINARY_LL(func)                         \
+	inline real func(const real& r1, const real& r2) \
+	{                                                \
+		real temp;                                   \
+		func(temp, r1, r2);                          \
+		return temp;                                 \
+	}
+
+#define MP_R_BINARY_RL(func)                    \
+	inline real func(real&& r1, const real& r2) \
+	{                                           \
+		func(r1, r1, r2);                       \
+		return std::move(r1);                   \
+	}
+
+#define MP_R_BINARY_LR(func)                    \
+	inline real func(const real& r1, real&& r2) \
+	{                                           \
+		func(r2, r1, r2);                       \
+		return std::move(r2);                   \
+	}
+
+#define MP_R_BINARY_RR(func)               \
+	inline real func(real&& r1, real&& r2) \
+	{                                      \
+		func(r1, r1, r2);                  \
+		std::move(r2).reset();             \
+		return std::move(r1);              \
+	}
+
+#define MP_R_BINARY(func) MP_R_BINARY_LL(func) MP_R_BINARY_LR(func) MP_R_BINARY_RL(func) MP_R_BINARY_RR(func)
 
 	// if sign is nonnegative, return +0
 	// if sign is negative, return -0
@@ -610,220 +665,64 @@ namespace qboot::mp
 
 	inline int sgn(const real& r) { return _sgn(r._x); }
 
-	inline real ceil(const real& r)
-	{
-		real temp;
-		mpfr_ceil(temp._x, r._x);
-		return temp;
-	}
-	inline real ceil(real&& r)
-	{
-		mpfr_ceil(r._x, r._x);
-		return std::move(r);
-	}
+	inline void ceil(real& ans, const real& r) { mpfr_ceil(ans._x, r._x); }
+	MP_R_UNARY(ceil)
 
-	inline real round(const real& r)
-	{
-		real temp;
-		mpfr_round(temp._x, r._x);
-		return temp;
-	}
-	inline real round(real&& r)
-	{
-		mpfr_round(r._x, r._x);
-		return std::move(r);
-	}
+	inline void round(real& ans, const real& r) { mpfr_round(ans._x, r._x); }
+	MP_R_UNARY(round)
 
-	inline real floor(const real& r)
-	{
-		real temp;
-		mpfr_floor(temp._x, r._x);
-		return temp;
-	}
-	inline real floor(real&& r)
-	{
-		mpfr_floor(r._x, r._x);
-		return std::move(r);
-	}
+	inline void floor(real& ans, const real& r) { mpfr_floor(ans._x, r._x); }
+	MP_R_UNARY(floor)
 
 	inline bool isinteger(const real& r) { return mpfr_integer_p(r._x) != 0; }
 
-	inline real exp(const real& r)
-	{
-		real temp;
-		mpfr_exp(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real exp(real&& r)
-	{
-		mpfr_exp(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
+	inline void exp(real& ans, const real& r) { mpfr_exp(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(exp)
 
-	inline real abs(const real& r)
-	{
-		real temp;
-		mpfr_abs(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real abs(real&& r)
-	{
-		mpfr_abs(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
+	inline void abs(real& ans, const real& r) { mpfr_abs(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(abs)
 
-	inline real sin(const real& r)
-	{
-		real temp;
-		mpfr_sin(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real sin(real&& r)
-	{
-		mpfr_sin(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
-	inline real cos(const real& r)
-	{
-		real temp;
-		mpfr_cos(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real cos(real&& r)
-	{
-		mpfr_cos(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
-	inline real tan(const real& r)
-	{
-		real temp;
-		mpfr_tan(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real tan(real&& r)
-	{
-		mpfr_tan(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
+	inline void sin(real& ans, const real& r) { mpfr_sin(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(sin)
+	inline void cos(real& ans, const real& r) { mpfr_cos(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(cos)
+	inline void tan(real& ans, const real& r) { mpfr_tan(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(tan)
 
-	inline real sec(const real& r)
-	{
-		real temp;
-		mpfr_sec(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real sec(real&& r)
-	{
-		mpfr_sec(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
-	inline real csc(const real& r)
-	{
-		real temp;
-		mpfr_csc(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real csc(real&& r)
-	{
-		mpfr_csc(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
-	inline real cot(const real& r)
-	{
-		real temp;
-		mpfr_cot(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real cot(real&& r)
-	{
-		mpfr_cot(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
+	inline void sec(real& ans, const real& r) { mpfr_sec(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(sec)
+	inline void csc(real& ans, const real& r) { mpfr_csc(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(csc)
+	inline void cot(real& ans, const real& r) { mpfr_cot(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(cot)
 
-	inline real log(const real& r)
-	{
-		real temp;
-		mpfr_log(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real log(real&& r)
-	{
-		mpfr_log(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
+	inline void log(real& ans, const real& r) { mpfr_log(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(log)
 
-	inline real sqrt(const real& r)
-	{
-		real temp;
-		mpfr_sqrt(temp._x, r._x, global_rnd);
-		return temp;
-	}
-	inline real sqrt(real&& r)
-	{
-		mpfr_sqrt(r._x, r._x, global_rnd);
-		return std::move(r);
-	}
+	inline void sqrt(real& ans, const real& r) { mpfr_sqrt(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(sqrt)
 
 	/////////////////////////////////////////////////////////////////
 	// mathematical functions (definitions for multiple "real" arguments)
 	/////////////////////////////////////////////////////////////////
 
-	inline real gamma_inc(const real& r1, const real& r2)
+	inline void gamma_inc(real& ans, const real& r1, const real& r2)
 	{
-		real temp;
-		mpfr_gamma_inc(temp._x, r1._x, r2._x, global_rnd);
-		return temp;
+		mpfr_gamma_inc(ans._x, r1._x, r2._x, global_rnd);
 	}
-	inline real gamma_inc(real&& r1, const real& r2)
-	{
-		mpfr_gamma_inc(r1._x, r1._x, r2._x, global_rnd);
-		return std::move(r1);
-	}
-	inline real gamma_inc(const real& r1, real&& r2)
-	{
-		mpfr_gamma_inc(r2._x, r1._x, r2._x, global_rnd);
-		return std::move(r2);
-	}
-	inline real gamma_inc(real&& r1, real&& r2) { return gamma_inc(std::move(r1), r2); }
+	MP_R_BINARY(gamma_inc)
 
-	inline real fdim(const real& r1, const real& r2)
-	{
-		real temp;
-		mpfr_dim(temp._x, r1._x, r2._x, global_rnd);
-		return temp;
-	}
+	inline void fdim(real& ans, const real& r1, const real& r2) { mpfr_dim(ans._x, r1._x, r2._x, global_rnd); }
+	MP_R_BINARY(fdim)
 
-	inline real fmax(const real& r1, const real& r2)
-	{
-		real temp;
-		mpfr_max(temp._x, r1._x, r2._x, global_rnd);
-		return temp;
-	}
+	inline void fmax(real& ans, const real& r1, const real& r2) { mpfr_max(ans._x, r1._x, r2._x, global_rnd); }
+	MP_R_BINARY(fmax)
 
-	inline real fmin(const real& r1, const real& r2)
-	{
-		real temp;
-		mpfr_min(temp._x, r1._x, r2._x, global_rnd);
-		return temp;
-	}
+	inline void fmin(real& ans, const real& r1, const real& r2) { mpfr_min(ans._x, r1._x, r2._x, global_rnd); }
+	MP_R_BINARY(fmin)
 
-	inline real pow(const real& r1, const real& r2)
-	{
-		real temp;
-		mpfr_pow(temp._x, r1._x, r2._x, global_rnd);
-		return temp;
-	}
-	inline real pow(real&& r1, const real& r2)
-	{
-		mpfr_pow(r1._x, r1._x, r2._x, global_rnd);
-		return std::move(r1);
-	}
-	inline real pow(const real& r1, real&& r2)
-	{
-		mpfr_pow(r2._x, r1._x, r2._x, global_rnd);
-		return std::move(r2);
-	}
-	inline real pow(real&& r1, real&& r2) { return pow(std::move(r1), r2); }
+	inline void pow(real& ans, const real& r1, const real& r2) { mpfr_pow(ans._x, r1._x, r2._x, global_rnd); }
+	MP_R_BINARY(pow)
 
 	inline real pow(const real& op1, _ulong op2)
 	{
@@ -875,11 +774,7 @@ namespace qboot::mp
 	// do not need to define rvalue version because we cannot reuse x in the above algorithm
 
 	inline int cmpabs(const real& r1, const real& r2) { return mpfr_cmpabs(r1._x, r2._x); }
-}  // namespace qboot::mp
 
-// io functions
-namespace qboot::mp
-{
 	/////////////////////////////////////////////////////////////////
 	// helper functions
 	/////////////////////////////////////////////////////////////////
@@ -958,7 +853,7 @@ namespace qboot::mp
 			exp = -exp;
 		}
 		if (-9 <= exp && exp <= 9) s += '0';
-		return s += std::to_string(exp);
+		return std::move(s += std::to_string(exp));
 	}
 
 	inline std::string _as_default(std::string&& s, intmax_t exp, std::ios_base::fmtflags flags, size_t prec)

@@ -31,6 +31,13 @@ namespace qboot
 		std::array<algebra::Matrix<mp::real>, 2> bilinear_{};
 
 	public:
+		void _reset() &&
+		{
+			dim_ = deg_ = 0;
+			std::move(constraint_B_)._reset();
+			std::move(constraint_c_)._reset();
+			for (auto&& x : bilinear_) std::move(x)._reset();
+		}
 		DualConstraint() = default;
 		DualConstraint(uint32_t dim, uint32_t deg, algebra::Matrix<mp::real>&& B, algebra::Vector<mp::real>&& c,
 		               std::array<algebra::Matrix<mp::real>, 2>&& bilinear);
@@ -38,6 +45,12 @@ namespace qboot
 		[[nodiscard]] uint32_t degree() const { return deg_; }
 		[[nodiscard]] uint32_t schur_size() const { return (deg_ + 1) * dim_ * (dim_ + 1) / 2; }
 		[[nodiscard]] const std::array<algebra::Matrix<mp::real>, 2>& bilinear() const { return bilinear_; }
+		[[nodiscard]] uint32_t _total_memory() const
+		{
+			uint32_t sum = constraint_B_.row() * constraint_B_.column() + constraint_c_.size();
+			for (const auto& q : bilinear_) sum += q.row() * q.column();
+			return sum;
+		}
 		[[nodiscard]] const algebra::Matrix<mp::real>& obj_B() const { return constraint_B_; }
 		[[nodiscard]] const algebra::Vector<mp::real>& obj_c() const { return constraint_c_; }
 	};
@@ -62,11 +75,26 @@ namespace qboot
 		void write_blocks(std::ostream& out) const;
 
 	public:
+		void _reset() &&
+		{
+			std::move(constant_term_)._reset();
+			std::move(objectives_)._reset();
+			constraints_.reset();
+			num_constraints_ = 0;
+		}
 		SDPBInput(mp::real&& constant, algebra::Vector<mp::real>&& obj, uint32_t num_constraints);
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
+		[[nodiscard]] uint32_t _total_memory() const
+		{
+			uint32_t sum = 1 + objectives_.size();
+			for (uint32_t i = 0; i < num_constraints_; ++i)
+				if (constraints_[i].has_value()) sum += constraints_[i].value()._total_memory();
+			return sum;
+		}
 		// call this for index = 0, ..., num_constraints() - 1 before call of write
 		void register_constraint(uint32_t index, DualConstraint&& c) &;
-		void write(const fs::path& root_, uint32_t parallel = 1, _event_base* event = nullptr) const;
+		void write(const fs::path& root_, uint32_t parallel = 1, _event_base* event = nullptr) const&;
+		void write(const fs::path& root_, uint32_t parallel = 1, _event_base* event = nullptr) &&;
 	};
 }  // namespace qboot
 

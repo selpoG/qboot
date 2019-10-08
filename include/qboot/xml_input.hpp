@@ -19,6 +19,14 @@ namespace qboot
 		algebra::Vector<algebra::Polynomial> bilinear_{};
 
 	public:
+		void _reset() &&
+		{
+			dim_ = deg_ = num_of_vars_ = 0;
+			std::move(M_)._reset();
+			std::move(sample_points_)._reset();
+			std::move(sample_scalings_)._reset();
+			std::move(bilinear_)._reset();
+		}
 		PVM() = default;
 		PVM(algebra::Matrix<algebra::Vector<algebra::Polynomial>>&& M, algebra::Vector<mp::real>&& x,
 		    algebra::Vector<mp::real>&& scale, algebra::Vector<algebra::Polynomial>&& bilinear);
@@ -37,6 +45,12 @@ namespace qboot
 		uint32_t num_constraints_;
 
 	public:
+		void _reset() &&
+		{
+			std::move(objectives_)._reset();
+			constraints_.reset();
+			num_constraints_ = 0;
+		}
 		XMLInput(mp::real&& constant, algebra::Vector<mp::real>&& obj, uint32_t num_constraints);
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
 		void register_constraint(uint32_t index, PVM&& c) &;

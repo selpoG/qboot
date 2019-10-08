@@ -5,6 +5,7 @@
 #include "qboot/algebra/real_function.hpp"     // for ComplexFunction
 
 using qboot::mp::real;
+using std::move;
 
 namespace qboot::algebra
 {
@@ -57,6 +58,7 @@ namespace qboot::algebra
 		}
 		for (uint32_t j = mat.row() - 1; j < mat.row(); --j)
 			for (uint32_t r = j - 1; r < j; --r) _add_row(&inv, j, r, -mat.at(r, j));
+		move(mat)._reset();
 		return inv;
 	}
 	Matrix<real> cholesky_decomposition(const Matrix<real>& mat)

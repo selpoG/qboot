@@ -85,7 +85,14 @@ namespace qboot::algebra
 		}
 
 	public:
-		ComplexFunction() : ComplexFunction(0) {}
+		void _reset() &&
+		{
+			sym_ = FunctionSymmetry::Mixed;
+			lambda_ = 0;
+			std::move(coeffs_)._reset();
+		}
+		// make an uninitialized object
+		ComplexFunction() : sym_(FunctionSymmetry::Mixed), lambda_(0), coeffs_{} {}
 		explicit ComplexFunction(uint32_t lambda, FunctionSymmetry sym = FunctionSymmetry::Mixed)
 		    : sym_(sym), lambda_(lambda), coeffs_(function_dimension(lambda, sym))
 		{

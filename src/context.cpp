@@ -2,7 +2,7 @@
 
 using qboot::algebra::RealFunction, qboot::algebra::ComplexFunction, qboot::algebra::RealConverter;
 using qboot::mp::real, qboot::mp::rational;
-using std::make_unique;
+using std::make_unique, std::move;
 
 namespace qboot
 {
@@ -44,6 +44,7 @@ namespace qboot
 		assert(realAxisResult.lambda() == lambda_);
 		ComplexFunction<real> f(lambda_);
 		for (uint32_t m = 0; m <= lambda_; ++m) f.at(m, 0u).swap(realAxisResult.at(m));
+		move(realAxisResult)._reset();
 
 		real val{}, term{}, quad_casimir = op.quadratic_casimir();
 
@@ -99,7 +100,7 @@ namespace qboot
 				val /= common_factor;
 
 				// h[m - 1, n], h[m - 2, n] and h[m - 3, n]
-				term = {};
+				term = 0;
 				if (m >= 3) term += 8 * f.at(uint32_t(m - 3), uint32_t(n));
 				if (m >= 2) term += 4 * f.at(uint32_t(m - 2), uint32_t(n));
 				if (m >= 1) term -= 2 * f.at(uint32_t(m - 1), uint32_t(n));

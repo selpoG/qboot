@@ -25,6 +25,7 @@ namespace qboot::algebra
 		Vector<mp::real> coeff_;
 
 	public:
+		void _reset() && { std::move(coeff_)._reset(); }
 		Polynomial() : coeff_(0) {}
 		Polynomial(Polynomial&&) noexcept = default;
 		Polynomial& operator=(Polynomial&&) & noexcept = default;
