@@ -93,8 +93,8 @@ namespace qboot
 		}
 		// call this for index = 0, ..., num_constraints() - 1 before call of write
 		void register_constraint(uint32_t index, DualConstraint&& c) &;
-		void write(const fs::path& root_, uint32_t parallel = 1, _event_base* event = nullptr) const&;
-		void write(const fs::path& root_, uint32_t parallel = 1, _event_base* event = nullptr) &&;
+		void write(const fs::path& root_, uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) const&;
+		void write(const fs::path& root_, uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) &&;
 	};
 }  // namespace qboot
 

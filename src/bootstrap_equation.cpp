@@ -103,7 +103,8 @@ namespace qboot
 	}
 
 	[[nodiscard]] PolynomialProgram BootstrapEquation::ope_maximize(string_view target, string_view norm, real&& N,
-	                                                                uint32_t parallel, _event_base* event) const
+	                                                                uint32_t parallel,
+	                                                                const std::unique_ptr<_event_base>& event) const
 	{
 		assert(N_ > 0);
 		PolynomialProgram prg(N_);
@@ -130,8 +131,8 @@ namespace qboot
 		for (const auto& eq : eqs_) N_ += eq.dimension();
 	}
 
-	[[nodiscard]] PolynomialProgram BootstrapEquation::find_contradiction(string_view norm, uint32_t parallel,
-	                                                                      _event_base* event) const
+	[[nodiscard]] PolynomialProgram BootstrapEquation::find_contradiction(
+	    string_view norm, uint32_t parallel, const std::unique_ptr<_event_base>& event) const
 	{
 		assert(N_ > 0);
 		PolynomialProgram prg(N_);
@@ -149,7 +150,7 @@ namespace qboot
 		return prg;
 	}
 	void BootstrapEquation::add_ineqs(PolynomialProgram* prg, const std::function<bool(const std::string&)>& filter,
-	                                  uint32_t parallel, _event_base* event) const
+	                                  uint32_t parallel, const std::unique_ptr<_event_base>& event) const
 	{
 		vector<std::function<unique_ptr<PolynomialInequality>()>> ineqs;
 		for (const auto& [sec, id] : sector_id_)
@@ -158,18 +159,18 @@ namespace qboot
 			auto sz = sector(id).size();
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
-					ineqs.emplace_back([this, id = id, sz, sec = sec, event]() {
+					ineqs.emplace_back([this, id = id, sz, sec = sec, &event]() {
 						_scoped_event scope(sec, event);
 						return make_unique<PolynomialInequality>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
 					});
 				else
-					ineqs.emplace_back([this, id = id, sec = sec, event]() {
+					ineqs.emplace_back([this, id = id, sec = sec, &event]() {
 						_scoped_event scope(sec, event);
 						return make_unique<PolynomialInequality>(N_, make_disc_mat_v(id), real(0));
 					});
 			else
 				for (const auto& op : sector(id).ops_)
-					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, event]() {
+					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, &event]() {
 						auto tag = op.str();
 						tag += " in ";
 						tag += sec;

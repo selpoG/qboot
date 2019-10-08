@@ -202,9 +202,10 @@ namespace qboot
 		// alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
 		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm, mp::real&& N,
-		                                             uint32_t parallel, _event_base* event) const;
+		                                             uint32_t parallel,
+		                                             const std::unique_ptr<_event_base>& event) const;
 		void add_ineqs(PolynomialProgram* prg, const std::function<bool(const std::string&)>& filter, uint32_t parallel,
-		               _event_base* event) const;
+		               const std::unique_ptr<_event_base>& event) const;
 
 	public:
 		void _reset() &&
@@ -263,7 +264,7 @@ namespace qboot
 		// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
 		// the size of matrices in norm sector must be 1
 		[[nodiscard]] PolynomialProgram find_contradiction(std::string_view norm, uint32_t parallel = 1,
-		                                                   _event_base* event = nullptr) const;
+		                                                   const std::unique_ptr<_event_base>& event = {}) const;
 
 		// create a PolynomialProgram which finds a linear functional alpha
 		// s.t. alpha maximizes alpha(norm)
@@ -271,7 +272,8 @@ namespace qboot
 		// the size of matrices in target, norm sector must be 1
 		// such a alpha gives an upper bound on lambda, lambda ^ 2 <= -alpha(norm)
 		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm,
-		                                             uint32_t parallel = 1, _event_base* event = nullptr) const
+		                                             uint32_t parallel = 1,
+		                                             const std::unique_ptr<_event_base>& event = {}) const
 		{
 			return ope_maximize(target, norm, mp::real(1), parallel, event);
 		}
@@ -282,7 +284,8 @@ namespace qboot
 		// the size of matrices in target, norm sector must be 1
 		// such a alpha gives an lower bound on lambda, lambda ^ 2 >= alpha(norm)
 		[[nodiscard]] PolynomialProgram ope_minimize(std::string_view target, std::string_view norm,
-		                                             uint32_t parallel = 1, _event_base* event = nullptr) const
+		                                             uint32_t parallel = 1,
+		                                             const std::unique_ptr<_event_base>& event = {}) const
 		{
 			return ope_maximize(target, norm, mp::real(-1), parallel, event);
 		}

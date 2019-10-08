@@ -135,7 +135,7 @@ namespace qboot
 				break;
 			}
 	}
-	SDPBInput PolynomialProgram::create_input(uint32_t parallel, _event_base* event) &&
+	SDPBInput PolynomialProgram::create_input(uint32_t parallel, const std::unique_ptr<_event_base>& event) &&
 	{
 		uint32_t eq_sz = uint32_t(equation_.size()), M = N_ - eq_sz;
 		// y[leading_indices_[0]], ..., y[leading_indices_[eq_sz - 1]] are eliminated
@@ -157,7 +157,7 @@ namespace qboot
 		SDPBInput sdpb(move(obj_const_), move(obj_new), uint32_t(inequality_.size()));
 		std::vector<std::function<void()>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
-			tasks.emplace_back([this, &sdpb, j, M, eq_sz, event]() {
+			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event]() {
 				_scoped_event scope(std::to_string(j), event);
 				auto ineq = std::move(inequality_[j]);
 				// convert ineq to DualConstraint
@@ -216,7 +216,7 @@ namespace qboot
 		leading_indices_.clear();
 		return sdpb;
 	}
-	XMLInput PolynomialProgram::create_xml(uint32_t parallel, _event_base* event) &&
+	XMLInput PolynomialProgram::create_xml(uint32_t parallel, const std::unique_ptr<_event_base>& event) &&
 	{
 		uint32_t eq_sz = uint32_t(equation_.size()), M = N_ - eq_sz;
 		Vector<real> obj_new(M);
@@ -231,7 +231,7 @@ namespace qboot
 		XMLInput sdpb(move(obj_const_), move(obj_new), uint32_t(inequality_.size()));
 		std::vector<std::function<void()>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
-			tasks.emplace_back([this, &sdpb, j, M, eq_sz, event]() {
+			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event]() {
 				_scoped_event scope(std::to_string(j), event);
 				auto ineq = std::move(inequality_[j]);
 				uint32_t sz = ineq->size();

@@ -79,10 +79,10 @@ WatchScope::~WatchScope() = default;
 
 [[maybe_unused]] static string name_single(const dict<rational>& deltas);
 [[maybe_unused]] static string name_mixed(const dict<rational>& deltas);
-[[maybe_unused]] static void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax,
-                                          uint32_t maxspin, qboot::_event_base* event);
-[[maybe_unused]] static void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax,
-                                         uint32_t maxspin, qboot::_event_base* event);
+[[maybe_unused]] static qboot::BootstrapEquation single_ising(const Context& c, const dict<rational>& deltas,
+                                                              uint32_t numax, uint32_t maxspin);
+[[maybe_unused]] static qboot::BootstrapEquation mixed_ising(const Context& c, const dict<rational>& deltas,
+                                                             uint32_t numax, uint32_t maxspin);
 
 string name_single(const dict<rational>& deltas)
 {
@@ -94,8 +94,8 @@ string name_mixed(const dict<rational>& deltas)
 	       deltas.at("e1").str('#');
 }
 
-void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24,
-                 qboot::_event_base* event = nullptr)
+qboot::BootstrapEquation mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20,
+                                     uint32_t maxspin = 24)
 {
 	dict<Op> ops;
 	ops.emplace("s", Op(real(deltas.at("s")), 0, c));
@@ -174,14 +174,11 @@ void mixed_ising(const Context& c, const dict<rational>& deltas, uint32_t numax 
 		boot.add_equation(eq);
 	}
 	boot.finish();
-	auto root = fs::current_path() / name_mixed(deltas);
-	auto pmp = boot.ope_maximize("T", "unit", c.parallel(), event);
-	// auto pmp = boot.find_contradiction("unit", 8, event);
-	move(pmp).create_input(c.parallel(), event).write(root, c.parallel());
+	return boot;
 }
 
-void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20, uint32_t maxspin = 24,
-                  qboot::_event_base* event = nullptr)
+qboot::BootstrapEquation single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax = 20,
+                                      uint32_t maxspin = 24)
 {
 	dict<Op> ops;
 	ops.emplace("s", Op(real(deltas.at("s")), 0, c));
@@ -207,9 +204,7 @@ void single_ising(const Context& c, const dict<rational>& deltas, uint32_t numax
 	eq.add("even", ext("s", "s", "s", "s"));
 	boot.add_equation(move(eq));
 	boot.finish();
-	auto root = fs::current_path() / name_single(deltas);
-	auto pmp = boot.find_contradiction("unit", c.parallel(), event);
-	move(pmp).create_input(c.parallel(), event).write(root, c.parallel());
+	return boot;
 }
 
 int main(int argc, char* argv[])
@@ -235,12 +230,21 @@ int main(int argc, char* argv[])
 		deltas["e1"] = parse(args[3]).value();
 		args.release();
 	}
-	Context c(n_Max, lambda, dim, parallel);
 #ifndef NDEBUG
-	auto stopwatch = std::make_unique<WatchScope>();
+	unique_ptr<qboot::_event_base> stopwatch = std::make_unique<WatchScope>();
 #else
 	unique_ptr<qboot::_event_base> stopwatch{};
 #endif
-	mixed_ising(c, deltas, numax, maxspin, stopwatch.get());
+	std::optional<qboot::PolynomialProgram> pmp;
+	{
+		Context c(n_Max, lambda, dim, parallel);
+		auto boot = mixed_ising(c, deltas, numax, maxspin);
+		pmp = boot.ope_maximize("T", "unit", parallel, stopwatch);
+		// pmp = boot.find_contradiction("unit", parallel, stopwatch);
+	}
+	auto root = fs::current_path() / name_mixed(deltas);
+	auto input = move(pmp.value()).create_input(parallel, stopwatch);
+	pmp.reset();
+	move(input).write(root, parallel, stopwatch);
 	return 0;
 }

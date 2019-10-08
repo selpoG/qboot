@@ -200,8 +200,8 @@ namespace qboot
 			assert(ineq->num_of_variables() == N_);
 			inequality_.push_back(std::move(ineq));
 		}
-		SDPBInput create_input(uint32_t parallel = 1, _event_base* event = nullptr) &&;
-		XMLInput create_xml(uint32_t parallel = 1, _event_base* event = nullptr) &&;
+		SDPBInput create_input(uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) &&;
+		XMLInput create_xml(uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) &&;
 	};
 }  // namespace qboot
 
