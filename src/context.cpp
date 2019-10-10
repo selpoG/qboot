@@ -4,17 +4,19 @@ using qboot::algebra::RealFunction, qboot::algebra::ComplexFunction, qboot::alge
 using qboot::mp::real, qboot::mp::rational;
 using std::move, std::optional;
 
-namespace qboot
+namespace
 {
+	// z = 4 r / (1 + r) ^ 2
+	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
 	RealFunction<real> z_as_func_rho(uint32_t lambda)
 	{
 		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqt(2) + r') ^ {-2}
 		// f = (4 - 2sqt(2) + r') ^ {-2}
-		auto f = algebra::power_function(4 - mp::sqrt(8), real(1), real(-2), lambda);
+		auto f = qboot::algebra::power_function(4 - qboot::mp::sqrt(8), real(1), real(-2), lambda);
 		// g1 = 2 sqrt(2) r' f
 		auto g1 = f.clone();
 		g1.shift(1);
-		g1 *= mp::sqrt(8);
+		g1 *= qboot::mp::sqrt(8);
 		// g2 = -r' ^ 2 f / 2
 		auto g2 = f.clone();
 		g2.shift(2);
@@ -22,6 +24,10 @@ namespace qboot
 		// z - 1 / 2 = g1 + g2
 		return g1 + g2;
 	}
+}  // namespace
+
+namespace qboot
+{
 	Context::Context(uint32_t n_Max, uint32_t lambda, uint32_t dim, uint32_t p)
 	    : n_Max_(n_Max),
 	      lambda_(lambda),

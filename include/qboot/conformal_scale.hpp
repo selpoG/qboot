@@ -15,52 +15,6 @@
 
 namespace qboot
 {
-	class PoleSequence
-	{
-		bool include_odd;
-		uint32_t type, k, spin;
-		mp::rational epsilon;
-
-	public:
-		PoleSequence(uint32_t type, uint32_t spin, const mp::rational& epsilon, bool include_odd = true)
-		    : include_odd(include_odd), type(type), k(1), spin(spin), epsilon(epsilon)
-		{
-			assert(1 <= type && type <= 3);
-			if (type != 2 && !include_odd) k = 2;
-		}
-		[[nodiscard]] bool valid() const { return type != 3 || k <= spin; }
-		[[nodiscard]] mp::rational get() const
-		{
-			switch (type)
-			{
-			case 1: return mp::rational(-int32_t(spin + k - 1));
-			case 2: return epsilon - (k - 1);
-			default: return 2 * epsilon + (1 + spin - k);  // note: k <= spin -> 1 + spin - k >= 1
-			}
-		}
-		void next() & { k += type == 2 || include_odd ? 1 : 2; }
-	};
-	template <class L, class R>
-	class Merged
-	{
-		L seql;
-		R seqr;
-		bool next_l{};
-		void update() & { next_l = !seqr.valid() || (seql.valid() && seql.get() >= seqr.get()); }
-
-	public:
-		Merged(L&& l, R&& r) : seql(std::move(l)), seqr(std::move(r)) { update(); }
-		void next() &
-		{
-			if (next_l)
-				seql.next();
-			else
-				seqr.next();
-			update();
-		}
-		[[nodiscard]] bool valid() const { return seql.valid() || seqr.valid(); }
-		[[nodiscard]] mp::rational get() const { return next_l ? seql.get() : seqr.get(); }
-	};
 	inline bool include_odd(const mp::real& d1, const mp::real& d2, const mp::real& d3, const mp::real& d4)
 	{
 		return d1 != d2 && d3 != d4;

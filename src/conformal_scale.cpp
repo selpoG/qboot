@@ -3,69 +3,120 @@
 #include <utility>  // for move
 
 using qboot::algebra::Vector, qboot::algebra::Polynomial, qboot::algebra::Matrix;
-using qboot::mp::real, qboot::mp::log, qboot::mp::gamma_inc;
+using qboot::mp::real, qboot::mp::rational, qboot::mp::log, qboot::mp::gamma_inc;
 using std::move, std::optional;
 
-inline static Matrix<real> anti_band_to_inverse(const Vector<real>& ab)
+namespace
 {
-	auto dim = (1 + ab.size()) / 2;
-	Matrix<real> A(dim, dim);
-	for (uint32_t i = 0; i < dim; ++i)
-		for (uint32_t j = 0; j < dim; ++j) A.at(i, j) = ab[i + j];
-	return qboot::algebra::lower_triangular_inverse(qboot::algebra::cholesky_decomposition(A));
-}
-
-// let pole_position = -p, base = exp(-k)
-// calculate \int_{0}^{\infty} e ^ {-k x} x ^ n / (x + p) dx, for n = 0, ..., pole_order_max
-// this integral equals to
-// n! p ^ n e ^ {p k} \Gamma(-n, p k)
-// = (-p) ^ n e ^ {p k} \Gamma(0, p k)
-//   + (1 / k ^ n) \sum_{i = 0}^{n - 1} (n - i - 1)! (-p k) ^ i
-// incomplete_gamma_factor = e ^ {p k} \Gamma(0, p k)
-inline static Vector<real> simple_pole_integral(uint32_t pole_order_max, const real& base, const real& pole_position)
-{
-	real incomplete_gamma = pole_position == 0
-	                            ? real(qboot::mp::global_prec)
-	                            : qboot::mp::pow(base, pole_position) * gamma_inc(real(0), pole_position * log(base));
-	Vector<real> result(pole_order_max + 1);
-	result[0] = incomplete_gamma;
-	real tmp{}, pow = pole_position * incomplete_gamma;
-	real factorial(1);
-	real minus_log_base = -1 / log(base);
-	real log_base_power = minus_log_base;
-	for (uint32_t j = 1; j <= pole_order_max; ++j)
+	Matrix<real> anti_band_to_inverse(const Vector<real>& ab)
 	{
-		// factorial == (j - 1)!;
-		// pow == incomplete_gamma_factor * pow(pole_position, j);
-		// log_base_power == pow(minus_log_base, j);
-		tmp = factorial * log_base_power + tmp * pole_position;
-		// tmp == sum((j - k - 1)! * pow(pole_position, k) * pow(minus_log_base, j - k), 0 <= k < j);
-		result[j] = tmp + pow;
-		// result[j] == sum((j - k - 1)! * pow(pole_position, k) * pow(minus_log_base, j - k), 0 <= k < j)
-		//              + incomplete_gamma_factor * pow(pole_position, j);
+		auto dim = (1 + ab.size()) / 2;
+		Matrix<real> A(dim, dim);
+		for (uint32_t i = 0; i < dim; ++i)
+			for (uint32_t j = 0; j < dim; ++j) A.at(i, j) = ab[i + j];
+		return qboot::algebra::lower_triangular_inverse(qboot::algebra::cholesky_decomposition(A));
+	}
 
-		if (j < pole_order_max)
+	// let pole_position = -p, base = exp(-k)
+	// calculate \int_{0}^{\infty} e ^ {-k x} x ^ n / (x + p) dx, for n = 0, ..., pole_order_max
+	// this integral equals to
+	// n! p ^ n e ^ {p k} \Gamma(-n, p k)
+	// = (-p) ^ n e ^ {p k} \Gamma(0, p k)
+	//   + (1 / k ^ n) \sum_{i = 0}^{n - 1} (n - i - 1)! (-p k) ^ i
+	// incomplete_gamma_factor = e ^ {p k} \Gamma(0, p k)
+	Vector<real> simple_pole_integral(uint32_t pole_order_max, const real& base, const real& pole_position)
+	{
+		real incomplete_gamma =
+		    pole_position == 0 ? real(qboot::mp::global_prec)
+		                       : qboot::mp::pow(base, pole_position) * gamma_inc(real(0), pole_position * log(base));
+		Vector<real> result(pole_order_max + 1);
+		result[0] = incomplete_gamma;
+		real tmp{}, pow = pole_position * incomplete_gamma;
+		real factorial(1);
+		real minus_log_base = -1 / log(base);
+		real log_base_power = minus_log_base;
+		for (uint32_t j = 1; j <= pole_order_max; ++j)
 		{
-			pow *= pole_position;
-			log_base_power *= minus_log_base;
-			factorial *= j;
-		}
-	}
-	return result;
-}
+			// factorial == (j - 1)!;
+			// pow == incomplete_gamma_factor * pow(pole_position, j);
+			// log_base_power == pow(minus_log_base, j);
+			tmp = factorial * log_base_power + tmp * pole_position;
+			// tmp == sum((j - k - 1)! * pow(pole_position, k) * pow(minus_log_base, j - k), 0 <= k < j);
+			result[j] = tmp + pow;
+			// result[j] == sum((j - k - 1)! * pow(pole_position, k) * pow(minus_log_base, j - k), 0 <= k < j)
+			//              + incomplete_gamma_factor * pow(pole_position, j);
 
-inline static Vector<real> fast_partial_fraction(const Vector<real>& poles)
-{
-	Vector<real> result(poles.size());
-	for (uint32_t i = 0; i < poles.size(); ++i)
-	{
-		result[i] = 1;
-		for (uint32_t j = 0; j < poles.size(); ++j)
-			if (i != j) result[i] *= poles[i] - poles[j];
-		result[i] = 1 / result[i];
+			if (j < pole_order_max)
+			{
+				pow *= pole_position;
+				log_base_power *= minus_log_base;
+				factorial *= j;
+			}
+		}
+		return result;
 	}
-	return result;
-}
+
+	Vector<real> fast_partial_fraction(const Vector<real>& poles)
+	{
+		Vector<real> result(poles.size());
+		for (uint32_t i = 0; i < poles.size(); ++i)
+		{
+			result[i] = 1;
+			for (uint32_t j = 0; j < poles.size(); ++j)
+				if (i != j) result[i] *= poles[i] - poles[j];
+			result[i] = 1 / result[i];
+		}
+		return result;
+	}
+
+	class PoleSequence
+	{
+		bool include_odd;
+		uint32_t type, k, spin;
+		rational epsilon;
+
+	public:
+		PoleSequence(uint32_t type, uint32_t spin, const rational& epsilon, bool include_odd = true)
+		    : include_odd(include_odd), type(type), k(1), spin(spin), epsilon(epsilon)
+		{
+			assert(1 <= type && type <= 3);
+			if (type != 2 && !include_odd) k = 2;
+		}
+		[[nodiscard]] bool valid() const { return type != 3 || k <= spin; }
+		[[nodiscard]] rational get() const
+		{
+			switch (type)
+			{
+			case 1: return rational(-int32_t(spin + k - 1));
+			case 2: return epsilon - (k - 1);
+			default: return 2 * epsilon + (1 + spin - k);  // note: k <= spin -> 1 + spin - k >= 1
+			}
+		}
+		void next() & { k += type == 2 || include_odd ? 1 : 2; }
+	};
+
+	template <class L, class R>
+	class Merged
+	{
+		L seql;
+		R seqr;
+		bool next_l{};
+		void update() & { next_l = !seqr.valid() || (seql.valid() && seql.get() >= seqr.get()); }
+
+	public:
+		Merged(L&& l, R&& r) : seql(move(l)), seqr(move(r)) { update(); }
+		void next() &
+		{
+			if (next_l)
+				seql.next();
+			else
+				seqr.next();
+			update();
+		}
+		[[nodiscard]] bool valid() const { return seql.valid() || seqr.valid(); }
+		[[nodiscard]] rational get() const { return next_l ? seql.get() : seqr.get(); }
+	};
+}  // namespace
 
 namespace qboot
 {

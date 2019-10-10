@@ -6,27 +6,30 @@ using qboot::algebra::ComplexFunction, qboot::algebra::FunctionSymmetry;
 using qboot::mp::real;
 using std::move;
 
-template <class Ring>
-ComplexFunction<Ring> _proj(ComplexFunction<Ring>&& f, FunctionSymmetry sym)
+namespace
 {
-	if (f.symmetry() == sym) return move(f);
-	ComplexFunction<Ring> z(f.lambda(), sym);
-	if (f.symmetry() == FunctionSymmetry::Mixed)
+	template <class Ring>
+	ComplexFunction<Ring> _proj(ComplexFunction<Ring>&& f, FunctionSymmetry sym)
 	{
-		for (uint32_t dy = 0; dy <= f.lambda() / 2; ++dy)
-			for (uint32_t dx = 0; dx + 2 * dy <= f.lambda(); ++dx)
-				if (matches(sym, dx)) z.at(dx, dy).swap(f.at(dx, dy));
+		if (f.symmetry() == sym) return move(f);
+		ComplexFunction<Ring> z(f.lambda(), sym);
+		if (f.symmetry() == FunctionSymmetry::Mixed)
+		{
+			for (uint32_t dy = 0; dy <= f.lambda() / 2; ++dy)
+				for (uint32_t dx = 0; dx + 2 * dy <= f.lambda(); ++dx)
+					if (matches(sym, dx)) z.at(dx, dy).swap(f.at(dx, dy));
+		}
+		if (sym == FunctionSymmetry::Mixed)
+		{
+			for (uint32_t dy = 0; dy <= f.lambda() / 2; ++dy)
+				for (uint32_t dx = 0; dx + 2 * dy <= f.lambda(); ++dx)
+					if (matches(f.symmetry(), dx)) z.at(dx, dy).swap(f.at(dx, dy));
+		}
+		move(f)._reset();
+		// otherwise (even to odd or odd to even), proj is vanishing
+		return z;
 	}
-	if (sym == FunctionSymmetry::Mixed)
-	{
-		for (uint32_t dy = 0; dy <= f.lambda() / 2; ++dy)
-			for (uint32_t dx = 0; dx + 2 * dy <= f.lambda(); ++dx)
-				if (matches(f.symmetry(), dx)) z.at(dx, dy).swap(f.at(dx, dy));
-	}
-	move(f)._reset();
-	// otherwise (even to odd or odd to even), proj is vanishing
-	return z;
-}
+}  // namespace
 
 namespace qboot::algebra
 {

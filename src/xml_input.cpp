@@ -13,50 +13,53 @@ using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial
 using qboot::mp::real;
 using std::move, std::make_unique, std::optional, fs::path, std::ostream, std::ofstream, std::string_view;
 
-class ScopedTag
+namespace
 {
-	ostream& os_;
-	string_view tag_;
-
-public:
-	ScopedTag(ostream& os, string_view tag) : os_(os), tag_(tag) { os_ << "<" << tag_ << ">\n"; }
-	ScopedTag(const ScopedTag&) = delete;
-	ScopedTag(ScopedTag&&) = delete;
-	ScopedTag& operator=(const ScopedTag&) = delete;
-	ScopedTag& operator=(ScopedTag&&) = delete;
-	~ScopedTag() { os_ << "</" << tag_ << ">\n"; }
-};
-
-static void write_vec(ostream& out, const Vector<real>& v)
-{
-	for (const auto& x : v)
+	class ScopedTag
 	{
-		ScopedTag elt(out, "elt");
-		out << x;
-	}
-}
+		ostream& os_;
+		string_view tag_;
 
-static void write_vec(ostream& out, const Vector<real>& v, string_view tag)
-{
-	ScopedTag tmp(out, tag);
-	write_vec(out, v);
-}
+	public:
+		ScopedTag(ostream& os, string_view tag) : os_(os), tag_(tag) { os_ << "<" << tag_ << ">\n"; }
+		ScopedTag(const ScopedTag&) = delete;
+		ScopedTag(ScopedTag&&) = delete;
+		ScopedTag& operator=(const ScopedTag&) = delete;
+		ScopedTag& operator=(ScopedTag&&) = delete;
+		~ScopedTag() { os_ << "</" << tag_ << ">\n"; }
+	};
 
-static void write_pol(ostream& out, const Polynomial& v)
-{
-	ScopedTag pol(out, "polynomial");
-	if (v.iszero())
+	void write_vec(ostream& out, const Vector<real>& v)
 	{
-		ScopedTag elt(out, "coeff");
-		out << 0;
-	}
-	else
 		for (const auto& x : v)
 		{
-			ScopedTag elt(out, "coeff");
+			ScopedTag elt(out, "elt");
 			out << x;
 		}
-}
+	}
+
+	void write_vec(ostream& out, const Vector<real>& v, string_view tag)
+	{
+		ScopedTag tmp(out, tag);
+		write_vec(out, v);
+	}
+
+	void write_pol(ostream& out, const Polynomial& v)
+	{
+		ScopedTag pol(out, "polynomial");
+		if (v.iszero())
+		{
+			ScopedTag elt(out, "coeff");
+			out << 0;
+		}
+		else
+			for (const auto& x : v)
+			{
+				ScopedTag elt(out, "coeff");
+				out << x;
+			}
+	}
+}  // namespace
 
 namespace qboot
 {

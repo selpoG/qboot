@@ -12,25 +12,28 @@ using qboot::mp::real;
 using std::array, std::move, std::optional, std::make_unique, std::vector;
 using std::ostream, std::ofstream, std::string, std::to_string, fs::path, fs::create_directory;
 
-static ostream& write_mat(ostream& out, const Matrix<real>& v)
+namespace
 {
-	out << v.row() << " " << v.column() << "\n";
-	for (uint32_t r = 0; r < v.row(); ++r)
-		for (uint32_t c = 0; c < v.column(); ++c) out << v.at(r, c) << "\n";
-	return out;
-}
+	ostream& write_mat(ostream& out, const Matrix<real>& v)
+	{
+		out << v.row() << " " << v.column() << "\n";
+		for (uint32_t r = 0; r < v.row(); ++r)
+			for (uint32_t c = 0; c < v.column(); ++c) out << v.at(r, c) << "\n";
+		return out;
+	}
 
-static ostream& write_vec(ostream& out, const Vector<real>& v)
-{
-	out << v.size() << "\n";
-	for (const auto& x : v) out << x << "\n";
-	return out;
-}
+	ostream& write_vec(ostream& out, const Vector<real>& v)
+	{
+		out << v.size() << "\n";
+		for (const auto& x : v) out << x << "\n";
+		return out;
+	}
 
-static void set_manip(ostream& out)
-{
-	out << std::defaultfloat << std::setprecision(3 + int32_t(double(qboot::mp::global_prec) * 0.302));
-}
+	void set_manip(ostream& out)
+	{
+		out << std::defaultfloat << std::setprecision(3 + int32_t(double(qboot::mp::global_prec) * 0.302));
+	}
+}  // namespace
 
 namespace qboot
 {

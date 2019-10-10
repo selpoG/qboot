@@ -22,10 +22,6 @@
 
 namespace qboot
 {
-	// z = 4 r / (1 + r) ^ 2
-	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
-	algebra::RealFunction<mp::real> z_as_func_rho(uint32_t lambda);
-
 	template <class T>
 	class memoized;
 	// create a thread-safe momoized function
