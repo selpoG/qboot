@@ -14,54 +14,54 @@
 namespace qboot::algebra
 {
 	template <class, template <class> class, class = std::void_t<>>
-	struct detect : std::false_type
+	struct _detect : std::false_type
 	{
 	};
 	template <class T, template <class> class Check>
-	struct detect<T, Check, std::void_t<Check<T>>> : std::true_type
+	struct _detect<T, Check, std::void_t<Check<T>>> : std::true_type
 	{
 	};
 	template <class T>
-	using has_iszero_checker = decltype(std::declval<const T&>().iszero());
+	using _has_iszero_checker = decltype(std::declval<const T&>().iszero());
 	template <class T>
-	inline constexpr bool has_iszero = detect<T, has_iszero_checker>::value;
+	inline constexpr bool _has_iszero = _detect<T, _has_iszero_checker>::value;
 	template <class R>
 	bool iszero(const R& v)
 	{
-		if constexpr (has_iszero<R>)
+		if constexpr (_has_iszero<R>)
 			return v.iszero();
 		else
 			return v == 0;
 	}
 	template <class T>
-	struct evaluated;
+	struct _evaluated;
 	template <class T>
-	using evaluated_t = typename evaluated<T>::type;
+	using _evaluated_t = typename _evaluated<T>::type;
 	template <class R, template <class> class Vec>
-	struct evaluated<Vec<R>>
+	struct _evaluated<Vec<R>>
 	{
-		using type = Vec<evaluated_t<R>>;
+		using type = Vec<_evaluated_t<R>>;
 	};
 	template <>
-	struct evaluated<mp::real>
+	struct _evaluated<mp::real>
 	{
 		using type = mp::real;
 	};
 	template <class Ring, class S>
-	struct substitute;
+	struct _substitute;
 	// substitute the most inner template argument R by S,
-	// i.e. substitute_t<A<B<...<C<R>>...>>> = A<B<...<C<S>>...>>
+	// i.e. _substitute_t<A<B<...<C<R>>...>>> = A<B<...<C<S>>...>>
 	template <class T, class S>
-	using substitute_t = typename substitute<T, S>::type;
+	using _substitute_t = typename _substitute<T, S>::type;
 	template <class S>
-	struct substitute<mp::real, S>
+	struct _substitute<mp::real, S>
 	{
 		using type = S;
 	};
 	template <class R, template <class> class Vec, class S>
-	struct substitute<Vec<R>, S>
+	struct _substitute<Vec<R>, S>
 	{
-		using type = Vec<substitute_t<R, S>>;
+		using type = Vec<_substitute_t<R, S>>;
 	};
 	inline mp::real eval(const mp::real& v, [[maybe_unused]] const mp::real& x) { return v; }
 	// interface Swappable<T> {
@@ -257,9 +257,9 @@ namespace qboot::algebra
 			for (uint32_t i = 1; i < x.sz_; ++i) s += mul(x.arr_[i], y.arr_[i]);
 			return s;
 		}
-		[[nodiscard]] Vector<evaluated_t<Ring>> eval(const mp::real& x) const
+		[[nodiscard]] Vector<_evaluated_t<Ring>> eval(const mp::real& x) const
 		{
-			Vector<evaluated_t<Ring>> ans(sz_);
+			Vector<_evaluated_t<Ring>> ans(sz_);
 			for (uint32_t i = 0; i < sz_; ++i) ans[i] = at(i).eval(x);
 			return ans;
 		}
@@ -454,9 +454,9 @@ namespace qboot::algebra
 				}
 			return z;
 		}
-		[[nodiscard]] Matrix<evaluated_t<Ring>> eval(const mp::real& x) const
+		[[nodiscard]] Matrix<_evaluated_t<Ring>> eval(const mp::real& x) const
 		{
-			return Matrix<evaluated_t<Ring>>(arr_.eval(x), row_, col_);
+			return Matrix<_evaluated_t<Ring>>(arr_.eval(x), row_, col_);
 		}
 	};
 

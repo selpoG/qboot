@@ -7,7 +7,7 @@
 #include <utility>  // for move, swap
 
 #include "qboot/algebra/matrix.hpp"      // for Vector
-#include "qboot/algebra/polynomial.hpp"  // for polynomialize_t, to_pol
+#include "qboot/algebra/polynomial.hpp"  // for _polynomialize_t, to_pol
 #include "qboot/mp/real.hpp"             // for real
 
 namespace qboot::algebra
@@ -20,21 +20,21 @@ namespace qboot::algebra
 		Odd = 1,
 		Mixed
 	};
-	inline constexpr bool matches(FunctionSymmetry s, uint32_t dx) noexcept
+	inline constexpr bool _matches(FunctionSymmetry s, uint32_t dx) noexcept
 	{
 		return s == FunctionSymmetry::Mixed || (dx % 2) == uint32_t(s);
 	}
-	// times(Mixed, _) = times(_, Mixed) = Mixed
-	// times(s, s) = Even, times(s, !s) = Odd
-	inline constexpr FunctionSymmetry times(FunctionSymmetry s, FunctionSymmetry t) noexcept
+	// _times(Mixed, _) = _times(_, Mixed) = Mixed
+	// _times(s, s) = Even, _times(s, !s) = Odd
+	inline constexpr FunctionSymmetry _times(FunctionSymmetry s, FunctionSymmetry t) noexcept
 	{
 		return s == FunctionSymmetry::Mixed || t == FunctionSymmetry::Mixed
 		           ? FunctionSymmetry::Mixed
 		           : s == t ? FunctionSymmetry::Even : FunctionSymmetry::Odd;
 	}
-	// plus(s, s) = s
-	// plus(Mixed, *) = plus(*, Mixed) = plus(s, !s) = Mixed
-	inline constexpr FunctionSymmetry plus(FunctionSymmetry s, FunctionSymmetry t) noexcept
+	// _plus(s, s) = s
+	// _plus(Mixed, *) = _plus(*, Mixed) = _plus(s, !s) = Mixed
+	inline constexpr FunctionSymmetry _plus(FunctionSymmetry s, FunctionSymmetry t) noexcept
 	{
 		return s == t ? s : FunctionSymmetry::Mixed;
 	}
@@ -160,45 +160,45 @@ namespace qboot::algebra
 		friend ComplexFunction operator+(const ComplexFunction& x, const ComplexFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction z(x.lambda_, plus(x.sym_, y.sym_));
+			ComplexFunction z(x.lambda_, _plus(x.sym_, y.sym_));
 			if (x.sym_ == y.sym_)
 				z.coeffs_ = x.coeffs_ + y.coeffs_;
 			else
 				for (uint32_t dy = 0; dy <= x.lambda_ / 2; ++dy)
 					for (uint32_t dx = 0; dx + 2 * dy <= x.lambda_; ++dx)
 					{
-						if (matches(x.sym_, dx)) z.at(dx, dy) += x.at(dx, dy);
-						if (matches(y.sym_, dx)) z.at(dx, dy) += y.at(dx, dy);
+						if (_matches(x.sym_, dx)) z.at(dx, dy) += x.at(dx, dy);
+						if (_matches(y.sym_, dx)) z.at(dx, dy) += y.at(dx, dy);
 					}
 			return z;
 		}
 		friend ComplexFunction operator-(const ComplexFunction& x, const ComplexFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction z(x.lambda_, plus(x.sym_, y.sym_));
+			ComplexFunction z(x.lambda_, _plus(x.sym_, y.sym_));
 			if (x.sym_ == y.sym_)
 				z.coeffs_ = x.coeffs_ - y.coeffs_;
 			else
 				for (uint32_t dy = 0; dy <= x.lambda_ / 2; ++dy)
 					for (uint32_t dx = 0; dx + 2 * dy <= x.lambda_; ++dx)
 					{
-						if (matches(x.sym_, dx)) z.at(dx, dy) -= x.at(dx, dy);
-						if (matches(y.sym_, dx)) z.at(dx, dy) -= y.at(dx, dy);
+						if (_matches(x.sym_, dx)) z.at(dx, dy) -= x.at(dx, dy);
+						if (_matches(y.sym_, dx)) z.at(dx, dy) -= y.at(dx, dy);
 					}
 			return z;
 		}
 		friend ComplexFunction mul(const ComplexFunction& x, const ComplexFunction& y)
 		{
 			assert(x.lambda_ == y.lambda_);
-			ComplexFunction z(x.lambda_, times(x.sym_, y.sym_));
+			ComplexFunction z(x.lambda_, _times(x.sym_, y.sym_));
 			for (uint32_t dy1 = 0; dy1 <= x.lambda_ / 2; ++dy1)
 				for (uint32_t dx1 = 0; dx1 + 2 * dy1 <= x.lambda_; ++dx1)
 				{
-					if (!matches(x.sym_, dx1)) continue;
+					if (!_matches(x.sym_, dx1)) continue;
 					for (uint32_t dy2 = 0; dy1 + dy2 <= x.lambda_ / 2; ++dy2)
 						for (uint32_t dx2 = 0; dx1 + dx2 + 2 * dy1 + 2 * dy2 <= x.lambda_; ++dx2)
 						{
-							if (!matches(y.sym_, dx2)) continue;
+							if (!_matches(y.sym_, dx2)) continue;
 							z.at(dx1 + dx2, dy1 + dy2) += mul(x.at(dx1, dy1), y.at(dx2, dy2));
 						}
 				}
@@ -229,9 +229,9 @@ namespace qboot::algebra
 			return x.lambda_ == y.lambda_ && x.sym_ == y.sym_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
-		[[nodiscard]] ComplexFunction<evaluated_t<Ring>> eval(const mp::real& x) const
+		[[nodiscard]] ComplexFunction<_evaluated_t<Ring>> eval(const mp::real& x) const
 		{
-			return ComplexFunction<evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
+			return ComplexFunction<_evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
 		}
 	};
 	template <>
@@ -239,15 +239,15 @@ namespace qboot::algebra
 	template <>
 	ComplexFunction<Polynomial> ComplexFunction<Polynomial>::proj(FunctionSymmetry sym) &&;
 	template <class Ring>
-	ComplexFunction<polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>* coeffs)
+	ComplexFunction<_polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>* coeffs)
 	{
 		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();
 		auto sym = coeffs->at(0).symmetry();
-		ComplexFunction<polynomialize_t<Ring>> ans(lambda, sym);
+		ComplexFunction<_polynomialize_t<Ring>> ans(lambda, sym);
 		Vector<Ring> v(len);
 		for (uint32_t dy = 0; dy <= lambda / 2; ++dy)
 			for (uint32_t dx = 0; dx + 2 * dy <= lambda; ++dx)
-				if (matches(sym, dx))
+				if (_matches(sym, dx))
 				{
 					for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs->at(i).at(dx, dy));
 					ans.at(dx, dy) = to_pol(&v);
@@ -268,7 +268,7 @@ namespace qboot::algebra
 			out << "[";
 			for (uint32_t dx = 0; dx + 2 * dy <= v.lambda(); ++dx)
 			{
-				if (!matches(v.symmetry(), dx)) continue;
+				if (!_matches(v.symmetry(), dx)) continue;
 				if (g) out << ", ";
 				out << v.at(dx, dy);
 				g = true;
@@ -278,8 +278,6 @@ namespace qboot::algebra
 		}
 		return out << "]";
 	}
-	// v ^ d = ((1 - z) (1 - z_bar)) ^ d as a function of x, y
-	ComplexFunction<mp::real> v_to_d(const mp::real& d, uint32_t lambda);
 }  // namespace qboot::algebra
 
 #endif  // QBOOT_ALGEBRA_COMPLEX_FUNCTION_HPP_

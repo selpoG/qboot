@@ -31,20 +31,20 @@ namespace qboot::mp
 	// check all values in integral class I1 are included in integral class I2
 	// and I1, I2 has the same signed property
 	template <class I1, class I2>
-	inline constexpr bool is_included_v = std::numeric_limits<I2>::min() <= std::numeric_limits<I1>::min() &&
-	                                      std::numeric_limits<I1>::max() <= std::numeric_limits<I2>::max();
+	inline constexpr bool _is_included_v = std::numeric_limits<I2>::min() <= std::numeric_limits<I1>::min() &&
+	                                       std::numeric_limits<I1>::max() <= std::numeric_limits<I2>::max();
 
 	template <class I1, class I2>
-	struct is_included : std::integral_constant<bool, is_included_v<I1, I2>>
+	struct _is_included : std::integral_constant<bool, _is_included_v<I1, I2>>
 	{
 	};
 
 	template <class Tp>
 	inline constexpr bool _ulong_convertible_v =
-	    std::conjunction_v<std::is_integral<Tp>, std::is_unsigned<Tp>, is_included<Tp, _ulong>>;
+	    std::conjunction_v<std::is_integral<Tp>, std::is_unsigned<Tp>, _is_included<Tp, _ulong>>;
 	template <class Tp>
 	inline constexpr bool _long_convertible_v =
-	    std::conjunction_v<std::is_integral<Tp>, std::is_signed<Tp>, is_included<Tp, _long>>;
+	    std::conjunction_v<std::is_integral<Tp>, std::is_signed<Tp>, _is_included<Tp, _long>>;
 
 	inline bool _is_even(mpz_srcptr p) { return mpz_even_p(p) != 0; }           // NOLINT
 	inline bool _is_odd(mpz_srcptr p) { return mpz_odd_p(p) != 0; }             // NOLINT

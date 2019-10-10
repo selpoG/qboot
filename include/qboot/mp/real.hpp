@@ -237,14 +237,14 @@ namespace qboot::mp
 			mpfr_init2(_x, global_prec);
 			if constexpr (std::is_signed_v<T>)
 			{
-				if constexpr (is_included_v<T, _long>)
+				if constexpr (_is_included_v<T, _long>)
 					mpfr_set_si_2exp(_x, op, e, global_rnd);
 				else
 					mpfr_set_sj_2exp(_x, op, e, global_rnd);
 			}
 			else
 			{
-				if constexpr (is_included_v<T, _ulong>)
+				if constexpr (_is_included_v<T, _ulong>)
 					mpfr_set_ui_2exp(_x, op, e, global_rnd);
 				else
 					mpfr_set_uj_2exp(_x, op, e, global_rnd);

@@ -7,7 +7,7 @@
 #include <utility>  // for swap, move
 
 #include "qboot/algebra/matrix.hpp"      // for Vector, Matrix
-#include "qboot/algebra/polynomial.hpp"  // for polynomialize_t, to_pol
+#include "qboot/algebra/polynomial.hpp"  // for _polynomialize_t, to_pol
 #include "qboot/mp/real.hpp"             // for real, pow
 
 namespace qboot::algebra
@@ -151,16 +151,16 @@ namespace qboot::algebra
 			return x.lambda_ == y.lambda_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const RealFunction& x, const RealFunction& y) { return !(x == y); }
-		[[nodiscard]] RealFunction<evaluated_t<Ring>> eval(const mp::real& x) const
+		[[nodiscard]] RealFunction<_evaluated_t<Ring>> eval(const mp::real& x) const
 		{
-			return RealFunction<evaluated_t<Ring>>(coeffs_.eval(x));
+			return RealFunction<_evaluated_t<Ring>>(coeffs_.eval(x));
 		}
 	};
 	template <class Ring>
-	RealFunction<polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>* coeffs)
+	RealFunction<_polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>* coeffs)
 	{
 		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();
-		RealFunction<polynomialize_t<Ring>> ans(lambda);
+		RealFunction<_polynomialize_t<Ring>> ans(lambda);
 		Vector<Ring> v(len);
 		for (uint32_t r = 0; r <= lambda; ++r)
 		{

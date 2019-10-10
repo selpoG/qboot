@@ -24,6 +24,22 @@ namespace
 		// z - 1 / 2 = g1 + g2
 		return g1 + g2;
 	}
+	// v ^ d = ((1 - z) (1 - z_bar)) ^ d as a function of x, y
+	ComplexFunction<real> v_to_d(const real& d, uint32_t lambda)
+	{
+		// f.at(m, n) = (der x) ^ m (der y) ^ n ((x - 1) ^ 2 - y) ^ d / (n! m!)
+		//            = (-1) ^ {n + m} 2 ^ {2 n + m} lf(d, n) lf(2 (d - n), m) / (n! m! 4 ^ d)
+		// where lf(x, n) = x (x - 1) ... (x - (n - 1)) (falling factorial)
+		ComplexFunction<real> f(lambda);
+		f.at(0, 0) = qboot::mp::pow(4, -d);
+		for (uint32_t n = 0; n <= lambda / 2; ++n)
+		{
+			if (n > 0) f.at(0u, n) = f.at(0u, n - 1) * 4 * (-d + (n - 1)) / n;
+			for (uint32_t m = 1; m + 2 * n <= lambda; ++m)
+				f.at(m, n) = f.at(m - 1, n) * (-4 * d + 2 * (m + 2 * n - 1)) / m;
+		}
+		return f;
+	}
 }  // namespace
 
 namespace qboot
@@ -36,7 +52,7 @@ namespace qboot
 	      epsilon_(dim - 2, 2u),
 	      rho_(3 - mp::sqrt(8)),
 	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse()),
-	      v_to_d_{[this](const real& d) { return algebra::v_to_d(d, this->lambda_); }, p},
+	      v_to_d_{[this](const real& d) { return ::v_to_d(d, this->lambda_); }, p},
 	      gBlock_{[this](const PrimaryOperator& op, const real& S, const real& P) {
 		              return qboot::gBlock(op, S, P, *this);
 	              },

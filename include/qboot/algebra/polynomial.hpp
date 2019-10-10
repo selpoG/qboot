@@ -148,19 +148,19 @@ namespace qboot::algebra
 	};
 
 	template <>
-	struct evaluated<Polynomial>
+	struct _evaluated<Polynomial>
 	{
 		using type = mp::real;
 	};
 	template <class T>
-	using polynomialize_t = substitute_t<T, Polynomial>;
+	using _polynomialize_t = _substitute_t<T, Polynomial>;
 	// schematically, to_pol(Vector<Ring>{a, b, c, ...}) = a + b x + c x ^ 2 + ...
 	inline auto to_pol(Vector<mp::real>* coeffs) { return Polynomial(coeffs->clone()); }
 	template <class Ring>
-	Matrix<polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>* coeffs)
+	Matrix<_polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>* coeffs)
 	{
 		uint32_t row = coeffs->at(0).row(), column = coeffs->at(0).column(), len = coeffs->size();
-		Matrix<polynomialize_t<Ring>> ans(row, column);
+		Matrix<_polynomialize_t<Ring>> ans(row, column);
 		Vector<Ring> v(len);
 		for (uint32_t r = 0; r < row; ++r)
 			for (uint32_t c = 0; c < column; ++c)
@@ -171,10 +171,10 @@ namespace qboot::algebra
 		return ans;
 	}
 	template <class Ring>
-	Vector<polynomialize_t<Ring>> to_pol(Vector<Vector<Ring>>* coeffs)
+	Vector<_polynomialize_t<Ring>> to_pol(Vector<Vector<Ring>>* coeffs)
 	{
 		uint32_t sz = coeffs->at(0).size(), len = coeffs->size();
-		Vector<polynomialize_t<Ring>> ans(sz);
+		Vector<_polynomialize_t<Ring>> ans(sz);
 		Vector<Ring> v(len);
 		for (uint32_t r = 0; r < sz; ++r)
 		{
@@ -187,7 +187,7 @@ namespace qboot::algebra
 	// vals[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
 	// evals(polynomial_interpolate(vals, points), points) == vals (up to rounding errors)
 	template <class Ring>
-	polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<mp::real>& points)
+	_polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<mp::real>& points)
 	{
 		assert(vals.size() == points.size() && points.size() > 0);
 		auto deg = points.size() - 1;
@@ -201,9 +201,9 @@ namespace qboot::algebra
 		return to_pol(&coeffs);
 	}
 	template <class Ring>
-	Vector<evaluated_t<Ring>> evals(const Ring& v, const Vector<mp::real>& xs)
+	Vector<_evaluated_t<Ring>> evals(const Ring& v, const Vector<mp::real>& xs)
 	{
-		Vector<evaluated_t<Ring>> ans(xs.size());
+		Vector<_evaluated_t<Ring>> ans(xs.size());
 		for (uint32_t i = 0; i < xs.size(); ++i) ans[i] = v.eval(xs[i]);
 		return ans;
 	}
