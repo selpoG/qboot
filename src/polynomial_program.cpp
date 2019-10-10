@@ -5,7 +5,7 @@
 #include <utility>     // for move
 #include <vector>      // for vector
 
-#include "qboot/task_queue.hpp"  // for parallel_evaluate, _event_base
+#include "qboot/task_queue.hpp"  // for _parallel_evaluate, _event_base
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real;
@@ -207,7 +207,7 @@ namespace qboot
 				}
 				sdpb.register_constraint(j, DualConstraint(sz, deg, move(d_B), move(d_c), {move(q0), move(q1)}));
 			});
-		parallel_evaluate(tasks, parallel);
+		_parallel_evaluate(tasks, parallel);
 		equation_.clear();
 		equation_targets_.clear();
 		free_indices_.clear();
@@ -256,7 +256,7 @@ namespace qboot
 				    j, PVM(move(mat), ineq->sample_points(), ineq->sample_scalings(), ineq->bilinear_bases()));
 				ineq.reset();
 			});
-		parallel_evaluate(tasks, parallel);
+		_parallel_evaluate(tasks, parallel);
 		equation_.clear();
 		equation_targets_.clear();
 		free_indices_.clear();

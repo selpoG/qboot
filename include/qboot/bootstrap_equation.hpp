@@ -28,12 +28,12 @@
 namespace qboot
 {
 	// function object
-	class PoleSelector
+	class _pole_selector
 	{
 		uint32_t numax_;
 
 	public:
-		explicit PoleSelector(uint32_t numax) : numax_(numax) {}
+		explicit _pole_selector(uint32_t numax) : numax_(numax) {}
 		// num of poles to pick
 		uint32_t operator()(uint32_t spin) const { return numax_ + std::min(numax_, spin) / 2; }
 	};
@@ -216,11 +216,11 @@ namespace qboot
 			N_ = 0;
 		}
 		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
-		    : BootstrapEquation(cont, sectors, PoleSelector(numax))
+		    : BootstrapEquation(cont, sectors, _pole_selector(numax))
 		{
 		}
 		BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors, uint32_t numax)
-		    : BootstrapEquation(cont, std::move(sectors), PoleSelector(numax))
+		    : BootstrapEquation(cont, std::move(sectors), _pole_selector(numax))
 		{
 		}
 		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors,

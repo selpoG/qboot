@@ -3,7 +3,7 @@
 #include <functional>  // for function
 #include <vector>      // for vector
 
-#include "qboot/task_queue.hpp"  // for parallel_evaluate, _event_base
+#include "qboot/task_queue.hpp"  // for _parallel_evaluate, _event_base
 
 namespace fs = qboot::fs;
 
@@ -160,7 +160,7 @@ namespace qboot
 				write_free_var_matrix(root, i);
 				write_primal_objective_c(root, i);
 			});
-		parallel_evaluate(tasks, parallel);
+		_parallel_evaluate(tasks, parallel);
 	}
 	void SDPBInput::write(const path& root_, uint32_t parallel, const std::unique_ptr<_event_base>& event) &&
 	{
@@ -178,7 +178,7 @@ namespace qboot
 				_scoped_event scope("write_bilinear_bases", event);
 				write_bilinear_bases(root);
 			});
-			parallel_evaluate(tasks, parallel);
+			_parallel_evaluate(tasks, parallel);
 		}
 		{
 			vector<std::function<void()>> tasks;
@@ -194,7 +194,7 @@ namespace qboot
 					write_primal_objective_c(root, i);
 					constraints_[i].reset();
 				});
-			parallel_evaluate(tasks, parallel);
+			_parallel_evaluate(tasks, parallel);
 		}
 	}
 }  // namespace qboot

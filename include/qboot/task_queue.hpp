@@ -31,8 +31,8 @@ namespace qboot
 	// evaluate fs in parallel and returns its value
 	// if p <= 1, evaluate sequentially
 	template <class T>
-	std::vector<T> parallel_evaluate(const std::vector<std::function<T()>>& fs,
-	                                 uint32_t p = std::thread::hardware_concurrency())
+	std::vector<T> _parallel_evaluate(const std::vector<std::function<T()>>& fs,
+	                                  uint32_t p = std::thread::hardware_concurrency())
 	{
 		static_assert(std::is_default_constructible_v<T>);
 		if (p <= 1) return _seq_eval(fs);
@@ -60,8 +60,8 @@ namespace qboot
 	}
 	// evaluate fs in parallel
 	// if p <= 1, evaluate sequentially
-	inline void parallel_evaluate(const std::vector<std::function<void()>>& fs,
-	                              uint32_t p = std::thread::hardware_concurrency())
+	inline void _parallel_evaluate(const std::vector<std::function<void()>>& fs,
+	                               uint32_t p = std::thread::hardware_concurrency())
 	{
 		if (p <= 1) return _seq_eval(fs);
 		std::vector<std::function<bool()>> fs_dummy;
@@ -70,7 +70,7 @@ namespace qboot
 				f();
 				return true;
 			});
-		parallel_evaluate(fs_dummy, p);
+		_parallel_evaluate(fs_dummy, p);
 	}
 
 	class _task_base
@@ -110,7 +110,7 @@ namespace qboot
 		}
 	};
 
-	class TaskQueue
+	class _task_queue
 	{
 		std::mutex mtx_{};                // lock for q_ and killed_
 		std::condition_variable cond_{};  // awake if task is queued or killed
@@ -135,11 +135,11 @@ namespace qboot
 		}
 
 	public:
-		TaskQueue(uint32_t p = std::thread::hardware_concurrency())
+		_task_queue(uint32_t p = std::thread::hardware_concurrency())
 		{
 			for (uint32_t i = 0; i < p; ++i) ts_.emplace_back([this] { work(); });
 		}
-		~TaskQueue()
+		~_task_queue()
 		{
 			signal_done();
 			for (auto& t : ts_) t.join();

@@ -18,24 +18,24 @@
 #include "qboot/mp/rational.hpp"               // for rational
 #include "qboot/mp/real.hpp"                   // for real, sqrt
 #include "qboot/primary_op.hpp"                // for PrimaryOperator
-#include "qboot/task_queue.hpp"                // for TaskQueue
+#include "qboot/task_queue.hpp"                // for _task_queue
 
 namespace qboot
 {
 	template <class T>
-	class memoized;
+	class _memoized;
 	// create a thread-safe momoized function
 	// all types of arguments must be comparable
 	template <class T, class... TArgs>
-	class memoized<T(TArgs...)>
+	class _memoized<T(TArgs...)>
 	{
 		mutable std::mutex mutex_{};
 		std::function<T(TArgs...)> f_;
 		mutable std::map<std::tuple<TArgs...>, std::shared_future<T>> memo_{};
-		mutable TaskQueue tq_;
+		mutable _task_queue tq_;
 
 	public:
-		explicit memoized(std::function<T(TArgs...)> f, uint32_t p = 1) : f_(f), tq_(p) {}
+		explicit _memoized(std::function<T(TArgs...)> f, uint32_t p = 1) : f_(f), tq_(p) {}
 		const T& operator()(const TArgs&... args) const
 		{
 			auto key = std::tuple<TArgs...>(args...);
@@ -55,7 +55,7 @@ namespace qboot
 		}
 	};
 	template <class T, class... TArgs>
-	memoized(T (*)(TArgs...))->memoized<T(TArgs...)>;
+	_memoized(T (*)(TArgs...))->_memoized<T(TArgs...)>;
 
 	// controls n_Max, lambda and dim
 	// all gBlocks are evaluated in parallel and memoized
@@ -66,8 +66,8 @@ namespace qboot
 		mp::real rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter rho_to_z_;
-		memoized<algebra::ComplexFunction<mp::real>(mp::real)> v_to_d_;
-		memoized<algebra::ComplexFunction<mp::real>(PrimaryOperator, mp::real, mp::real)> gBlock_;
+		_memoized<algebra::ComplexFunction<mp::real>(mp::real)> v_to_d_;
+		_memoized<algebra::ComplexFunction<mp::real>(PrimaryOperator, mp::real, mp::real)> gBlock_;
 		[[nodiscard]] const algebra::ComplexFunction<mp::real>& v_to_d(const mp::real& d) const { return v_to_d_(d); }
 		[[nodiscard]] const algebra::ComplexFunction<mp::real>& gBlock(const PrimaryOperator& op, const mp::real& S,
 		                                                               const mp::real& P) const
@@ -141,7 +141,7 @@ namespace qboot
 		                                                         const mp::real& d4,
 		                                                         algebra::FunctionSymmetry sym) const
 		{
-			return F_block((d2 + d3) / 2, gBlock(op, delta_S(d1, d2, d3, d4), delta_P(d1, d2, d3, d4)), sym);
+			return F_block((d2 + d3) / 2, gBlock(op, _delta_S(d1, d2, d3, d4), _delta_P(d1, d2, d3, d4)), sym);
 		}
 		[[nodiscard]] algebra::ComplexFunction<mp::real> F_block(const mp::real& d2, const mp::real& d3,
 		                                                         const algebra::ComplexFunction<mp::real>& gBlock) const

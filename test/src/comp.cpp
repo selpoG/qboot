@@ -128,7 +128,7 @@ static string error_msg(const Element& x, const Element& y) noexcept;
 static bool equal(const Element& x, const Element& y, const real& error_bound) noexcept;
 static my_error check_file(const path& d1, const path& d2, const real& error_bound) noexcept;
 static my_result<fs::file_type> check_type(const path& x, const path& y);
-static my_error check_dir(const path& d1, const path& d2, const real& error_bound, qboot::TaskQueue* q,
+static my_error check_dir(const path& d1, const path& d2, const real& error_bound, qboot::_task_queue* q,
                           vector<std::future<my_error>>* futs) noexcept;
 static my_error check_dir(const path& d1, const path& d2, const real& error_bound, uint32_t parallel) noexcept;
 
@@ -303,7 +303,7 @@ my_result<fs::file_type> check_type(const path& x, const path& y)
 	return os.str();
 }
 
-my_error check_dir(const path& d1, const path& d2, const real& error_bound, qboot::TaskQueue* q,
+my_error check_dir(const path& d1, const path& d2, const real& error_bound, qboot::_task_queue* q,
                    vector<std::future<my_error>>* futs) noexcept
 {
 	for (const auto& d : {d1, d2})
@@ -328,7 +328,7 @@ my_error check_dir(const path& d1, const path& d2, const real& error_bound, qboo
 my_error check_dir(const path& d1, const path& d2, const real& error_bound,
                    uint32_t parallel = std::thread::hardware_concurrency()) noexcept
 {
-	qboot::TaskQueue q(parallel);
+	qboot::_task_queue q(parallel);
 	vector<std::future<my_error>> futs;
 	if (auto err = check_dir(d1, d2, error_bound, &q, &futs); !is_ok(err)) return err;
 	for (auto&& x : futs)

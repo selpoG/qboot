@@ -12,15 +12,15 @@
 
 namespace qboot
 {
-	inline mp::real delta_S(const mp::real& d12, const mp::real& d34) { return (d34 - d12) / 2; }
-	inline mp::real delta_S(const mp::real& d1, const mp::real& d2, const mp::real& d3, const mp::real& d4)
+	inline mp::real _delta_S(const mp::real& d12, const mp::real& d34) { return (d34 - d12) / 2; }
+	inline mp::real _delta_S(const mp::real& d1, const mp::real& d2, const mp::real& d3, const mp::real& d4)
 	{
-		return delta_S(d1 - d2, d3 - d4);
+		return _delta_S(d1 - d2, d3 - d4);
 	}
-	inline mp::real delta_P(const mp::real& d12, const mp::real& d34) { return d12 * d34 / (-2); }
-	inline mp::real delta_P(const mp::real& d1, const mp::real& d2, const mp::real& d3, const mp::real& d4)
+	inline mp::real _delta_P(const mp::real& d12, const mp::real& d34) { return d12 * d34 / (-2); }
+	inline mp::real _delta_P(const mp::real& d1, const mp::real& d2, const mp::real& d3, const mp::real& d4)
 	{
-		return delta_P(d1 - d2, d3 - d4);
+		return _delta_P(d1 - d2, d3 - d4);
 	}
 	// F_{\mp, op}^{d1 d2, d3 d4}
 	template <class Operator>
@@ -49,8 +49,8 @@ namespace qboot
 		    : op_(op), d12_(d12), d34_(d34), d23h_(d23h), sym_(sym)
 		{
 			assert(sym == algebra::FunctionSymmetry::Even || sym == algebra::FunctionSymmetry::Odd);
-			S_ = delta_S(d12_, d34_);
-			P_ = delta_P(d12_, d34_);
+			S_ = _delta_S(d12_, d34_);
+			P_ = _delta_P(d12_, d34_);
 		}
 		ConformalBlock(const Operator& op, const mp::real& d1, const mp::real& d2, const mp::real& d3,
 		               const mp::real& d4, algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)
@@ -111,8 +111,8 @@ namespace qboot
 		    : d12_(d12), d34_(d34), d23h_(d23h), sym_(sym)
 		{
 			assert(sym == algebra::FunctionSymmetry::Even || sym == algebra::FunctionSymmetry::Odd);
-			S_ = delta_S(d12_, d34_);
-			P_ = delta_P(d12_, d34_);
+			S_ = _delta_S(d12_, d34_);
+			P_ = _delta_P(d12_, d34_);
 		}
 		GeneralConformalBlock(const mp::real& d1, const mp::real& d2, const mp::real& d3, const mp::real& d4,
 		                      algebra::FunctionSymmetry sym = algebra::FunctionSymmetry::Odd)

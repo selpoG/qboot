@@ -8,7 +8,7 @@
 #include <utility>     // for move
 #include <vector>      // for vector
 
-#include "qboot/task_queue.hpp"  // for parallel_evaluate, _event_base
+#include "qboot/task_queue.hpp"  // for _parallel_evaluate, _event_base
 
 using qboot::algebra::Vector, qboot::algebra::Matrix;
 using qboot::mp::real;
@@ -180,6 +180,6 @@ namespace qboot
 						    PolynomialInequality(N_, sz, move(ag), move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};
 					});
 		}
-		for (auto&& x : parallel_evaluate(ineqs, parallel)) prg->add_inequality(move(x));
+		for (auto&& x : _parallel_evaluate(ineqs, parallel)) prg->add_inequality(move(x));
 	}
 }  // namespace qboot
