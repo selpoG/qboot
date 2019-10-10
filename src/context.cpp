@@ -2,7 +2,7 @@
 
 using qboot::algebra::RealFunction, qboot::algebra::ComplexFunction, qboot::algebra::RealConverter;
 using qboot::mp::real, qboot::mp::rational;
-using std::make_unique, std::move;
+using std::move, std::optional;
 
 namespace qboot
 {
@@ -29,14 +29,14 @@ namespace qboot
 	      parallel_(p),
 	      epsilon_(dim - 2, 2u),
 	      rho_(3 - mp::sqrt(8)),
-	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse())
+	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse()),
+	      v_to_d_{[this](const real& d) { return algebra::v_to_d(d, this->lambda_); }, p},
+	      gBlock_{[this](const PrimaryOperator& op, const real& S, const real& P) {
+		              return qboot::gBlock(op, S, P, *this);
+	              },
+	              p}
 	{
 		assert(dim >= 3 && dim % 2 == 1);
-		v_to_d_ = make_unique<memoized<ComplexFunction<real>(real)>>(
-		    [this](const real& d) { return algebra::v_to_d(d, this->lambda_); }, parallel_);
-		gBlock_ = make_unique<memoized<ComplexFunction<real>(PrimaryOperator, real, real)>>(
-		    [this](const PrimaryOperator& op, const real& S, const real& P) { return qboot::gBlock(op, S, P, *this); },
-		    parallel_);
 	}
 	ComplexFunction<real> Context::expand_off_diagonal(RealFunction<real>&& realAxisResult, const PrimaryOperator& op,
 	                                                   const real& S, const real& P) const

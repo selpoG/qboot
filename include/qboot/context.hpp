@@ -33,14 +33,14 @@ namespace qboot
 	template <class T, class... TArgs>
 	class memoized<T(TArgs...)>
 	{
-		std::mutex mutex_{};
+		mutable std::mutex mutex_{};
 		std::function<T(TArgs...)> f_;
-		std::map<std::tuple<TArgs...>, std::shared_future<T>> memo_{};
-		TaskQueue tq_;
+		mutable std::map<std::tuple<TArgs...>, std::shared_future<T>> memo_{};
+		mutable TaskQueue tq_;
 
 	public:
 		explicit memoized(std::function<T(TArgs...)> f, uint32_t p = 1) : f_(f), tq_(p) {}
-		const T& operator()(const TArgs&... args)
+		const T& operator()(const TArgs&... args) const
 		{
 			auto key = std::tuple<TArgs...>(args...);
 			{
@@ -50,11 +50,11 @@ namespace qboot
 			}
 			return memo_.at(key).get();
 		}
-		[[nodiscard]] uint32_t _total_memory()
+		[[nodiscard]] uint32_t _total_memory() const
 		{
 			std::lock_guard<std::mutex> guard(mutex_);
 			uint32_t sum = 0;
-			for (const auto& [k, f] : memo_) sum += f.get().size();
+			for (const auto& t : memo_) sum += t.second.get().size();
 			return sum;
 		}
 	};
@@ -70,16 +70,13 @@ namespace qboot
 		mp::real rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter rho_to_z_;
-		std::unique_ptr<memoized<algebra::ComplexFunction<mp::real>(mp::real)>> v_to_d_{};
-		std::unique_ptr<memoized<algebra::ComplexFunction<mp::real>(PrimaryOperator, mp::real, mp::real)>> gBlock_{};
-		[[nodiscard]] const algebra::ComplexFunction<mp::real>& v_to_d(const mp::real& d) const
-		{
-			return (*v_to_d_)(d);
-		}
+		memoized<algebra::ComplexFunction<mp::real>(mp::real)> v_to_d_;
+		memoized<algebra::ComplexFunction<mp::real>(PrimaryOperator, mp::real, mp::real)> gBlock_;
+		[[nodiscard]] const algebra::ComplexFunction<mp::real>& v_to_d(const mp::real& d) const { return v_to_d_(d); }
 		[[nodiscard]] const algebra::ComplexFunction<mp::real>& gBlock(const PrimaryOperator& op, const mp::real& S,
 		                                                               const mp::real& P) const
 		{
-			return (*gBlock_)(op, S, P);
+			return gBlock_(op, S, P);
 		}
 
 	public:
@@ -89,8 +86,6 @@ namespace qboot
 			std::move(epsilon_)._reset();
 			std::move(rho_)._reset();
 			std::move(rho_to_z_)._reset();
-			v_to_d_.reset();
-			gBlock_.reset();
 		}
 		// cutoff of the power series expansion of conformal blocks at rho = 0
 		[[nodiscard]] uint32_t n_Max() const { return n_Max_; }
@@ -113,14 +108,14 @@ namespace qboot
 			return os.str();
 		}
 		Context(uint32_t n_Max, uint32_t lambda, uint32_t dim, uint32_t p = 1);
-		Context(Context&&) noexcept = default;
-		Context& operator=(Context&&) noexcept = default;
+		Context(Context&&) noexcept = delete;
+		Context& operator=(Context&&) noexcept = delete;
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 		~Context() = default;
 		[[nodiscard]] uint32_t _total_memory() const
 		{
-			return 1 + v_to_d_->_total_memory() + gBlock_->_total_memory() + rho_to_z_._total_memory();
+			return 1 + v_to_d_._total_memory() + gBlock_._total_memory() + rho_to_z_._total_memory();
 		}
 		[[nodiscard]] mp::rational unitarity_bound(uint32_t spin) const
 		{
