@@ -12,7 +12,8 @@
 
 using qboot::algebra::Vector, qboot::algebra::Matrix;
 using qboot::mp::real;
-using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view, std::vector;
+using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view, std::vector,
+    std::optional;
 
 namespace qboot
 {
@@ -58,16 +59,13 @@ namespace qboot
 			include_odd |= std::any_of(eqs_[i][id].begin(), eqs_[i][id].end(), [](const auto& term) {
 				return std::get<GeneralBlock>(term.block()).include_odd();
 			});
-		auto ag = make_unique<ConformalScale>(op, cont_, include_odd);
-		ag->set_gap(op.lower_bound(), op.upper_bound_safe());
-		return ag;
+		return make_unique<ConformalScale>(op, cont_, include_odd);
 	}
-	[[nodiscard]] Vector<Vector<Matrix<real>>> BootstrapEquation::make_cont_mat(uint32_t id,
-	                                                                            const GeneralPrimaryOperator& op,
-	                                                                            unique_ptr<ConformalScale>* ag) const
+	[[nodiscard]] Vector<Vector<Matrix<real>>> BootstrapEquation::make_cont_mat(
+	    uint32_t id, const GeneralPrimaryOperator& op, const unique_ptr<ConformalScale>& ag) const
 	{
 		auto sz = sector(id).size();
-		auto sp = (*ag)->sample_points();
+		auto sp = ag->sample_points();
 		Vector<Vector<Matrix<real>>> mat(N_);
 		for (uint32_t i = 0; i < N_; ++i) mat[i] = Vector<Matrix<real>>(sp.size(), {sz, sz});
 		uint32_t p = 0;
@@ -88,7 +86,7 @@ namespace qboot
 				{
 					uint32_t r = term.row(), c = term.column();
 					const auto& block = std::get<GeneralBlock>(term.block()).fix_op(op);
-					auto delta = (*ag)->get_delta(sp[k]);
+					auto delta = ag->get_delta(sp[k]);
 					auto val = mul_scalar(term.coeff() / (r == c ? 1 : 2), cont_.evaluate(block, delta).flatten());
 					if (c != r) tmp.at(c, r) += val;
 					tmp.at(r, c) += val;
@@ -152,7 +150,7 @@ namespace qboot
 	void BootstrapEquation::add_ineqs(PolynomialProgram* prg, const std::function<bool(const std::string&)>& filter,
 	                                  uint32_t parallel, const std::unique_ptr<_event_base>& event) const
 	{
-		vector<std::function<unique_ptr<PolynomialInequality>()>> ineqs;
+		vector<std::function<optional<PolynomialInequality>()>> ineqs;
 		for (const auto& [sec, id] : sector_id_)
 		{
 			if (!filter(sec)) continue;
@@ -161,12 +159,12 @@ namespace qboot
 				if (sector(id).is_matrix())
 					ineqs.emplace_back([this, id = id, sz, sec = sec, &event] {
 						_scoped_event scope(sec, event);
-						return make_unique<PolynomialInequality>(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz));
+						return optional{PolynomialInequality(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz))};
 					});
 				else
 					ineqs.emplace_back([this, id = id, sec = sec, &event] {
 						_scoped_event scope(sec, event);
-						return make_unique<PolynomialInequality>(N_, make_disc_mat_v(id), real(0));
+						return optional{PolynomialInequality(N_, make_disc_mat_v(id), real(0))};
 					});
 			else
 				for (const auto& op : sector(id).ops_)
@@ -176,10 +174,10 @@ namespace qboot
 						tag += sec;
 						_scoped_event scope(tag, event);
 						auto ag = common_scale(id, op);
-						auto mat = make_cont_mat(id, op, &ag);
+						auto mat = make_cont_mat(id, op, ag);
 						auto deg = ag->max_degree();
-						return make_unique<PolynomialInequality>(N_, sz, move(ag), move(mat),
-						                                         Vector<Matrix<real>>(deg + 1, {sz, sz}));
+						return optional{
+						    PolynomialInequality(N_, sz, move(ag), move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};
 					});
 		}
 		for (auto&& x : parallel_evaluate(ineqs, parallel)) prg->add_inequality(move(x));

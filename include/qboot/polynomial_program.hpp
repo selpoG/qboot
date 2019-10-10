@@ -1,9 +1,10 @@
 #ifndef QBOOT_POLYNOMIAL_PROGRAM_HPP_
 #define QBOOT_POLYNOMIAL_PROGRAM_HPP_
 
-#include <cstdint>  // for uint32_t
-#include <memory>   // for unique_ptr
-#include <vector>   // for vector
+#include <cstdint>   // for uint32_t
+#include <memory>    // for unique_ptr
+#include <optional>  // for optional
+#include <vector>    // for vector
 
 #include "qboot/algebra/matrix.hpp"      // for Matrix, Vector
 #include "qboot/algebra/polynomial.hpp"  // for Polynomial
@@ -26,9 +27,6 @@ namespace qboot
 	//   - sample scalings s[k] (for k = 0, ..., D)
 	// each element of M[n] / chi is a polynomial of x, but SDPB v.2 requires only there evaluation at x = x[k]
 	// while SDPB v.1 requires explicit coefficients of polynomials in xml file
-	// class PolynomialInequalityEvaluated holds only evaluated matrices
-	// class PolynomialInequalityWithCoeffs holds full coefficients of matrices
-	// class PolynomialInequality is the base abstract class of the two
 	class PolynomialInequality
 	{
 		uint32_t N_, sz_;
@@ -64,8 +62,6 @@ namespace qboot
 		PolynomialInequality(PolynomialInequality&&) noexcept = default;
 		PolynomialInequality& operator=(PolynomialInequality&&) noexcept = default;
 		~PolynomialInequality() = default;
-		[[nodiscard]] const std::unique_ptr<ScaleFactor>& get_scale() const& { return chi_; }
-		[[nodiscard]] std::unique_ptr<ScaleFactor> get_scale() && { return std::move(chi_); }
 		// number of free variables N
 		[[nodiscard]] uint32_t num_of_variables() const { return N_; }
 		[[nodiscard]] uint32_t _total_memory() const
@@ -84,13 +80,13 @@ namespace qboot
 		[[nodiscard]] uint32_t max_degree() const { return chi_->max_degree(); }
 
 		// {q[0](x), ..., q[D / 2](x)}
-		[[nodiscard]] algebra::Vector<algebra::Polynomial> bilinear_bases() { return chi_->bilinear_bases(); }
+		[[nodiscard]] algebra::Vector<algebra::Polynomial> bilinear_bases() const { return chi_->bilinear_bases(); }
 
 		// {x_0, ..., x_D}
-		[[nodiscard]] algebra::Vector<mp::real> sample_points() { return chi_->sample_points(); }
+		[[nodiscard]] algebra::Vector<mp::real> sample_points() const { return chi_->sample_points(); }
 
 		// {s_0, ..., s_D}
-		[[nodiscard]] algebra::Vector<mp::real> sample_scalings() { return chi_->sample_scalings(); }
+		[[nodiscard]] algebra::Vector<mp::real> sample_scalings() const { return chi_->sample_scalings(); }
 
 		// M[n] / chi (0 <= n < N)
 		[[nodiscard]] algebra::Matrix<algebra::Polynomial> matrix_polynomial(uint32_t n)
@@ -116,15 +112,13 @@ namespace qboot
 		// evaluate M[n] / chi at x = x_k (0 <= n < N, 0 <= k <= D)
 		[[nodiscard]] algebra::Matrix<mp::real> matrix_eval_without_scale(uint32_t n, uint32_t k)
 		{
-			const auto& chi = PolynomialInequality::get_scale();
-			return mat_[n][k] / chi->eval(chi->sample_point(k));
+			return std::move(mat_[n][k]) / chi_->eval(chi_->sample_point(k));
 		}
 
 		// evaluate M[N] / chi at x = x_k
 		[[nodiscard]] algebra::Matrix<mp::real> target_eval_without_scale(uint32_t k)
 		{
-			const auto& chi = PolynomialInequality::get_scale();
-			return target_[k] / chi->eval(chi->sample_point(k));
+			return std::move(target_[k]) / chi_->eval(chi_->sample_point(k));
 		}
 	};
 
@@ -155,7 +149,7 @@ namespace qboot
 		// indices which are not eliminated
 		// union of leading_indices_ and free_indices_ is always {0, ..., N - 1}
 		std::vector<uint32_t> free_indices_{};
-		std::vector<std::unique_ptr<PolynomialInequality>> inequality_{};
+		std::vector<std::optional<PolynomialInequality>> inequality_{};
 
 	public:
 		void _reset() &&
@@ -167,7 +161,7 @@ namespace qboot
 			std::vector<mp::real>{}.swap(equation_targets_);
 			std::vector<uint32_t>{}.swap(leading_indices_);
 			std::vector<uint32_t>{}.swap(free_indices_);
-			std::vector<std::unique_ptr<PolynomialInequality>>{}.swap(inequality_);
+			std::vector<std::optional<PolynomialInequality>>{}.swap(inequality_);
 		}
 		explicit PolynomialProgram(uint32_t num_of_vars) : N_(num_of_vars), obj_(num_of_vars)
 		{
@@ -195,7 +189,7 @@ namespace qboot
 		// the order of call of this function may affects the resulting SDPB input
 		// to guarantee the reproducibility, call this function in some fixed order
 		void add_equation(algebra::Vector<mp::real>&& vec, mp::real&& target) &;
-		void add_inequality(std::unique_ptr<PolynomialInequality>&& ineq) &
+		void add_inequality(std::optional<PolynomialInequality>&& ineq) &
 		{
 			assert(ineq->num_of_variables() == N_);
 			inequality_.push_back(std::move(ineq));

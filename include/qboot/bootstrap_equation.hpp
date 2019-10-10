@@ -197,7 +197,7 @@ namespace qboot
 		[[nodiscard]] algebra::Vector<algebra::Matrix<mp::real>> make_disc_mat(uint32_t id) const;
 		[[nodiscard]] std::unique_ptr<ConformalScale> common_scale(uint32_t id, const GeneralPrimaryOperator& op) const;
 		[[nodiscard]] algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>> make_cont_mat(
-		    uint32_t id, const GeneralPrimaryOperator& op, std::unique_ptr<ConformalScale>* ag) const;
+		    uint32_t id, const GeneralPrimaryOperator& op, const std::unique_ptr<ConformalScale>& ag) const;
 
 		// alpha maximizes alpha(norm)
 		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)

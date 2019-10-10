@@ -17,9 +17,8 @@ namespace qboot
 	{
 		uint32_t deg = vals.size() - 1;
 		Vector<Matrix<real>> ev(deg + 1);
-		const auto& chi = PolynomialInequality::get_scale();
-		auto xs = chi->sample_points();
-		for (uint32_t k = 0; k <= deg; ++k) ev[k] = vals[k] / chi->eval(xs[k]);
+		auto xs = chi_->sample_points();
+		for (uint32_t k = 0; k <= deg; ++k) ev[k] = vals[k] / chi_->eval(xs[k]);
 		move(vals)._reset();
 		return algebra::polynomial_interpolate(ev, xs);
 	}
@@ -28,7 +27,7 @@ namespace qboot
 	                                           Vector<real>&& target)
 	    : N_(N), sz_(1), chi_(move(scale)), mat_(N)
 	{
-		uint32_t deg = PolynomialInequality::get_scale()->max_degree();
+		uint32_t deg = chi_->max_degree();
 		for (uint32_t i = 0; i < N; ++i)
 		{
 			assert(mat[i].size() == deg + 1);
@@ -90,7 +89,7 @@ namespace qboot
 	                                           Vector<Vector<Matrix<real>>>&& mat, Vector<Matrix<real>>&& target)
 	    : N_(N), sz_(sz), chi_(move(scale)), mat_(move(mat)), target_(move(target))
 	{
-		uint32_t deg = PolynomialInequality::get_scale()->max_degree();
+		uint32_t deg = chi_->max_degree();
 		assert(mat_.size() == N);
 		for (uint32_t i = 0; i < N; ++i)
 		{

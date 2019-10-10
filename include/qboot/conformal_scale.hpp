@@ -3,7 +3,6 @@
 
 #include <cassert>   // for assert
 #include <cstdint>   // for uint32_t, int32_t
-#include <memory>    // for make_unique, unique_ptr
 #include <optional>  // for optional
 #include <utility>   // for move
 
@@ -16,18 +15,6 @@
 
 namespace qboot
 {
-	inline mp::real sample_point(uint32_t degree, uint32_t k)
-	{
-		return mp::pow(mp::const_pi() * (-1 + 4 * int32_t(k)), 2uL) /
-		       ((-64 * int32_t(degree + 1)) * mp::log(3 - mp::sqrt(8)));
-	}
-	inline algebra::Vector<mp::real> sample_points(uint32_t degree)
-	{
-		algebra::Vector<mp::real> v(degree + 1);
-		for (uint32_t i = 0; i <= degree; ++i) v[i] = mp::pow(mp::const_pi() * (-1 + 4 * int32_t(i)), 2uL);
-		v /= (-64 * int32_t(degree + 1)) * mp::log(3 - mp::sqrt(8));
-		return v;
-	}
 	class PoleSequence
 	{
 		bool include_odd;
@@ -84,13 +71,12 @@ namespace qboot
 		bool odd_included_;
 		uint32_t spin_, lambda_;
 		mp::rational epsilon_;
-		mp::real rho_;
-		mp::real unitarity_bound_{}, gap_{};
-		std::optional<mp::real> end_{};
+		mp::real rho_, gap_;
+		std::optional<mp::real> end_;
 		// pole at Delta = poles_[i]
 		// 1 / (Delta - poles_[i])
 		algebra::Vector<mp::real> poles_;
-		std::optional<algebra::Vector<algebra::Polynomial>> bilinear_bases_{};
+		algebra::Vector<algebra::Polynomial> bilinear_bases_{};
 		void _set_bilinear_bases() &;
 
 	public:
@@ -100,27 +86,19 @@ namespace qboot
 			spin_ = lambda_ = 0;
 			std::move(epsilon_)._reset();
 			std::move(rho_)._reset();
-			std::move(unitarity_bound_)._reset();
 			std::move(gap_)._reset();
 			end_.reset();
 			std::move(poles_)._reset();
-			bilinear_bases_.reset();
-		}
-		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, const mp::real& d1, const mp::real& d2,
-		               const mp::real& d3, const mp::real& d4)
-		    : ConformalScale(cutoff, spin, context, d1 - d2, d3 - d4)
-		{
-		}
-		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, const mp::real& delta12,
-		               const mp::real& delta34)
-		    : ConformalScale(cutoff, spin, context, include_odd(delta12, delta34))
-		{
+			std::move(bilinear_bases_)._reset();
 		}
 		ConformalScale(const GeneralPrimaryOperator& op, const Context& context, bool include_odd)
-		    : ConformalScale(op.num_poles(), op.spin(), context, include_odd)
+		    : ConformalScale(op.num_poles(), op.spin(), context, include_odd, op.lower_bound(), op.upper_bound_safe())
 		{
 		}
-		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, bool include_odd);
+		// constrain delta to be in the range gap <= delta < end
+		// if end is nullopt (corresponds to infinity), gap <= delta
+		ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, bool include_odd, const mp::real& gap,
+		               const std::optional<mp::real>& end);
 		ConformalScale(const ConformalScale&) = delete;
 		ConformalScale& operator=(const ConformalScale&) = delete;
 		ConformalScale(ConformalScale&&) noexcept = default;
@@ -152,47 +130,37 @@ namespace qboot
 		}
 		// evaluate at delta
 		[[nodiscard]] mp::real eval(const mp::real& x) const override { return eval_d(get_delta(x)); }
-		[[nodiscard]] algebra::Vector<mp::real> sample_scalings() override
+		[[nodiscard]] algebra::Vector<mp::real> sample_scalings() const override
 		{
 			auto xs = sample_points();
 			for (auto& x : xs) x = eval(x);
 			return xs;
 		}
-		// constrain delta to be in the range gap <= delta < end
-		// if end is nullopt (corresponds to infinity), gap <= delta
-		void set_gap(const mp::real& gap, const std::optional<mp::real>& end = {}) &
+		[[nodiscard]] algebra::Vector<algebra::Polynomial> bilinear_bases() const override
 		{
-			bilinear_bases_ = {};  // reset cache
-			gap_ = gap;
-			end_ = end;
+			return bilinear_bases_.clone();
 		}
-		[[nodiscard]] algebra::Polynomial bilinear_base(uint32_t m) override
+		[[nodiscard]] mp::real sample_point(uint32_t k) const override
 		{
-			_set_bilinear_bases();
-			return bilinear_bases_.value().at(m).clone();
+			return ConformalScale::sample_point(max_degree(), k);
 		}
-		[[nodiscard]] algebra::Vector<algebra::Polynomial> bilinear_bases() override
+		[[nodiscard]] algebra::Vector<mp::real> sample_points() const override
 		{
-			_set_bilinear_bases();
-			return bilinear_bases_.value().clone();
+			return ConformalScale::sample_points(max_degree());
 		}
-		[[nodiscard]] mp::real sample_point(uint32_t k) override { return qboot::sample_point(max_degree(), k); }
-		[[nodiscard]] algebra::Vector<mp::real> sample_points() override { return qboot::sample_points(max_degree()); }
+		static mp::real sample_point(uint32_t degree, uint32_t k)
+		{
+			return mp::pow(mp::const_pi() * (-1 + 4 * int32_t(k)), 2uL) /
+			       ((-64 * int32_t(degree + 1)) * mp::log(3 - mp::sqrt(8)));
+		}
+		static algebra::Vector<mp::real> sample_points(uint32_t degree)
+		{
+			algebra::Vector<mp::real> v(degree + 1);
+			for (uint32_t i = 0; i <= degree; ++i) v[i] = mp::pow(mp::const_pi() * (-1 + 4 * int32_t(i)), 2uL);
+			v /= (-64 * int32_t(degree + 1)) * mp::log(3 - mp::sqrt(8));
+			return v;
+		}
 	};
-	inline std::unique_ptr<TrivialScale> get_scale([[maybe_unused]] const ConformalBlock<PrimaryOperator>& block,
-	                                               [[maybe_unused]] uint32_t num_poles,
-	                                               [[maybe_unused]] const Context& c)
-	{
-		return std::make_unique<TrivialScale>();
-	}
-	inline std::unique_ptr<ConformalScale> get_scale(const ConformalBlock<GeneralPrimaryOperator>& block,
-	                                                 uint32_t num_poles, const Context& c)
-	{
-		auto scale = std::make_unique<ConformalScale>(num_poles, block.spin(), c, block.include_odd());
-		const auto& op = block.get_op();
-		scale->set_gap(op.lower_bound(), op.upper_bound_safe());
-		return scale;
-	}
 }  // namespace qboot
 
 #endif  // QBOOT_CONFORMAL_SCALE_HPP_

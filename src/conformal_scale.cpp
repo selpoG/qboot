@@ -4,7 +4,7 @@
 
 using qboot::algebra::Vector, qboot::algebra::Polynomial, qboot::algebra::Matrix;
 using qboot::mp::real, qboot::mp::log, qboot::mp::gamma_inc;
-using std::move;
+using std::move, std::optional;
 
 inline static Matrix<real> anti_band_to_inverse(const Vector<real>& ab)
 {
@@ -72,41 +72,40 @@ namespace qboot
 	ConformalScale::~ConformalScale() = default;
 	void ConformalScale::_set_bilinear_bases() &
 	{
-		if (bilinear_bases_.has_value()) return;
+		auto deg = bilinear_bases_.size() - 1;
 		if (end_.has_value())
-		{
-			bilinear_bases_ = Vector<Polynomial>{max_degree() / 2 + 1};
-			for (uint32_t i = 0; i < bilinear_bases_.value().size(); ++i) bilinear_bases_.value().at(i) = Polynomial(i);
-		}
+			for (uint32_t i = 0; i <= deg; ++i) bilinear_bases_.at(i) = Polynomial(i);
 		else
 		{
 			// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
 			Vector<real> shifted_poles(poles_.size());
 			for (uint32_t i = 0; i < poles_.size(); ++i) shifted_poles[i] = poles_[i] - gap_;
 			auto weight = fast_partial_fraction(shifted_poles);
-			auto deg = max_degree() / 2;
 			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
 			Vector<real> inner_prods(2 * deg + 1);
 			for (uint32_t i = 0; i < poles_.size(); ++i)
 				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho_, shifted_poles[i]));
 			inner_prods *= mp::pow(4 * rho_, gap_);
 			auto mat = anti_band_to_inverse(inner_prods);
-			bilinear_bases_ = Vector<Polynomial>{deg + 1};
 			for (uint32_t i = 0; i <= deg; ++i)
 			{
 				Vector<real> v(i + 1);
-				for (uint32_t j = 0; j <= i; ++j) v[j] = mat.at(i, j);
-				bilinear_bases_.value().at(i) = Polynomial(move(v));
+				for (uint32_t j = 0; j <= i; ++j) v[j] = move(mat.at(i, j));
+				bilinear_bases_.at(i) = Polynomial(move(v));
 			}
 		}
 	}
-	ConformalScale::ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, bool include_odd)
+	ConformalScale::ConformalScale(uint32_t cutoff, uint32_t spin, const Context& context, bool include_odd,
+	                               const real& gap, const optional<real>& end)
 	    : odd_included_(include_odd),
 	      spin_(spin),
 	      lambda_(context.lambda()),
 	      epsilon_(context.epsilon()),
 	      rho_(context.rho()),
-	      poles_(cutoff)
+	      gap_(gap),
+	      end_(end),
+	      poles_(cutoff),
+	      bilinear_bases_((cutoff + context.lambda()) / 2 + 1)
 	{
 		// type 1 or 3 PoleData vanishes when delta12 == 0 or delta34 == 0 and k is odd
 		auto get_pols = [this, include_odd](uint32_t type) {
@@ -119,5 +118,6 @@ namespace qboot
 			poles_[pos++] = real(pole_seq.get());
 			pole_seq.next();
 		}
+		_set_bilinear_bases();
 	}
 }  // namespace qboot
