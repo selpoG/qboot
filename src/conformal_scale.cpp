@@ -17,6 +17,18 @@ namespace
 		return qboot::algebra::lower_triangular_inverse(qboot::algebra::cholesky_decomposition(A));
 	}
 
+	// let base = exp(-k)
+	// calculate \int_{0}^{\infty} e ^ {-k x} x ^ n dx, for n = 0, ..., pole_order_max
+	//   = n! / k ^ (n + 1)
+	Vector<real> empty_pole_integral(uint32_t pole_order_max, const real& base)
+	{
+		Vector<real> result(pole_order_max + 1);
+		real minus_log_base = -1 / log(base);
+		result[0] = 1 / minus_log_base;
+		for (uint32_t j = 1; j <= pole_order_max; ++j) result[j] = result[j - 1] * j / minus_log_base;
+		return result;
+	}
+
 	// let pole_position = -p, base = exp(-k)
 	// calculate \int_{0}^{\infty} e ^ {-k x} x ^ n / (x + p) dx, for n = 0, ..., pole_order_max
 	// this integral equals to
@@ -133,10 +145,14 @@ namespace qboot
 			for (uint32_t i = 0; i < poles_.size(); ++i) shifted_poles[i] = poles_[i] - gap_;
 			auto weight = fast_partial_fraction(shifted_poles);
 			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
+			auto base = 4 * rho_;
 			Vector<real> inner_prods(2 * deg + 1);
-			for (uint32_t i = 0; i < poles_.size(); ++i)
-				inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, 4 * rho_, shifted_poles[i]));
-			inner_prods *= mp::pow(4 * rho_, gap_);
+			if (poles_.size() == 0)
+				inner_prods = empty_pole_integral(2 * deg, base);
+			else
+				for (uint32_t i = 0; i < poles_.size(); ++i)
+					inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, base, shifted_poles[i]));
+			inner_prods *= mp::pow(base, gap_);
 			auto mat = anti_band_to_inverse(inner_prods);
 			for (uint32_t i = 0; i <= deg; ++i)
 			{
