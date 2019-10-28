@@ -24,8 +24,8 @@ namespace
 	{
 		Vector<real> result(pole_order_max + 1);
 		real minus_log_base = -1 / log(base);
-		result[0] = 1 / minus_log_base;
-		for (uint32_t j = 1; j <= pole_order_max; ++j) result[j] = result[j - 1] * j / minus_log_base;
+		result[0] = minus_log_base;
+		for (uint32_t j = 1; j <= pole_order_max; ++j) result[j] = result[j - 1] * j * minus_log_base;
 		return result;
 	}
 

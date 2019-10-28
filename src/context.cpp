@@ -10,7 +10,7 @@ namespace
 	// calculate z - 1 / 2 as a function of r' (= r - 3 + 2 sqrt(2)) upto r' ^ {lambda}
 	RealFunction<real> z_as_func_rho(uint32_t lambda)
 	{
-		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqt(2) + r') ^ {-2}
+		// z - 1 / 2 = (-r' ^ 2 / 2 + 2 sqrt(2) r') (4 - 2sqrt(2) + r') ^ {-2}
 		// f = (4 - 2sqt(2) + r') ^ {-2}
 		auto f = qboot::algebra::power_function(4 - qboot::mp::sqrt(8), real(1), real(-2), lambda);
 		// g1 = 2 sqrt(2) r' f
