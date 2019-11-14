@@ -79,7 +79,7 @@ namespace qboot
 		// convert delta to x (in [0, \infty))
 		[[nodiscard]] mp::real get_x(const mp::real& delta) const
 		{
-			if (end_.has_value()) return end_.value() * (delta - gap_) / (end_.value() - gap_);
+			if (end_.has_value()) return end_.value() * (delta - gap_) / (end_.value() - delta);
 			return delta - gap_;
 		}
 		// evaluate at delta

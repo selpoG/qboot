@@ -123,7 +123,7 @@ namespace qboot
 		                                                         const algebra::ComplexFunction<mp::real>& gBlock,
 		                                                         algebra::FunctionSymmetry sym) const
 		{
-			return mul(v_to_d(d), gBlock).proj(sym);
+			return mul_scalar(2, mul(v_to_d(d), gBlock).proj(sym));
 		}
 		[[nodiscard]] algebra::ComplexFunction<mp::real> evaluate(const ConformalBlock<PrimaryOperator>& block) const
 		{
