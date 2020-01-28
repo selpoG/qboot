@@ -100,6 +100,21 @@ namespace qboot
 		for (uint32_t k = 0; k <= deg; ++k) assert(target_[k].is_square() && target_[k].row() == sz);
 	}
 
+	Vector<real> PolynomialProgram::recover(const Vector<real>& z)
+	{
+		assert(z.size() + equation_.size() == N_);
+		uint32_t eq_sz = uint32_t(equation_.size()), M = N_ - eq_sz;
+		Vector<real> y(N_);
+		for (uint32_t n = 0; n < M; ++n) y[free_indices_[n]] = z[n];
+		for (uint32_t e = 0; e < eq_sz; ++e)
+		{
+			auto n = leading_indices_[e];
+			y[n] = equation_targets_[e];
+			for (uint32_t m = 0; m < M; ++m) y[n] -= equation_[e][free_indices_[m]] * z[m];
+		}
+		return y;
+	}
+
 	void PolynomialProgram::add_equation(Vector<real>&& vec, real&& target) &
 	{
 		assert(vec.size() == N_);

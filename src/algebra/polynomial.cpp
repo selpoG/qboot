@@ -25,6 +25,18 @@ namespace qboot::algebra
 		for (uint32_t i = 0; i <= uint32_t(deg); ++i) coeff_[i].swap(coeffs[i]);
 		move(coeffs)._reset();
 	}
+	void Polynomial::derivate() &
+	{
+		if (iszero()) return;
+		if (degree() == 0)
+		{
+			*this = {};
+			return;
+		}
+		Vector<real> new_coeff(coeff_.size() - 1);
+		for (uint32_t i = 1; i < coeff_.size(); ++i) new_coeff[i - 1] = i * move(coeff_[i]);
+		coeff_ = move(new_coeff);
+	}
 	Polynomial& Polynomial::operator+=(const Polynomial& p) &
 	{
 		if (p.iszero()) return *this;
@@ -166,5 +178,54 @@ namespace qboot::algebra
 			f = true;
 		}
 		return out;
+	}
+	Matrix<real> interpolation_matrix(const Vector<real>& points)
+	{
+		assert(points.size() > 0);
+		auto deg = points.size() - 1;
+		Matrix<real> mat(deg + 1, deg + 1);
+		for (uint32_t i = 0; i <= deg; ++i)
+		{
+			mat.at(i, 0) = 1;
+			for (uint32_t j = 1; j <= deg; ++j) mat.at(i, j) = points[i] * mat.at(i, j - 1);
+		}
+		return inverse(mat);
+	}
+	static int32_t _sign(uint32_t N, const std::vector<uint32_t>& perm);
+	int32_t _sign(uint32_t N, const std::vector<uint32_t>& perm)
+	{
+		int32_t sign = 1;
+		std::vector<bool> done(N, false);
+		for (uint32_t i = 0; i < N; ++i)
+		{
+			if (done[i]) continue;
+			uint32_t len = 0, j = i;
+			while (!done[j])
+			{
+				done[j] = true;
+				j = perm[j];
+				++len;
+			}
+			if (len % 2 == 0) sign *= -1;
+		}
+		return sign;
+	}
+	Polynomial determinant(Matrix<Polynomial>&& mat)
+	{
+		assert(mat.is_square());
+		uint32_t N = mat.row();
+		if (N == 0) return Polynomial(0u);
+		if (N == 1) return move(mat.at(0, 0));
+		if (N == 2) return mul(move(mat.at(0, 0)), mat.at(1, 1)) - mul(move(mat.at(0, 1)), mat.at(1, 0));
+		std::vector<uint32_t> perm(N);
+		for (uint32_t i = 0; i < N; ++i) perm[i] = i;
+		Polynomial ans;
+		do
+		{
+			Polynomial prod(real(_sign(N, perm)), 0u);
+			for (uint32_t i = 0; i < N; ++i) prod = mul(prod, mat.at(i, perm[i]));
+			ans += prod;
+		} while (std::next_permutation(perm.begin(), perm.end()));
+		return ans;
 	}
 }  // namespace qboot::algebra

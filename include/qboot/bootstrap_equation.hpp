@@ -21,6 +21,7 @@
 #include "qboot/context.hpp"                   // for Context
 #include "qboot/mp/rational.hpp"               // for rational
 #include "qboot/mp/real.hpp"                   // for real
+#include "qboot/my_filesystem.hpp"             // for path
 #include "qboot/polynomial_program.hpp"        // for PolynomialProgram
 #include "qboot/primary_op.hpp"                // for GeneralPrimaryOperator, PrimaryOperator
 #include "qboot/task_queue.hpp"                // for _event_base
@@ -289,6 +290,15 @@ namespace qboot
 		{
 			return ope_maximize(target, norm, mp::real(-1), parallel, event);
 		}
+
+		// apply func and use Extremal Functional Method
+		// extract operators such that det(func(V_op)) = 0
+		std::map<std::string, std::vector<PrimaryOperator>, std::less<>> get_spectrum(
+		    const algebra::Vector<mp::real>& func, std::string_view norm, uint32_t parallel = 1,
+		    const std::unique_ptr<_event_base>& event = {}) const;
+		std::map<std::string, std::vector<PrimaryOperator>, std::less<>> get_spectrum(
+		    const fs::path& func, std::string_view norm, uint32_t parallel = 1,
+		    const std::unique_ptr<_event_base>& event = {}) const;
 	};
 	using Externals = std::array<PrimaryOperator, 4>;
 	class Equation

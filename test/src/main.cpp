@@ -213,38 +213,55 @@ int main(int argc, char* argv[])
 	qboot::mp::global_rnd = MPFR_RNDN;
 	constexpr uint32_t n_Max = 400, lambda = 14, dim = 3, maxspin = 24, parallel = 8;
 	[[maybe_unused]] constexpr uint32_t numax = 6;
-	if (argc != 1 && argc != 4)
+	if (argc != 1 && argc != 2 && argc != 5)
 	{
-		cout << "usage: ./program [delta_s delta_e delta_e1]" << endl;
+		cout << "usage: ./program [mode [delta_s delta_e delta_e1]]" << endl;
+		cout << "mode = solve or efm" << endl;
 		return 1;
 	}
+	unique_ptr<char*[]> args(argv);
+	string mode = argc == 1 ? "efm" : args[1];
+	assert((mode == "solve") || (mode == "efm"));
 	dict<rational> deltas;
 	deltas["s"] = parse("0.5181489").value();
 	deltas["e"] = parse("1.412625").value();
 	deltas["e1"] = parse("3.83").value();
-	if (argc == 4)
+	if (argc == 5)
 	{
-		unique_ptr<char*[]> args(argv);
-		deltas["s"] = parse(args[1]).value();
-		deltas["e"] = parse(args[2]).value();
-		deltas["e1"] = parse(args[3]).value();
-		args.release();
+		deltas["s"] = parse(args[2]).value();
+		deltas["e"] = parse(args[3]).value();
+		deltas["e1"] = parse(args[4]).value();
 	}
+	args.release();
 #ifndef NDEBUG
 	unique_ptr<qboot::_event_base> stopwatch = std::make_unique<WatchScope>();
 #else
 	unique_ptr<qboot::_event_base> stopwatch{};
 #endif
-	std::optional<qboot::PolynomialProgram> pmp;
+	if (mode == "efm")
 	{
-		Context c(n_Max, lambda, dim, parallel);
+		Context c(n_Max, lambda, dim);
 		auto boot = mixed_ising(c, deltas, numax, maxspin);
-		pmp = boot.ope_maximize("T", "unit", parallel, stopwatch);
-		// pmp = boot.find_contradiction("unit", parallel, stopwatch);
+		auto spc = boot.get_spectrum(fs::current_path() / "func.txt", "unit", parallel, stopwatch);
+		for (const auto& [sec, ops] : spc)
+		{
+			cout << sec << endl;
+			for (const auto& op : ops) cout << op.str() << endl;
+		}
 	}
-	auto root = fs::current_path() / name_mixed(deltas);
-	auto input = move(pmp.value()).create_input(parallel, stopwatch);
-	pmp.reset();
-	move(input).write(root, parallel, stopwatch);
+	else
+	{
+		std::optional<qboot::PolynomialProgram> pmp;
+		{
+			Context c(n_Max, lambda, dim, parallel);
+			auto boot = mixed_ising(c, deltas, numax, maxspin);
+			pmp = boot.ope_maximize("T", "unit", parallel, stopwatch);
+			// pmp = boot.find_contradiction("unit", parallel, stopwatch);
+		}
+		auto root = fs::current_path() / name_mixed(deltas);
+		auto input = move(pmp.value()).create_input(parallel, stopwatch);
+		pmp.reset();
+		move(input).write(root, parallel, stopwatch);
+	}
 	return 0;
 }

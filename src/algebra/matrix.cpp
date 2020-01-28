@@ -36,6 +36,31 @@ namespace qboot::algebra
 	{
 		for (uint32_t c = c0; c < mat->column(); ++c) mat->at(r, c) *= x;
 	}
+	real determinant(Matrix<real>&& mat)
+	{
+		assert(mat.is_square());
+		if (mat.row() == 0) return real(1);
+		if (mat.row() == 1) return mat.at(0, 0);
+		if (mat.row() == 2) return mat.at(0, 0) * mat.at(1, 1) - mat.at(0, 1) * mat.at(1, 0);
+		real det(1);
+		for (uint32_t j = 0; j < mat.row(); ++j)
+		{
+			uint32_t p = j;
+			for (uint32_t i = j + 1; i < mat.row(); ++i)
+				if (mp::cmpabs(mat.at(p, j), mat.at(i, j)) < 0) p = i;
+			if (p != j)
+			{
+				det.negate();
+				_swap_row(&mat, p, j, j);
+			}
+			det *= mat.at(j, j);
+			if (det.iszero()) break;
+			_multiply_row(&mat, j, 1 / mat.at(j, j), j);
+			for (uint32_t i = j + 1; i < mat.row(); ++i) _add_row(&mat, j, i, -mat.at(i, j), j);
+		}
+		move(mat)._reset();
+		return det;
+	}
 	Matrix<real> inverse(Matrix<real>&& mat)
 	{
 		assert(mat.is_square());

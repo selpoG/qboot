@@ -55,6 +55,8 @@ namespace qboot::algebra
 			for (auto& v : coeffs) coeff_[i++] = v.clone();
 			assert(coeff_.size() == 0 || !coeff_[coeff_.size() - 1].iszero());
 		}
+		// coefficient of x ^ p (p <= deg)
+		[[nodiscard]] const mp::real& at(uint32_t p) const { return coeff_.at(p); }
 		[[nodiscard]] const mp::real* begin() const& noexcept { return coeff_.begin(); }
 		[[nodiscard]] const mp::real* end() const& noexcept { return coeff_.end(); }
 		[[nodiscard]] mp::real abs() const { return mp::sqrt(norm()); }
@@ -87,6 +89,13 @@ namespace qboot::algebra
 		}
 		void swap(Polynomial& other) & { coeff_.swap(other.coeff_); }
 		void negate() & { coeff_.negate(); }
+		void derivate() &;
+		Polynomial derivative()
+		{
+			auto t = clone();
+			t.derivate();
+			return t;
+		}
 		Polynomial& operator+=(const Polynomial& p) &;
 		Polynomial& operator-=(const Polynomial& p) &;
 		template <class R>
@@ -183,6 +192,15 @@ namespace qboot::algebra
 		}
 		return ans;
 	}
+	Matrix<mp::real> interpolation_matrix(const Vector<mp::real>& points);
+	template <class Ring>
+	_polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals,
+	                                              const Matrix<mp::real>& interpolation_matrix)
+	{
+		assert(vals.size() == interpolation_matrix.row() && vals.size() > 0 && interpolation_matrix.is_square());
+		auto coeffs = dot(interpolation_matrix, vals);
+		return to_pol(&coeffs);
+	}
 	// calculate coefficients c of polynomial f(x) s.t. for each i, f(points[i]) = vals[i]
 	// vals[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
 	// evals(polynomial_interpolate(vals, points), points) == vals (up to rounding errors)
@@ -190,15 +208,7 @@ namespace qboot::algebra
 	_polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<mp::real>& points)
 	{
 		assert(vals.size() == points.size() && points.size() > 0);
-		auto deg = points.size() - 1;
-		Matrix<mp::real> mat(deg + 1, deg + 1);
-		for (uint32_t i = 0; i <= deg; ++i)
-		{
-			mat.at(i, 0) = 1;
-			for (uint32_t j = 1; j <= deg; ++j) mat.at(i, j) = points[i] * mat.at(i, j - 1);
-		}
-		auto coeffs = dot(inverse(mat), vals);
-		return to_pol(&coeffs);
+		return polynomial_interpolate(vals, interpolation_matrix(points));
 	}
 	template <class Ring>
 	Vector<_evaluated_t<Ring>> evals(const Ring& v, const Vector<mp::real>& xs)
@@ -207,6 +217,8 @@ namespace qboot::algebra
 		for (uint32_t i = 0; i < xs.size(); ++i) ans[i] = v.eval(xs[i]);
 		return ans;
 	}
+	Polynomial determinant(Matrix<Polynomial>&& mat);
+	inline Polynomial determinant(const Matrix<Polynomial>& mat) { return determinant(mat.clone()); }
 }  // namespace qboot::algebra
 
 #endif  // QBOOT_ALGEBRA_POLYNOMIAL_HPP_

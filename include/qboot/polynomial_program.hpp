@@ -184,6 +184,9 @@ namespace qboot
 			assert(obj.size() == N_);
 			obj_ = std::move(obj);
 		}
+		// recover variables (y[0], ..., y[N - 1]) from eliminated variables (z[0], ..., z[N - 1 - E]),
+		// where E is the number of linear constraints added
+		algebra::Vector<mp::real> recover(const algebra::Vector<mp::real>& z);
 		// add a constraint \sum_{n = 0}^{N - 1} y[n] mat[n] = target
 		// we assume that all equations are linear independent
 		// the order of call of this function may affects the resulting SDPB input

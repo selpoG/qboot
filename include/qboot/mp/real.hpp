@@ -67,11 +67,12 @@ namespace qboot::mp
 	inline std::basic_ostream<Char, Traits>& _helper_ostream(std::basic_ostream<Char, Traits>& s, mpfr_ptr x,
 	                                                         mpfr_rnd_t rnd);
 
-	inline bool _is_nan(mpfr_srcptr x) { return mpfr_nan_p(x) != 0; }    // NOLINT
-	inline bool _is_inf(mpfr_srcptr x) { return mpfr_inf_p(x) != 0; }    // NOLINT
-	inline bool _is_zero(mpfr_srcptr x) { return mpfr_zero_p(x) != 0; }  // NOLINT
-	inline int _sgn(mpfr_srcptr x) { return mpfr_sgn(x); }               // NOLINT
-	inline int _signbit(mpfr_srcptr x) { return mpfr_signbit(x); }       // NOLINT
+	inline bool _is_nan(mpfr_srcptr x) { return mpfr_nan_p(x) != 0; }          // NOLINT
+	inline bool _is_integer(mpfr_srcptr x) { return mpfr_integer_p(x) != 0; }  // NOLINT
+	inline bool _is_inf(mpfr_srcptr x) { return mpfr_inf_p(x) != 0; }          // NOLINT
+	inline bool _is_zero(mpfr_srcptr x) { return mpfr_zero_p(x) != 0; }        // NOLINT
+	inline int _sgn(mpfr_srcptr x) { return mpfr_sgn(x); }                     // NOLINT
+	inline int _signbit(mpfr_srcptr x) { return mpfr_signbit(x); }             // NOLINT
 
 	template <class Tp>
 	inline constexpr bool _mpfr_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer> ||
@@ -146,6 +147,39 @@ namespace qboot::mp
 		[[nodiscard]] bool iszero() const { return _is_zero(_x); }
 		[[nodiscard]] bool isinf() const { return _is_inf(_x); }
 		[[nodiscard]] bool isnan() const { return _is_nan(_x); }
+		[[nodiscard]] bool isinteger() const { return _is_integer(_x); }
+		[[nodiscard]] integer to_integer() const
+		{
+			mpz_t x;
+			mpz_init(x);
+			mpfr_get_z(x, _x, MPFR_RNDD);
+			return integer(x);
+		}
+		[[nodiscard]] rational to_rational() const
+		{
+			mpq_t x;
+			mpq_init(x);
+			mpfr_get_q(x, _x);
+			return rational(x);
+		}
+		[[nodiscard]] real _next_toward(const real& t) const
+		{
+			real x(*this);
+			mpfr_nexttoward(x._x, t._x);
+			return x;
+		}
+		[[nodiscard]] real _next_above() const
+		{
+			real x(*this);
+			mpfr_nextabove(x._x);
+			return x;
+		}
+		[[nodiscard]] real _next_below() const
+		{
+			real x(*this);
+			mpfr_nextbelow(x._x);
+			return x;
+		}
 
 		void negate() & { *this *= -1; }
 

@@ -610,6 +610,11 @@ namespace qboot::mp
 			mpz_fdiv_r_ui(_x, _x, o);
 			return *this;
 		}
+		integer& operator<<=(mp_bitcnt_t o) &
+		{
+			mpz_mul_2exp(_x, _x, o);
+			return *this;
+		}
 
 		friend integer mul(const integer& r1, const integer& r2) { return r1 * r2; }
 		friend integer mul(integer&& r1, const integer& r2) { return std::move(r1) * r2; }
@@ -706,6 +711,13 @@ namespace qboot::mp
 			b.reset();
 			return std::move(a);
 		}
+		friend integer operator<<(const integer& a, mp_bitcnt_t o)
+		{
+			integer z;
+			mpz_mul_2exp(z._x, a._x, o);
+			return z;
+		}
+		friend integer operator<<(integer&& a, mp_bitcnt_t o) { return std::move(a <<= o); }
 
 		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
 		friend integer operator+(const integer& r1, const Tp& r2)
@@ -849,6 +861,10 @@ namespace qboot::mp
 		friend integer pow(_ulong op1, _ulong op2);
 		friend integer factorial(_ulong n);
 		friend int cmpabs(const integer& r1, const integer& r2);
+		friend integer gcd(const integer& op1, const integer& op2);
+		friend integer lcm(const integer& op1, const integer& op2);
+		friend void addmul(integer& ans, const integer& r1, const integer& r2);
+		friend void submul(integer& ans, const integer& r1, const integer& r2);
 	};
 	inline int iszero(const integer& x) { return mpz_sgn(x._x) == 0; }
 	inline int sgn(const integer& x) { return mpz_sgn(x._x); }
@@ -887,6 +903,22 @@ namespace qboot::mp
 		mpz_fac_ui(temp._x, n);
 		return temp;
 	}
+	inline integer gcd(const integer& op1, const integer& op2)
+	{
+		integer temp;
+		mpz_gcd(temp._x, op1._x, op2._x);
+		return temp;
+	}
+	inline integer lcm(const integer& op1, const integer& op2)
+	{
+		integer temp;
+		mpz_lcm(temp._x, op1._x, op2._x);
+		return temp;
+	}
+	// ans += r1 * r2
+	inline void addmul(integer& ans, const integer& r1, const integer& r2) { mpz_addmul(ans._x, r1._x, r2._x); }
+	// ans -= r1 * r2
+	inline void submul(integer& ans, const integer& r1, const integer& r2) { mpz_submul(ans._x, r1._x, r2._x); }
 	inline int cmpabs(const integer& r1, const integer& r2) { return mpz_cmpabs(r1._x, r2._x); }
 	inline _ulong _mp_ops<_ulong>::get(mpq_srcptr op) { return _ulong(_mp_ops<integer>::get(op)); }
 	inline _long _mp_ops<_long>::get(mpq_srcptr op) { return _long(_mp_ops<integer>::get(op)); }

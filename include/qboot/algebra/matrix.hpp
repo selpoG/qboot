@@ -460,6 +460,8 @@ namespace qboot::algebra
 		}
 	};
 
+	mp::real determinant(Matrix<mp::real>&& mat);
+	inline mp::real determinant(const Matrix<mp::real>& mat) { return determinant(mat.clone()); }
 	Matrix<mp::real> inverse(Matrix<mp::real>&& mat);
 	inline Matrix<mp::real> inverse(const Matrix<mp::real>& mat) { return inverse(mat.clone()); }
 	// calculate the cholesky decomposition L of positive definite matrix, by Cholesky–Banachiewicz algorithm.
