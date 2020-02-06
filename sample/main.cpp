@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 	}
 	Context c(n_Max, lambda, dim, parallel);
 	auto eqn = create(c, deltas, numax, maxspin);
-	auto pmp = eqn.find_contradiction("unit", parallel);
+	auto pmp = eqn.convert(qboot::FindContradiction("unit"), parallel);
 	auto root = fs::current_path() / name(deltas);
 	cout << root << endl;
 	move(pmp).create_input(parallel).write(root, parallel);

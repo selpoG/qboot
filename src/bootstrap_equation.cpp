@@ -20,11 +20,11 @@ namespace qboot
 	class ExactPolynomial
 	{
 		// coeff_[N_] must be positive
-		vector<integer> coeff_;
+		vector<integer> coeff_{};
 		// degree
 		uint32_t N_;
 		// binom(n, m) for 0<=n<=deg, 0<=m<=n/2
-		shared_ptr<vector<vector<integer>>> binom_;
+		shared_ptr<vector<vector<integer>>> binom_{};
 		void set_binom()
 		{
 			binom_ = std::make_shared<vector<vector<integer>>>();
@@ -47,7 +47,7 @@ namespace qboot
 				if (n % 2 == 0) binom_->at(n).emplace_back(binom_->at(n - 1)[n / 2 - 1] << 1);
 			}
 		}
-		const integer& binom(uint32_t n, uint32_t m) const
+		[[nodiscard]] const integer& binom(uint32_t n, uint32_t m) const
 		{
 			if (m > n) return binom_->at(0)[1];
 			if (m > n - m) return binom(n, n - m);
@@ -56,22 +56,22 @@ namespace qboot
 		ExactPolynomial(vector<integer>&& coeff, const shared_ptr<vector<vector<integer>>>& binom)
 		    : coeff_(move(coeff)), N_(0), binom_(binom)
 		{
-			assert(coeff_.size() > 0 && coeff_.back() != 0);
+			assert(!coeff_.empty() && coeff_.back() != 0);
 			N_ = uint32_t(coeff_.size()) - 1;
 			if (coeff_.back() < 0)
 				for (auto& c : coeff_) c.negate();
 		}
 
 	public:
-		ExactPolynomial(vector<integer>&& coeff) : coeff_(move(coeff)), N_(0), binom_{}
+		explicit ExactPolynomial(vector<integer>&& coeff) : coeff_(move(coeff)), N_(0)
 		{
-			assert(coeff_.size() > 0 && coeff_.back() != 0);
+			assert(!coeff_.empty() && coeff_.back() != 0);
 			N_ = uint32_t(coeff_.size()) - 1;
 			if (coeff_.back() < 0)
 				for (auto& c : coeff_) c.negate();
 			set_binom();
 		}
-		ExactPolynomial(const Polynomial& d) : coeff_{}, N_(0), binom_{}
+		explicit ExactPolynomial(const Polynomial& d) : N_(0)
 		{
 			assert(!d.iszero());
 			vector<rational> coeff;  // d as rational
@@ -137,9 +137,9 @@ namespace qboot
 			auto ub = rational(roots_upper_bound());
 			vector<array<rational, 2>> ans;
 			ans.reserve(N_);
-			normalize(lb, ub).isolate_helper(ans);
+			normalize(lb, ub).isolate_helper(&ans);
 			for (auto&& t : ans)
-				for (uint32_t i = 0; i < 2; ++i) t[i] = lb + (ub - lb) * t[i];
+				for (uint32_t i = 0; i < 2; ++i) t.at(i) = lb + (ub - lb) * t.at(i);
 			return ans;
 		}
 
@@ -272,24 +272,24 @@ namespace qboot
 				for (uint32_t i = j; i <= N_; ++i) addmul(q[j], coeff_[i], binom(i, j));
 			return ExactPolynomial(move(q), binom_);
 		}
-		void isolate_helper(vector<array<rational, 2>>& ans) &&
+		void isolate_helper(vector<array<rational, 2>>* ans) &&
 		{
 			rational m(1, 2u);
 			auto p_m = eval(m);
 			auto cnt = count_roots();
-			if (p_m == 0) ans.push_back({m, m});
-			if (cnt == 1 && p_m != 0) ans.push_back({rational(0), rational(1)});
+			if (p_m == 0) ans->push_back({m, m});
+			if (cnt == 1 && p_m != 0) ans->push_back({rational(0), rational(1)});
 			if (cnt >= 2)
 			{
 				left_child();
 				auto right = shift_one();
-				auto it = ans.end();
+				auto it = ans->end();
 				move(*this).isolate_helper(ans);
-				for (; it != ans.end(); ++it)
+				for (; it != ans->end(); ++it)
 					for (uint32_t i = 0; i < 2; ++i) it->at(i) /= 2;
 				vector<integer>().swap(coeff_);
 				move(right).isolate_helper(ans);
-				for (; it != ans.end(); ++it)
+				for (; it != ans->end(); ++it)
 					for (uint32_t i = 0; i < 2; ++i) it->at(i) = (1 + it->at(i)) / 2;
 			}
 		}
@@ -334,10 +334,52 @@ namespace qboot
 		}
 	};
 
+	SDPMode::~SDPMode() = default;
+	_find_contradiction::~_find_contradiction() = default;
+	_extremal_OPE::~_extremal_OPE() = default;
+	PolynomialProgram _find_contradiction::_prepare(uint32_t N, const BootstrapEquation& boot) const
+	{
+		PolynomialProgram prg(N);
+		prg.objective_constant() = real(0);
+		prg.objectives(Vector(prg.num_of_variables(), real(0)));
+		prg.add_equation(boot.make_disc_mat_v(norm_), real(1));
+		return prg;
+	}
+	PolynomialProgram _extremal_OPE::_prepare(uint32_t N, const BootstrapEquation& boot) const
+	{
+		PolynomialProgram prg(N);
+		prg.objective_constant() = real(0);
+		prg.objectives(boot.make_disc_mat_v(norm_));
+		prg.add_equation(boot.make_disc_mat_v(target_), real(maximize_ ? 1 : -1));
+		return prg;
+	}
+
+	Vector<real> read_raw_functional(const fs::path& y_txt)
+	{
+		std::ifstream is(y_txt);
+		uint32_t sz, M;
+		is >> sz >> M;
+		assert(M == 1);
+		Vector<real> v(sz);
+		for (uint32_t i = 0; i < sz; ++i) is >> v.at(i);
+		return v;
+	}
 	using FixedBlock = ConformalBlock<PrimaryOperator>;
 	using GeneralBlock = GeneralConformalBlock;
+	Matrix<real> BootstrapEquation::apply_functional(const Vector<real>& func, string_view disc_sector) const
+	{
+		auto id = get_id(disc_sector);
+		auto sec = sector(id);
+		assert(sec.type() == SectorType::Discrete);
+		auto mats = make_disc_mat(id);
+		auto sz = sec.size();
+		Matrix<real> mat{sz, sz};
+		for (uint32_t n = 0; n < N_; ++n) mat += mul_scalar(func[n], move(mats[n]));
+		return mat;
+	}
 	[[nodiscard]] Vector<Matrix<real>> BootstrapEquation::make_disc_mat(uint32_t id) const
 	{
+		assert(sector(id).type() == SectorType::Discrete);
 		auto sz = sector(id).size();
 		Vector<Matrix<real>> mat(N_);
 		for (uint32_t i = 0; i < N_; ++i) mat[i] = {sz, sz};
@@ -381,6 +423,7 @@ namespace qboot
 	[[nodiscard]] Vector<Vector<Matrix<real>>> BootstrapEquation::make_cont_mat(
 	    uint32_t id, const GeneralPrimaryOperator& op, const unique_ptr<ConformalScale>& ag) const
 	{
+		assert(sector(id).type() == SectorType::Continuous);
 		auto sz = sector(id).size();
 		auto sp = ag->sample_points();
 		Vector<Vector<Matrix<real>>> mat(N_);
@@ -417,56 +460,11 @@ namespace qboot
 		return mat;
 	}
 
-	[[nodiscard]] PolynomialProgram BootstrapEquation::ope_maximize(string_view target, string_view norm, real&& N,
-	                                                                uint32_t parallel,
-	                                                                const unique_ptr<_event_base>& event) const
+	map<string, vector<PrimaryOperator>, std::less<>> BootstrapEquation::get_spectrum(
+	    const Vector<real>& recovered_func, uint32_t parallel, const unique_ptr<_event_base>& event) const
 	{
 		assert(N_ > 0);
-		PolynomialProgram prg(N_);
-		{
-			auto id = sector_id_.find(norm)->second;
-			assert(!sector(id).is_matrix());
-			assert(sector(id).type() == SectorType::Discrete);
-			prg.objective_constant() = real(0);
-			prg.objectives(make_disc_mat_v(id));
-		}
-		{
-			auto id = sector_id_.find(target)->second;
-			assert(!sector(id).is_matrix());
-			assert(sector(id).type() == SectorType::Discrete);
-			prg.add_equation(make_disc_mat_v(id), move(N));
-		}
-		add_ineqs(
-		    &prg, [&norm, &target](const string& s) { return s != norm && s != target; }, parallel, event);
-		return prg;
-	}
-	map<string, vector<PrimaryOperator>, std::less<>> BootstrapEquation::get_spectrum(
-	    const fs::path& func, string_view norm, uint32_t parallel, const unique_ptr<_event_base>& event) const
-	{
-		std::ifstream is(func);
-		uint32_t N, M;
-		is >> N >> M;
-		assert(M == 1);
-		Vector<real> v(N);
-		for (uint32_t i = 0; i < N; ++i) is >> v.at(i);
-		return get_spectrum(v, norm, parallel, event);
-	}
-	map<string, vector<PrimaryOperator>, std::less<>> BootstrapEquation::get_spectrum(
-	    const Vector<real>& func, string_view norm, uint32_t parallel, const unique_ptr<_event_base>& event) const
-	{
-		assert(N_ > 0);
-		PolynomialProgram prg(N_);
-		prg.objective_constant() = real(0);
-		prg.objectives(Vector(N_, real(0)));
-		{
-			_scoped_event scope(norm, event);
-			auto id = sector_id_.find(norm)->second;
-			assert(!sector(id).is_matrix());
-			assert(sector(id).type() == SectorType::Discrete);
-			prg.add_equation(make_disc_mat_v(id), real(1));
-		}
-		auto recovered = prg.recover(func);
-		map<string, vector<PrimaryOperator>, std::less<>> spectrum;
+		map<string, vector<PrimaryOperator>, std::less<>> spectrum_dict;
 		_memoized<Matrix<real>(uint32_t)> inv(
 		    [](uint32_t deg) { return algebra::interpolation_matrix(ConformalScale::sample_points(deg)); }, parallel);
 		vector<function<tuple<string, vector<PrimaryOperator>>()>> spectrums;
@@ -475,11 +473,12 @@ namespace qboot
 			if (sector(id).type_ != SectorType::Continuous) continue;
 			auto sz = sector(id).size();
 			for (const auto& op : sector(id).ops_)
-				spectrums.emplace_back([this, id = id, sec = sec, op = op, sz, &recovered, &inv, &event]() {
+				spectrums.emplace_back([this, id = id, sec = sec, op = op, sz, &recovered_func, &inv, &event]() {
 					vector<PrimaryOperator> spectrum;
 					auto tag = op.str();
 					tag += " in ";
 					tag += sec;
+					cout << tag << endl;
 					_scoped_event scope(tag, event);
 					auto ag = common_scale(id, op);
 					auto ps = ag->sample_points();
@@ -490,7 +489,7 @@ namespace qboot
 					for (uint32_t k = 0; k < num_pts; ++k)
 					{
 						mats[k] = {sz, sz};
-						for (uint32_t n = 0; n < N_; ++n) mats[k] += mul_scalar(recovered[n], move(mat[n][k]));
+						for (uint32_t n = 0; n < N_; ++n) mats[k] += mul_scalar(recovered_func[n], move(mat[n][k]));
 						mats[k] /= ag->eval(ps[k]);
 					}
 					auto mat_pol = polynomial_interpolate(mats, inv(ag->max_degree()));
@@ -531,13 +530,15 @@ namespace qboot
 						for (uint32_t i = 0; i < 15; ++i) x = x - d.eval(x) / d2.eval(x);
 						assert(t[0] <= x && x <= t[1]);
 						spectrum.push_back(op.fix_delta(ag->get_delta(x)));
+						cout << x << ": " << det.eval(x) / d2.eval(x) << endl;
 					}
+					cout << "at zero: " << det.eval(0) / d.eval(0) << endl;
 					return tuple{sec, spectrum};
 				});
 		}
 		for (auto&& [sec, ops] : _parallel_evaluate(spectrums, parallel))
-			for (auto& op : ops) spectrum[sec].push_back(op);
-		return spectrum;
+			for (auto& op : ops) spectrum_dict[sec].push_back(op);
+		return spectrum_dict;
 	}
 
 	void BootstrapEquation::finish() &
@@ -545,27 +546,18 @@ namespace qboot
 		for (const auto& eq : eqs_) N_ += eq.dimension();
 	}
 
-	[[nodiscard]] PolynomialProgram BootstrapEquation::find_contradiction(string_view norm, uint32_t parallel,
-	                                                                      const unique_ptr<_event_base>& event) const
+	[[nodiscard]] Vector<real> BootstrapEquation::recover(const unique_ptr<SDPMode>& mode,
+	                                                      const Vector<real>& raw_func) const
 	{
 		assert(N_ > 0);
-		PolynomialProgram prg(N_);
-		prg.objective_constant() = real(0);
-		prg.objectives(Vector(N_, real(0)));
-		{
-			_scoped_event scope(norm, event);
-			auto id = sector_id_.find(norm)->second;
-			assert(!sector(id).is_matrix());
-			assert(sector(id).type() == SectorType::Discrete);
-			prg.add_equation(make_disc_mat_v(id), real(1));
-		}
-		add_ineqs(
-		    &prg, [&norm](const string& s) { return s != norm; }, parallel, event);
-		return prg;
+		return mode->_prepare(N_, *this).recover(raw_func);
 	}
-	void BootstrapEquation::add_ineqs(PolynomialProgram* prg, const function<bool(const string&)>& filter,
-	                                  uint32_t parallel, const unique_ptr<_event_base>& event) const
+	[[nodiscard]] PolynomialProgram BootstrapEquation::convert(const unique_ptr<SDPMode>& mode, uint32_t parallel,
+	                                                           const unique_ptr<_event_base>& event) const
 	{
+		assert(N_ > 0);
+		auto prg = mode->_prepare(N_, *this);
+		auto filter = mode->_get_filter();
 		vector<function<optional<PolynomialInequality>()>> ineqs;
 		for (const auto& [sec, id] : sector_id_)
 		{
@@ -596,6 +588,7 @@ namespace qboot
 						    PolynomialInequality(N_, sz, move(ag), move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};
 					});
 		}
-		for (auto&& x : _parallel_evaluate(ineqs, parallel)) prg->add_inequality(move(x));
+		for (auto&& x : _parallel_evaluate(ineqs, parallel)) prg.add_inequality(move(x));
+		return prg;
 	}
 }  // namespace qboot

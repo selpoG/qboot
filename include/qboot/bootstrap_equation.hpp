@@ -157,6 +157,84 @@ namespace qboot
 			ub.isinf() ? add_op(spin, lb) : void(op_args_.emplace_back(spin, lb, ub));
 		}
 	};
+	class BootstrapEquation;
+	class SDPMode
+	{
+	public:
+		SDPMode() = default;
+		SDPMode(const SDPMode&) = default;
+		SDPMode& operator=(const SDPMode&) = default;
+		SDPMode(SDPMode&&) noexcept = default;
+		SDPMode& operator=(SDPMode&&) noexcept = default;
+		virtual ~SDPMode();
+		virtual PolynomialProgram _prepare(uint32_t N, const BootstrapEquation& boot) const = 0;
+		[[nodiscard]] virtual std::function<bool(const std::string&)> _get_filter() const = 0;
+	};
+	class _find_contradiction : public SDPMode
+	{
+		std::string norm_;
+
+	public:
+		_find_contradiction(std::string_view norm) : norm_(norm) {}
+		_find_contradiction(const _find_contradiction&) = default;
+		_find_contradiction& operator=(const _find_contradiction&) = default;
+		_find_contradiction(_find_contradiction&&) noexcept = default;
+		_find_contradiction& operator=(_find_contradiction&&) noexcept = default;
+		~_find_contradiction() override;
+		PolynomialProgram _prepare(uint32_t N, const BootstrapEquation& boot) const override;
+		[[nodiscard]] std::function<bool(const std::string&)> _get_filter() const override
+		{
+			return [this](const std::string& s) { return s != this->norm_; };
+		}
+	};
+	// create a PolynomialProgram which finds a linear functional alpha
+	// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
+	// the size of matrices in norm sector must be 1
+	inline std::unique_ptr<SDPMode> FindContradiction(std::string_view norm)
+	{
+		return std::make_unique<_find_contradiction>(norm);
+	}
+	// create a PolynomialProgram which finds a linear functional alpha
+	// s.t. alpha maximizes alpha(norm)
+	// and satisfies alpha(target) = \pm 1 and alpha(sec) >= 0 for each sector sec (!= target, norm)
+	// the size of matrices in target, norm sector must be 1
+	// in maximizing mode, alpha(target) = +1 and alpha gives an upper bound on lambda, lambda ^ 2 <= -alpha(norm)
+	// in minimizing mode, alpha(target) = -1 and alpha gives an lower bound on lambda, lambda ^ 2 >= +alpha(norm)
+	class _extremal_OPE : public SDPMode
+	{
+		bool maximize_;
+		std::string target_, norm_;
+
+	public:
+		_extremal_OPE(bool maximize, std::string_view target, std::string_view norm)
+		    : maximize_(maximize), target_(target), norm_(norm)
+		{
+		}
+		_extremal_OPE(const _extremal_OPE&) = default;
+		_extremal_OPE& operator=(const _extremal_OPE&) = default;
+		_extremal_OPE(_extremal_OPE&&) noexcept = default;
+		_extremal_OPE& operator=(_extremal_OPE&&) noexcept = default;
+		~_extremal_OPE() override;
+		PolynomialProgram _prepare(uint32_t N, const BootstrapEquation& boot) const override;
+		[[nodiscard]] std::function<bool(const std::string&)> _get_filter() const override
+		{
+			return [this](const std::string& s) { return s != this->target_ && s != this->norm_; };
+		}
+	};
+	// create a PolynomialProgram which finds a linear functional alpha
+	// s.t. alpha maximizes alpha(norm)
+	// and satisfies alpha(target) = \pm 1 and alpha(sec) >= 0 for each sector sec (!= target, norm)
+	// the size of matrices in target, norm sector must be 1
+	// in maximizing mode, alpha(target) = +1 and alpha gives an upper bound on lambda, lambda ^ 2 <= -alpha(norm)
+	// in minimizing mode, alpha(target) = -1 and alpha gives an lower bound on lambda, lambda ^ 2 >= +alpha(norm)
+	// if maximize, maximize = True
+	// if minimize, maximize = False
+	inline std::unique_ptr<SDPMode> ExtremalOPE(bool maximize, std::string_view target, std::string_view norm)
+	{
+		return std::make_unique<_extremal_OPE>(maximize, target, norm);
+	}
+	// read raw functional from a result of sdpb
+	algebra::Vector<mp::real> read_raw_functional(const fs::path& y_txt);
 	class Equation;
 	// one bootrap equation contains
 	// - constant terms (from the unit operator)
@@ -182,31 +260,36 @@ namespace qboot
 		// total dimension (index of equations, index of derivatives)
 		uint32_t N_ = 0;
 
+	public:
+		[[nodiscard]] algebra::Vector<mp::real> make_disc_mat_v(std::string_view sector_name) const
+		{
+			return make_disc_mat_v(get_id(sector_name));
+		}
 		[[nodiscard]] algebra::Vector<mp::real> make_disc_mat_v(uint32_t id) const
 		{
+			assert(!sector(id).is_matrix());
+			assert(sector(id).type() == SectorType::Discrete);
 			auto m = make_disc_mat(id);
 			algebra::Vector<mp::real> v(N_);
 			for (uint32_t i = 0; i < N_; ++i) v[i] = take_element(id, std::move(m[i]));
 			return v;
 		}
+		[[nodiscard]] algebra::Vector<algebra::Matrix<mp::real>> make_disc_mat(std::string_view sector_name) const
+		{
+			return make_disc_mat(get_id(sector_name));
+		}
+		[[nodiscard]] algebra::Vector<algebra::Matrix<mp::real>> make_disc_mat(uint32_t id) const;
+
+	private:
 		[[nodiscard]] mp::real take_element(uint32_t id, algebra::Matrix<mp::real>&& m) const
 		{
 			const auto& ope = sector(id).ope();
 			if (ope) return m.inner_product(ope.value());
 			return std::move(m.at(0, 0));
 		}
-		[[nodiscard]] algebra::Vector<algebra::Matrix<mp::real>> make_disc_mat(uint32_t id) const;
 		[[nodiscard]] std::unique_ptr<ConformalScale> common_scale(uint32_t id, const GeneralPrimaryOperator& op) const;
 		[[nodiscard]] algebra::Vector<algebra::Vector<algebra::Matrix<mp::real>>> make_cont_mat(
 		    uint32_t id, const GeneralPrimaryOperator& op, const std::unique_ptr<ConformalScale>& ag) const;
-
-		// alpha maximizes alpha(norm)
-		// and satisfies alpha(target) = N and alpha(sec) >= 0 for each sector sec (!= target, norm)
-		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm, mp::real&& N,
-		                                             uint32_t parallel,
-		                                             const std::unique_ptr<_event_base>& event) const;
-		void add_ineqs(PolynomialProgram* prg, const std::function<bool(const std::string&)>& filter, uint32_t parallel,
-		               const std::unique_ptr<_event_base>& event) const;
 
 	public:
 		void _reset() &&
@@ -259,45 +342,23 @@ namespace qboot
 		{
 			return sector_id_.find(sector_name)->second;
 		}
+		[[nodiscard]] const Sector& sector(std::string_view sector_name) const { return sectors_[get_id(sector_name)]; }
 		[[nodiscard]] const Sector& sector(uint32_t id) const { return sectors_[id]; }
 
-		// create a PolynomialProgram which finds a linear functional alpha
-		// s.t. alpha(norm) = 1 and alpha(sec) >= 0 for each sector sec (!= norm)
-		// the size of matrices in norm sector must be 1
-		[[nodiscard]] PolynomialProgram find_contradiction(std::string_view norm, uint32_t parallel = 1,
-		                                                   const std::unique_ptr<_event_base>& event = {}) const;
+		// disc_sector must be a discrete sector, not a continuous sector
+		algebra::Matrix<mp::real> apply_functional(const algebra::Vector<mp::real>& func,
+		                                           std::string_view disc_sector) const;
 
-		// create a PolynomialProgram which finds a linear functional alpha
-		// s.t. alpha maximizes alpha(norm)
-		// and satisfies alpha(target) = 1 and alpha(sec) >= 0 for each sector sec (!= target, norm)
-		// the size of matrices in target, norm sector must be 1
-		// such a alpha gives an upper bound on lambda, lambda ^ 2 <= -alpha(norm)
-		[[nodiscard]] PolynomialProgram ope_maximize(std::string_view target, std::string_view norm,
-		                                             uint32_t parallel = 1,
-		                                             const std::unique_ptr<_event_base>& event = {}) const
-		{
-			return ope_maximize(target, norm, mp::real(1), parallel, event);
-		}
-
-		// create a PolynomialProgram which finds a linear functional alpha
-		// s.t. alpha maximizes alpha(norm)
-		// and satisfies alpha(target) = -1 and alpha(sec) >= 0 for each sector sec (!= target, norm)
-		// the size of matrices in target, norm sector must be 1
-		// such a alpha gives an lower bound on lambda, lambda ^ 2 >= alpha(norm)
-		[[nodiscard]] PolynomialProgram ope_minimize(std::string_view target, std::string_view norm,
-		                                             uint32_t parallel = 1,
-		                                             const std::unique_ptr<_event_base>& event = {}) const
-		{
-			return ope_maximize(target, norm, mp::real(-1), parallel, event);
-		}
+		[[nodiscard]] PolynomialProgram convert(const std::unique_ptr<SDPMode>& mode, uint32_t parallel = 1,
+		                                        const std::unique_ptr<_event_base>& event = {}) const;
+		[[nodiscard]] algebra::Vector<mp::real> recover(const std::unique_ptr<SDPMode>& mode,
+		                                                const algebra::Vector<mp::real>& raw_func) const;
 
 		// apply func and use Extremal Functional Method
 		// extract operators such that det(func(V_op)) = 0
+		// recovered_func must be a result of recover_from_*(*, raw_func)
 		std::map<std::string, std::vector<PrimaryOperator>, std::less<>> get_spectrum(
-		    const algebra::Vector<mp::real>& func, std::string_view norm, uint32_t parallel = 1,
-		    const std::unique_ptr<_event_base>& event = {}) const;
-		std::map<std::string, std::vector<PrimaryOperator>, std::less<>> get_spectrum(
-		    const fs::path& func, std::string_view norm, uint32_t parallel = 1,
+		    const algebra::Vector<mp::real>& recovered_func, uint32_t parallel = 1,
 		    const std::unique_ptr<_event_base>& event = {}) const;
 	};
 	using Externals = std::array<PrimaryOperator, 4>;

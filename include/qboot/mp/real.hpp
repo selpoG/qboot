@@ -564,11 +564,18 @@ namespace qboot::mp
 		friend void ceil(real& ans, const real& r);
 		friend void round(real& ans, const real& r);
 		friend void floor(real& ans, const real& r);
+		friend real fmod(real&& r1, real&& r2);
+		friend void fmod(real& ans, const real& r1, const real& r2);
 		friend void exp(real& ans, const real& r);
 		friend void abs(real& ans, const real& r);
 		friend void sin(real& ans, const real& r);
 		friend void cos(real& ans, const real& r);
 		friend void tan(real& ans, const real& r);
+		friend void asin(real& ans, const real& r);
+		friend void acos(real& ans, const real& r);
+		friend void atan(real& ans, const real& r);
+		friend real atan2(real&& r1, real&& r2);
+		friend void atan2(real& ans, const real& r1, const real& r2);
 		friend void sec(real& ans, const real& r);
 		friend void csc(real& ans, const real& r);
 		friend void cot(real& ans, const real& r);
@@ -714,6 +721,9 @@ namespace qboot::mp
 
 	inline bool isinteger(const real& r) { return mpfr_integer_p(r._x) != 0; }
 
+	inline void fmod(real& ans, const real& r1, const real& r2) { mpfr_fmod(ans._x, r1._x, r2._x, global_rnd); }
+	MP_R_BINARY(fmod)
+
 	inline void exp(real& ans, const real& r) { mpfr_exp(ans._x, r._x, global_rnd); }
 	MP_R_UNARY(exp)
 
@@ -726,6 +736,15 @@ namespace qboot::mp
 	MP_R_UNARY(cos)
 	inline void tan(real& ans, const real& r) { mpfr_tan(ans._x, r._x, global_rnd); }
 	MP_R_UNARY(tan)
+
+	inline void asin(real& ans, const real& r) { mpfr_asin(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(asin)
+	inline void acos(real& ans, const real& r) { mpfr_acos(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(acos)
+	inline void atan(real& ans, const real& r) { mpfr_atan(ans._x, r._x, global_rnd); }
+	MP_R_UNARY(atan)
+	inline void atan2(real& ans, const real& r1, const real& r2) { mpfr_atan2(ans._x, r1._x, r2._x, global_rnd); }
+	MP_R_BINARY(atan2)
 
 	inline void sec(real& ans, const real& r) { mpfr_sec(ans._x, r._x, global_rnd); }
 	MP_R_UNARY(sec)

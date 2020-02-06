@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12.4)
 project(sample CXX)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
-find_package(QBoot 0.5.0 REQUIRED)
+find_package(QBoot 0.8.0 REQUIRED)
 
 add_executable(sample main.cpp)
 

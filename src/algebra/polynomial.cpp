@@ -216,7 +216,7 @@ namespace qboot::algebra
 		uint32_t N = mat.row();
 		if (N == 0) return Polynomial(0u);
 		if (N == 1) return move(mat.at(0, 0));
-		if (N == 2) return mul(move(mat.at(0, 0)), mat.at(1, 1)) - mul(move(mat.at(0, 1)), mat.at(1, 0));
+		if (N == 2) return mul(mat.at(0, 0), mat.at(1, 1)) - mul(mat.at(0, 1), mat.at(1, 0));
 		std::vector<uint32_t> perm(N);
 		for (uint32_t i = 0; i < N; ++i) perm[i] = i;
 		Polynomial ans;

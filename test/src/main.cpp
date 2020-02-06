@@ -238,11 +238,15 @@ int main(int argc, char* argv[])
 #else
 	unique_ptr<qboot::_event_base> stopwatch{};
 #endif
+	auto sdp_mode = qboot::ExtremalOPE(true, "T", "unit");
+	// auto sdp_mode = qboot::FindContradiction("unit");
 	if (mode == "efm")
 	{
 		Context c(n_Max, lambda, dim);
 		auto boot = mixed_ising(c, deltas, numax, maxspin);
-		auto spc = boot.get_spectrum(fs::current_path() / "func.txt", "unit", parallel, stopwatch);
+		auto raw_func = qboot::read_raw_functional(fs::current_path() / "func.txt");
+		auto func = boot.recover(sdp_mode, raw_func);
+		auto spc = boot.get_spectrum(func, parallel, stopwatch);
 		for (const auto& [sec, ops] : spc)
 		{
 			cout << sec << endl;
@@ -255,8 +259,7 @@ int main(int argc, char* argv[])
 		{
 			Context c(n_Max, lambda, dim, parallel);
 			auto boot = mixed_ising(c, deltas, numax, maxspin);
-			pmp = boot.ope_maximize("T", "unit", parallel, stopwatch);
-			// pmp = boot.find_contradiction("unit", parallel, stopwatch);
+			pmp = boot.convert(sdp_mode, parallel, stopwatch);
 		}
 		auto root = fs::current_path() / name_mixed(deltas);
 		auto input = move(pmp.value()).create_input(parallel, stopwatch);
