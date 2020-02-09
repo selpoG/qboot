@@ -62,7 +62,8 @@ int main(int argc, char* argv[])
 {
 	qboot::mp::global_prec = 1000;
 	qboot::mp::global_rnd = MPFR_RNDN;
-	constexpr uint32_t n_Max = 400, lambda = 16, dim = 3, maxspin = 28, numax = 12, parallel = 8;
+	constexpr uint32_t n_Max = 400, lambda = 16, maxspin = 28, numax = 12, parallel = 8;
+	const rational dim("3");
 	if (argc != 1 && argc != 3)
 	{
 		cout << "usage: ./program [delta_s delta_e]" << endl;

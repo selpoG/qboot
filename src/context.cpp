@@ -44,12 +44,12 @@ namespace
 
 namespace qboot
 {
-	Context::Context(uint32_t n_Max, uint32_t lambda, uint32_t dim, uint32_t p)
+	Context::Context(uint32_t n_Max, uint32_t lambda, const rational& dim, uint32_t p)
 	    : n_Max_(n_Max),
 	      lambda_(lambda),
-	      dim_(dim),
 	      parallel_(p),
-	      epsilon_(dim - 2, 2u),
+	      dim_(dim),
+	      epsilon_(dim / 2 - 1),
 	      rho_(3 - mp::sqrt(8)),
 	      rho_to_z_(RealConverter(z_as_func_rho(lambda)).inverse()),
 	      v_to_d_{[this](const real& d) { return ::v_to_d(d, this->lambda_); }, p},
@@ -58,7 +58,6 @@ namespace qboot
 	              },
 	              p}
 	{
-		assert(dim >= 3 && dim % 2 == 1);
 	}
 	ComplexFunction<real> Context::expand_off_diagonal(RealFunction<real>&& realAxisResult, const PrimaryOperator& op,
 	                                                   const real& S, const real& P) const

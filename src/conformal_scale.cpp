@@ -140,17 +140,40 @@ namespace qboot
 			for (uint32_t i = 0; i <= deg; ++i) bilinear_bases_.at(i) = Polynomial(i);
 		else
 		{
+			auto P = poles_.size();
 			// orthogonal polynomial of weight function (4 rho) ^ {Delta} / \prod_i (Delta - poles[i])
-			Vector<real> shifted_poles(poles_.size());
-			for (uint32_t i = 0; i < poles_.size(); ++i) shifted_poles[i] = poles_[i] - gap_;
+			Vector<real> shifted_poles(P);
+			for (uint32_t i = 0; i < P; ++i) shifted_poles[i] = poles_[i] - gap_;
+			// each element in shifted_poles must be non-positive
+			// shifted_poles is (weakly) decreasing and may contain duplicated values with multiplicity at most two
+			for (uint32_t i = 0; i < P; ++i)
+			{
+				assert(shifted_poles[i] <= 0);
+				assert(i < 1 || shifted_poles[i] <= shifted_poles[i - 1]);
+				assert(i < 2 || shifted_poles[i] < shifted_poles[i - 2]);
+				assert(i < 1 || mp::isinteger(2 * (shifted_poles[i - 1] - shifted_poles[i])));
+			}
+			{
+				// poles at zero cause a divergence, so we shift them
+				// we also shift double poles, and these operations affect only the bilinear bases
+				real small_shift("1e-10");
+				uint32_t i = 0;
+				if (i < P && shifted_poles[i] == 0)
+				{
+					shifted_poles[i++] -= small_shift;
+					if (i < P && shifted_poles[i] == 0) shifted_poles[i++] -= 2 * small_shift;
+				}
+				for (; i < P; ++i)
+					if (i > 0 && shifted_poles[i] == shifted_poles[i - 1]) shifted_poles[i] -= small_shift;
+			}
 			auto weight = fast_partial_fraction(shifted_poles);
 			// inner_prods[i] = \int_{0}^{\infty} dx (4 rho) ^ x x ^ i / \prod_i (x - poles[i])
 			auto base = 4 * rho_;
 			Vector<real> inner_prods(2 * deg + 1);
-			if (poles_.size() == 0)
+			if (P == 0)
 				inner_prods = empty_pole_integral(2 * deg, base);
 			else
-				for (uint32_t i = 0; i < poles_.size(); ++i)
+				for (uint32_t i = 0; i < P; ++i)
 					inner_prods += mul_scalar(weight[i], simple_pole_integral(2 * deg, base, shifted_poles[i]));
 			inner_prods *= mp::pow(base, gap_);
 			auto mat = anti_band_to_inverse(inner_prods);

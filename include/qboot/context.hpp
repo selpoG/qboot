@@ -61,8 +61,8 @@ namespace qboot
 	// all gBlocks are evaluated in parallel and memoized
 	class Context
 	{
-		uint32_t n_Max_, lambda_, dim_, parallel_;
-		mp::rational epsilon_;
+		uint32_t n_Max_, lambda_, parallel_;
+		mp::rational dim_, epsilon_;
 		mp::real rho_;
 		// convert a function of rho - (3 - 2 sqrt(2)) to a function of z - 1 / 2
 		algebra::RealConverter rho_to_z_;
@@ -78,7 +78,8 @@ namespace qboot
 	public:
 		void _reset() &&
 		{
-			n_Max_ = lambda_ = dim_ = parallel_ = 0;
+			n_Max_ = lambda_ = parallel_ = 0;
+			std::move(dim_)._reset();
 			std::move(epsilon_)._reset();
 			std::move(rho_)._reset();
 			std::move(rho_to_z_)._reset();
@@ -88,7 +89,7 @@ namespace qboot
 		// passed to the constructor of ComplexFunction<Ring>
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		// the dimension of the spacetime
-		[[nodiscard]] uint32_t dimension() const { return dim_; }
+		[[nodiscard]] const mp::rational& dimension() const { return dim_; }
 		// the dimension of the spacetime
 		[[nodiscard]] uint32_t parallel() const { return parallel_; }
 		// (dim - 2) / 2
@@ -103,7 +104,7 @@ namespace qboot
 			os << "Context(nMax=" << n_Max_ << ", lambda=" << lambda_ << ", dim=" << dim_ << ")";
 			return os.str();
 		}
-		Context(uint32_t n_Max, uint32_t lambda, uint32_t dim, uint32_t p = 1);
+		Context(uint32_t n_Max, uint32_t lambda, const mp::rational& dim, uint32_t p = 1);
 		Context(Context&&) noexcept = delete;
 		Context& operator=(Context&&) noexcept = delete;
 		Context(const Context&) = delete;
