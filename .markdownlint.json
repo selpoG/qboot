@@ -1,0 +1,10 @@
+{
+	"default": true,
+	"MD007": {
+		"indent": 1
+	},
+	"MD013": {
+		"line_length": 120
+	},
+	"no-hard-tabs": false
+}

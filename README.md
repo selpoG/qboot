@@ -8,6 +8,16 @@ For more information, see
 
 Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
+- [qboot](#qboot)
+	- [Requirements](#requirements)
+		- [Unix (or WSL)](#unix-or-wsl)
+		- [Windows (MSVC)](#windows-msvc)
+	- [Install](#install)
+		- [Unix](#unix)
+		- [Windows](#windows)
+	- [Use installed `qboot`](#use-installed-qboot)
+	- [Docker](#docker)
+
 ## Requirements
 
 - [cmake](https://cmake.org/) (`3.12.4+`)
@@ -106,3 +116,16 @@ Of course, you can build also in Windows.
 4. Push `Configure` button and `Generate` button.
 
 You can build `sample.sln` in `sample\build` folder.
+
+## Docker
+
+Docker for qboot can be obtained from [selpo/qboot](https://hub.docker.com/r/selpo/qboot),
+which was built using [Dockerfile](Dockerfile).
+We also have a simple sample using this container in [sample/Dockerfile](sample/Dockerfile).
+
+```sh
+cd qboot/sample
+docker build -t qboot.sample .
+docker run -it --rm qboot.sample
+./build/bin/sample-debug
+```
