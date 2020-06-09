@@ -3,6 +3,9 @@
 Converter from Conformal Bootstrap Equations to Semidefinite Programming.
 Sum of operators may run over not only infinite range `[lb, infty)` but also finite one `[lb, ub)`.
 
+For more information, see
+[An Automated Generation of Bootstrap Equations for Numerical Study of Critical Phenomena](https://arxiv.org/abs/2006.04173).
+
 Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 ## Requirements
