@@ -13,11 +13,35 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: requirement
-      run: sudo apt update && sudo apt install libgmp-dev libmpfr-dev
-    - name: configure
+    - name: requirement gmp
+      run: |
+        curl https://gmplib.org/download/gmp/gmp-6.2.0.tar.lz | tar --lzip -xf -
+        cd gmp-6.2.0
+        ./configure --enable-cxx --prefix=~/local
+        make -j4
+        make install
+        ldconfig
+        cd ..
+        rm -r gmp-6.2.0
+    - name: requirement mpfr
+      run: |
+        curl https://www.mpfr.org/mpfr-current/mpfr-4.0.2.tar.gz | tar zxf -
+        cd mpfr-4.0.2
+        ./configure --prefix=~/local
+        make -j4
+        make install
+        ldconfig
+        cd ..
+        rm -r mpfr-4.0.2
+    - name: configure debug
       run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/local ..
-    - name: make
-      run: make
-    - name: make install
+    - name: make debug
+      run: make -j4
+    - name: make debug install
+      run: make install
+    - name: configure release
+      run: cmake -DCMAKE_BUILD_TYPE=Release ..
+    - name: make release
+      run: make -j4
+    - name: make release install
       run: make install
