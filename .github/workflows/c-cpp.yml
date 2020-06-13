@@ -24,6 +24,9 @@ jobs:
         cmake -DGMP_INCLUDE_DIR=/usr/include -DGMP_LIBRARY=/usr/lib/x86_64-linux-gnu -DGMPXX_LIBRARY=/usr/lib/x86_64-linux-gnu -DMPFR_INCLUDE_DIR=/usr/include -DMPFR_LIBRARY=/usr/lib/x86_64-linux-gnu -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/local ..
     - name: make debug
       run: |
+        pwd
+        tree ~
+        tree .
         cd qboot/build
         make install -j4
     - name: configure release
