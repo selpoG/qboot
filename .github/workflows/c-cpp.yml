@@ -25,8 +25,13 @@ jobs:
         ls /usr/include
         export INCLUDE=/usr/include:/usr/include/c++/7
         export CPATH=/usr/include:/usr/include/c++/7
+        export CPLUS_INCLUDE_PATH=/usr/include
+        export CXX_INCLUDE_PATH=/usr/include
+        export C_INCLUDE_PATH=/usr/include
     - name: configure
       run: |
+        echo $INCLUDE
+        echo $CPATH
         mkdir build
         cd build
         cmake -DGMP_INCLUDE_DIR=/usr/include -DGMP_LIBRARY=/usr/lib/x86_64-linux-gnu -DGMPXX_LIBRARY=/usr/lib/x86_64-linux-gnu -DMPFR_INCLUDE_DIR=/usr/include -DMPFR_LIBRARY=/usr/lib/x86_64-linux-gnu -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/local ..
