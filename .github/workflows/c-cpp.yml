@@ -17,15 +17,17 @@ jobs:
       run: |
         sudo apt update
         sudo apt install libgmp-dev libmpfr-dev
-    - name: configure debug
-      run: mkdir build && cd build && cmake -DGMP_INCLUDE_DIR=/usr/include -DGMP_LIBRARY=/usr/lib/x86_64-linux-gnu -DGMPXX_LIBRARY=/usr/lib/x86_64-linux-gnu -DMPFR_INCLUDE_DIR=/usr/include -DMPFR_LIBRARY=/usr/lib/x86_64-linux-gnu -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/local ..
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake -DGMP_INCLUDE_DIR=/usr/include -DGMP_LIBRARY=/usr/lib/x86_64-linux-gnu -DGMPXX_LIBRARY=/usr/lib/x86_64-linux-gnu -DMPFR_INCLUDE_DIR=/usr/include -DMPFR_LIBRARY=/usr/lib/x86_64-linux-gnu -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/local ..
     - name: make debug
-      run: ls && make -j4
-    - name: make debug install
-      run: make install
+      run: |
+        cd qboot/build
+        make install -j4
     - name: configure release
-      run: cmake -DCMAKE_BUILD_TYPE=Release ..
-    - name: make release
-      run: make -j4
-    - name: make release install
-      run: make install
+      run: |
+        cd qboot/build
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        make install -j4
