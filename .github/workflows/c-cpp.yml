@@ -16,7 +16,7 @@ jobs:
     - name: requirement
       run: |
         sudo apt update
-        sudo apt install libgmp-dev libmpfr-dev
+        sudo apt install libgmp-dev libmpfr-dev tree
     - name: configure
       run: |
         mkdir build
@@ -25,9 +25,9 @@ jobs:
     - name: make debug
       run: |
         pwd
+        tree ..
         tree ~
-        tree .
-        cd qboot/build
+        cd build
         make install -j4
     - name: configure release
       run: |
