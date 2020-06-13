@@ -21,6 +21,10 @@ jobs:
         echo $CPATH
         echo $LD_LIBRARY_PATH
         echo $LIBRARY_PATH
+        ls /usr/include/c++/7
+        ls /usr/include
+        export INCLUDE=/usr/include:/usr/include/c++/7
+        export CPATH=/usr/include:/usr/include/c++/7
     - name: configure
       run: |
         mkdir build
