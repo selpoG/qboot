@@ -17,9 +17,8 @@ jobs:
       run: |
         sudo apt update
         sudo apt install libgmp-dev libmpfr-dev
-        sudo cp /usr/lib/x86_64-linux-gnu/libmpfr* /usr/lib/x86_64-linux-gnu/libgmp* /usr/lib/
     - name: configure debug
-      run: mkdir build && cd build && cmake -DMPFR_ROOT=/usr -DGMP_ROOT=/usr -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/local ..
+      run: mkdir build && cd build && cmake -DGMP_INCLUDE_DIR=/usr/include -DGMP_LIBRARY=/usr/lib/x86_64-linux-gnu -DMPFR_INCLUDE_DIR=/usr/include -DMPFR_LIBRARY=/usr/lib/x86_64-linux-gnu -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/local ..
     - name: make debug
       run: make -j4
     - name: make debug install
