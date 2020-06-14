@@ -37,6 +37,9 @@ jobs:
         export CPLUS_INCLUDE_PATH=/usr/include
         export CXX_INCLUDE_PATH=/usr/include
         export C_INCLUDE_PATH=/usr/include
+        echo -e "#include <iostream>\nint main(){std::cout<<\"hello\"<<std::endl;return 0;}" > hello.cpp
+        cat hello.cpp
+        g++ hello.cpp
         make install -j4
     - name: configure release
       run: |
