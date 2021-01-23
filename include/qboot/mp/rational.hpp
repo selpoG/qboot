@@ -3,6 +3,7 @@
 
 #include <array>        // for array
 #include <cassert>      // for assert
+#include <compare>      // for strong_ordering
 #include <istream>      // for basic_istream
 #include <optional>     // for optional
 #include <ostream>      // for basic_ostream
@@ -185,18 +186,14 @@ namespace qboot::mp
 
 		explicit operator integer() const { return floor(*this); }
 
-		// _cmp(a, b) returns the sign of a - b
-
-		friend int _cmp(const rational& r1, const rational& r2) { return mpq_cmp(r1._x, r2._x); }
-		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T>>>
-		friend int _cmp(const rational& r1, T r2)
+		friend std::strong_ordering operator<=>(const rational& r1, const rational& r2)
 		{
-			return _mp_ops<T>::cmp(r1._x, r2);
+			return mpq_cmp(r1._x, r2._x) <=> 0;
 		}
 		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T>>>
-		friend int _cmp(T r1, const rational& r2)
+		friend std::strong_ordering operator<=>(const rational& r1, T r2)
 		{
-			return -_cmp(r2, r1);
+			return _mp_ops<T>::cmp(r1._x, r2) <=> 0;
 		}
 
 		template <class Tp>

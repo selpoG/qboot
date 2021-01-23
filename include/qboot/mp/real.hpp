@@ -33,6 +33,7 @@
 #ifndef QBOOT_MP_REAL_HPP_
 #define QBOOT_MP_REAL_HPP_
 
+#include <compare>      // for strong_ordering
 #include <cstddef>      // for size_t
 #include <cstdint>      // for intmax_t
 #include <cstring>      // for strlen
@@ -306,18 +307,11 @@ namespace qboot::mp
 		// generic operators
 		/////////////////////////////////////////////////////////////////
 
-		// _cmp(a, b) returns the sign of a - b
-
-		friend int _cmp(const real& r1, const real& r2) { return mpfr_cmp(r1._x, r2._x); }
+		friend std::strong_ordering operator<=>(const real& r1, const real& r2) { return mpfr_cmp(r1._x, r2._x) <=> 0; }
 		template <class T, class = std::enable_if_t<_mpfr_is_other_operands<T>>>
-		friend int _cmp(const real& r1, T r2)
+		friend std::strong_ordering operator<=>(const real& r1, T r2)
 		{
-			return _mp_ops<T>::cmp(r1._x, r2);
-		}
-		template <class T, class = std::enable_if_t<_mpfr_is_other_operands<T>>>
-		friend int _cmp(T r1, const real& r2)
-		{
-			return -_cmp(r2, r1);
+			return _mp_ops<T>::cmp(r1._x, r2) <=> 0;
 		}
 
 		template <class Tp>

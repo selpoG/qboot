@@ -1,6 +1,7 @@
 #ifndef QBOOT_MP_INTEGER_HPP_
 #define QBOOT_MP_INTEGER_HPP_
 
+#include <compare>      // for strong_ordering
 #include <istream>      // for basic_istream
 #include <limits>       // for numeric_limits
 #include <optional>     // for optional
@@ -406,32 +407,7 @@ namespace qboot::mp
 	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
 	inline bool operator==(const Tp1& r1, const Tp2& r2)
 	{
-		return _cmp(r1, r2) == 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator!=(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) != 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator<(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) < 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator>(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) > 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator<=(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) <= 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator>=(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) >= 0;
+		return (r1 <=> r2) == 0;
 	}
 
 	inline std::optional<rational> parse(std::string_view str);
@@ -546,18 +522,14 @@ namespace qboot::mp
 			return _mp_ops<T>::get(_x);
 		}
 
-		// _cmp(a, b) returns the sign of a - b
-
-		friend int _cmp(const integer& r1, const integer& r2) { return mpz_cmp(r1._x, r2._x); }
-		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
-		friend int _cmp(const integer& r1, T r2)
+		friend std::strong_ordering operator<=>(const integer& r1, const integer& r2)
 		{
-			return _mp_ops<T>::cmp(r1._x, r2);
+			return mpz_cmp(r1._x, r2._x) <=> 0;
 		}
 		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
-		friend int _cmp(T r1, const integer& r2)
+		friend std::strong_ordering operator<=>(const integer& r1, T r2)
 		{
-			return -_cmp(r2, r1);
+			return _mp_ops<T>::cmp(r1._x, r2) <=> 0;
 		}
 
 		template <class Tp>
