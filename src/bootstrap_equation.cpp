@@ -369,7 +369,7 @@ namespace qboot
 	Matrix<real> BootstrapEquation::apply_functional(const Vector<real>& func, string_view disc_sector) const
 	{
 		auto id = get_id(disc_sector);
-		auto sec = sector(id);
+		const auto& sec = sector(id);
 		assert(sec.type() == SectorType::Discrete);
 		auto mats = make_disc_mat(id);
 		auto sz = sec.size();
@@ -473,7 +473,7 @@ namespace qboot
 			if (sector(id).type_ != SectorType::Continuous) continue;
 			auto sz = sector(id).size();
 			for (const auto& op : sector(id).ops_)
-				spectrums.emplace_back([this, id = id, sec = sec, op = op, sz, &recovered_func, &inv, &event]() {
+				spectrums.emplace_back([this, id = id, sec = sec, &op, sz, &recovered_func, &inv, &event]() {
 					vector<PrimaryOperator> spectrum;
 					auto tag = op.str();
 					tag += " in ";
@@ -576,7 +576,7 @@ namespace qboot
 					});
 			else
 				for (const auto& op : sector(id).ops_)
-					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, &event] {
+					ineqs.emplace_back([this, id = id, sz, &op, sec = sec, &event] {
 						auto tag = op.str();
 						tag += " in ";
 						tag += sec;
