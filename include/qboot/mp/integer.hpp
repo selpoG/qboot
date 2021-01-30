@@ -402,9 +402,7 @@ namespace qboot::mp
 		inline static int cmp(mpfr_srcptr op1, double op2) { return mpfr_cmp_d(op1, op2); }
 	};
 
-	// generate relational operators from _cmp (using ADL)
-
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
+	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1>>>
 	inline bool operator==(const Tp1& r1, const Tp2& r2)
 	{
 		return (r1 <=> r2) == 0;
