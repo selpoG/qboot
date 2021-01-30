@@ -93,6 +93,9 @@ target_link_libraries(
 )
 if(NOT MSVC)
 	target_link_libraries(${MY_TARGET} INTERFACE stdc++fs)
+	if(NOT CMAKE_COMPILER_IS_GNUCXX)
+		target_link_libraries(${MY_TARGET} INTERFACE c++abi)
+	endif()
 endif()
 
 target_include_directories(${MY_TARGET} PUBLIC

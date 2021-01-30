@@ -50,8 +50,8 @@
 #include <type_traits>  // for enable_if_t, is_same_v, is_integral_v, is_signed_v
 #include <utility>      // for move
 
-#include "gmpxx.h"
-#include "mpfr.h"
+#include <gmpxx.h>
+#include <mpfr.h>
 
 #include "qboot/mp/integer.hpp"
 #include "qboot/mp/rational.hpp"

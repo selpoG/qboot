@@ -14,8 +14,8 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "gmpxx.h"
-#include "mpfr.h"
+#include <gmpxx.h>
+#include <mpfr.h>
 
 #include "qboot/mp/integer.hpp"
 

@@ -12,8 +12,8 @@
 #include <type_traits>  // for enable_if_t, is_same_v, is_integral_v, is_signed_v, conjunction_v, integral_constant
 #include <utility>      // for move
 
-#include "gmpxx.h"
-#include "mpfr.h"
+#include <gmpxx.h>
+#include <mpfr.h>
 
 namespace qboot::mp
 {
