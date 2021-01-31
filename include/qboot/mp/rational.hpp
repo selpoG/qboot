@@ -84,6 +84,13 @@ namespace qboot::mp
 		}
 		[[nodiscard]] bool isinteger() const { return _cmp_ui(mpq_denref(_x), 1) == 0; }
 
+		[[nodiscard]] rational norm() const& { return *this * *this; }
+		[[nodiscard]] rational norm() &&
+		{
+			*this *= *this;
+			return std::move(*this);
+		}
+
 		template <class T>
 		[[nodiscard]] rational eval([[maybe_unused]] const T& x) const
 		{

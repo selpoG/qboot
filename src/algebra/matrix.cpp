@@ -11,8 +11,15 @@ namespace qboot::algebra
 {
 	template class Vector<real>;
 	template class Matrix<real>;
-	template class Vector<Vector<real>>;
-	template class Vector<Matrix<real>>;
+	// these instantiation causes compilation error on MSVC
+	// template class Vector<Vector<real>>;
+	// template class Vector<Matrix<real>>;
+	[[maybe_unused]] static void _instantiate()
+	{
+		// but you can use them... why?
+		Vector<Vector<real>> _1;
+		Vector<Matrix<real>> _2;
+	}
 	template class Vector<Polynomial>;
 	template class Matrix<Polynomial>;
 	template class Vector<RealFunction<real>>;

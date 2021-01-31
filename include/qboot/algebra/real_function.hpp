@@ -16,15 +16,15 @@ namespace qboot::algebra
 	// take derivatives (der x) ^ k upto k <= lambda
 	// namely, a function is represented as
 	//   \sum_{k = 0}^{lambda} this->at(k) x ^ k + O(x ^ {lambda + 1})
-	// Ring must be mp::real or Polynomial
-	template <class Ring>
+	// R must be mp::real or Polynomial
+	template <Ring R>
 	class RealFunction
 	{
-		template <class Ring2>
+		template <Ring R2>
 		friend class RealFunction;
 		uint32_t lambda_;
-		Vector<Ring> coeffs_;
-		explicit RealFunction(Vector<Ring>&& vec) : lambda_(vec.size() - 1), coeffs_(std::move(vec)) {}
+		Vector<R> coeffs_;
+		explicit RealFunction(Vector<R>&& vec) : lambda_(vec.size() - 1), coeffs_(std::move(vec)) {}
 
 	public:
 		friend class RealConverter;
@@ -48,8 +48,8 @@ namespace qboot::algebra
 		[[nodiscard]] RealFunction clone() const { return RealFunction(coeffs_.clone()); }
 		// get coefficient of the term x ^ k
 		// 0 <= k <= lambda
-		[[nodiscard]] Ring& at(uint32_t k) & { return coeffs_[k]; }
-		[[nodiscard]] const Ring& at(uint32_t k) const& { return coeffs_[k]; }
+		[[nodiscard]] R& at(uint32_t k) & { return coeffs_[k]; }
+		[[nodiscard]] const R& at(uint32_t k) const& { return coeffs_[k]; }
 
 		[[nodiscard]] auto abs() const { return coeffs_.abs(); }
 		[[nodiscard]] auto norm() const { return coeffs_.norm(); }
@@ -70,14 +70,14 @@ namespace qboot::algebra
 			coeffs_ -= v.coeffs_;
 			return *this;
 		}
-		template <class T>
-		RealFunction& operator*=(const T& r) &
+		template <class S>
+		RealFunction& operator*=(const S& r) &
 		{
 			coeffs_ *= r;
 			return *this;
 		}
-		template <class T>
-		RealFunction& operator/=(const T& r) &
+		template <class S>
+		RealFunction& operator/=(const S& r) &
 		{
 			coeffs_ /= r;
 			return *this;
@@ -126,23 +126,23 @@ namespace qboot::algebra
 				for (uint32_t k2 = 0; k1 + k2 <= x.lambda_; ++k2) z.at(k1 + k2) += mul(x.at(k1), y.at(k2));
 			return z;
 		}
-		template <class R>
-		friend RealFunction mul_scalar(const R& r, const RealFunction& x)
+		template <class S>
+		friend RealFunction mul_scalar(const S& r, const RealFunction& x)
 		{
 			return RealFunction(mul_scalar(r, x.coeffs_));
 		}
-		template <class R>
-		friend RealFunction mul_scalar(const R& r, RealFunction&& x)
+		template <class S>
+		friend RealFunction mul_scalar(const S& r, RealFunction&& x)
 		{
 			return std::move(x *= r);
 		}
-		template <class R>
-		friend RealFunction operator/(const RealFunction& x, const R& r)
+		template <class S>
+		friend RealFunction operator/(const RealFunction& x, const S& r)
 		{
 			return RealFunction(x.coeffs_ / r);
 		}
-		template <class R>
-		friend RealFunction operator/(RealFunction&& x, const R& r)
+		template <class S>
+		friend RealFunction operator/(RealFunction&& x, const S& r)
 		{
 			return std::move(x /= r);
 		}
@@ -151,17 +151,17 @@ namespace qboot::algebra
 			return x.lambda_ == y.lambda_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const RealFunction& x, const RealFunction& y) { return !(x == y); }
-		[[nodiscard]] RealFunction<_evaluated_t<Ring>> eval(const mp::real& x) const
+		[[nodiscard]] RealFunction<_evaluated_t<R>> eval(const mp::real& x) const
 		{
-			return RealFunction<_evaluated_t<Ring>>(coeffs_.eval(x));
+			return RealFunction<_evaluated_t<R>>(coeffs_.eval(x));
 		}
 	};
-	template <class Ring>
-	RealFunction<_polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>* coeffs)
+	template <Ring R>
+	RealFunction<_polynomialize_t<R>> to_pol(Vector<RealFunction<R>>* coeffs)
 	{
 		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();
-		RealFunction<_polynomialize_t<Ring>> ans(lambda);
-		Vector<Ring> v(len);
+		RealFunction<_polynomialize_t<R>> ans(lambda);
+		Vector<R> v(len);
 		for (uint32_t r = 0; r <= lambda; ++r)
 		{
 			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs->at(i).at(r));

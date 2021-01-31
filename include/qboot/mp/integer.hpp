@@ -461,6 +461,13 @@ namespace qboot::mp
 		[[nodiscard]] bool divisible_by(const integer& o) const { return mpz_divisible_p(_x, o._x) != 0; }
 		[[nodiscard]] bool divisible_by(_ulong o) const { return mpz_divisible_ui_p(_x, o) != 0; }
 
+		[[nodiscard]] integer norm() const& { return *this * *this; }
+		[[nodiscard]] integer norm() &&
+		{
+			*this *= *this;
+			return std::move(*this);
+		}
+
 		template <class T>
 		[[nodiscard]] integer eval([[maybe_unused]] const T& x) const
 		{
