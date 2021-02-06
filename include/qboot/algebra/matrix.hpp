@@ -14,25 +14,24 @@
 
 namespace qboot::algebra
 {
-	template <class, template <class> class, class = std::void_t<>>
-	struct _detect : std::false_type
-	{
-	};
-	template <class T, template <class> class Check>
-	struct _detect<T, Check, std::void_t<Check<T>>> : std::true_type
-	{
-	};
 	template <class T>
-	using _has_iszero_checker = decltype(std::declval<const T&>().iszero());
-	template <class T>
-	inline constexpr bool _has_iszero = _detect<T, _has_iszero_checker>::value;
+	concept _zero_checkable = requires(const T c)
+	{
+		// assert(T{}.iszero());
+		{
+			c.iszero()
+		}
+		->std::same_as<bool>;
+	};
 	template <class R>
 	bool iszero(const R& v)
 	{
-		if constexpr (_has_iszero<R>)
-			return v.iszero();
-		else
-			return v == 0;
+		return v == 0;
+	}
+	template <_zero_checkable R>
+	bool iszero(const R& v)
+	{
+		return v.iszero();
 	}
 	template <class T>
 	struct _evaluated;
@@ -89,13 +88,8 @@ namespace qboot::algebra
 			c.clone()
 		}
 		->std::same_as<T>;
-		// assert(T{}.iszero());
-		{
-			c.iszero()
-		}
-		->std::same_as<bool>;
 	}
-	&&_default_initializable<T>;
+	&&_zero_checkable<T>&& _default_initializable<T>;
 	template <class T>
 	concept _ring_ops = requires(const T& x, const T& y, T& r)
 	{
@@ -399,8 +393,7 @@ namespace qboot::algebra
 			return std::move(*this);
 		}
 		// v^t M v
-		template <class = std::enable_if<std::is_same_v<R, mp::real>>>
-		[[nodiscard]] R inner_product(const Vector<R>& v) const  // requires std::same_as<R, mp::real>
+		[[nodiscard]] R inner_product(const Vector<R>& v) const requires std::same_as<R, mp::real>
 		{
 			assert(is_square() && row_ == v.size());
 			mp::real s{};

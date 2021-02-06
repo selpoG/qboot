@@ -9,27 +9,27 @@ using std::move;
 
 namespace qboot::algebra
 {
-	template class Vector<real>;
-	template class Matrix<real>;
 	// these instantiation causes compilation error on MSVC
 	// template class Vector<Vector<real>>;
 	// template class Vector<Matrix<real>>;
 	[[maybe_unused]] static void _instantiate()
 	{
+		Vector<real> _;
+		Matrix<real> _0;
 		// but you can use them... why?
 		Vector<Vector<real>> _1;
 		Vector<Matrix<real>> _2;
+		Vector<Polynomial> _3;
+		Matrix<Polynomial> _4;
+		Vector<RealFunction<real>> _5;
+		Matrix<RealFunction<real>> _6;
+		Vector<ComplexFunction<real>> _7;
+		Matrix<ComplexFunction<real>> _8;
+		Vector<RealFunction<Polynomial>> _9;
+		Vector<ComplexFunction<Polynomial>> _10;
+		Matrix<RealFunction<Polynomial>> _11;
+		Matrix<ComplexFunction<Polynomial>> _12;
 	}
-	template class Vector<Polynomial>;
-	template class Matrix<Polynomial>;
-	template class Vector<RealFunction<real>>;
-	template class Matrix<RealFunction<real>>;
-	template class Vector<ComplexFunction<real>>;
-	template class Matrix<ComplexFunction<real>>;
-	template class Vector<RealFunction<Polynomial>>;
-	template class Vector<ComplexFunction<Polynomial>>;
-	template class Matrix<RealFunction<Polynomial>>;
-	template class Matrix<ComplexFunction<Polynomial>>;
 
 	static void _add_row(Matrix<real>* mat, uint32_t f, uint32_t t, const real& x, uint32_t c0 = 0)
 	{

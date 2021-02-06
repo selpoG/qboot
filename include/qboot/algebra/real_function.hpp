@@ -169,7 +169,7 @@ namespace qboot::algebra
 		}
 		return ans;
 	}
-	template <class R>
+	template <Ring R>
 	std::ostream& operator<<(std::ostream& out, const RealFunction<R>& v)
 	{
 		auto f = false;
@@ -205,7 +205,7 @@ namespace qboot::algebra
 		explicit RealConverter(const RealFunction<mp::real>& func);
 		[[nodiscard]] RealConverter inverse() const;
 		// convert a function f of x to a function of y where x = func(y)
-		template <class R>
+		template <Ring R>
 		[[nodiscard]] RealFunction<R> convert(const RealFunction<R>& f) const
 		{
 			assert(lambda_ == f.lambda());

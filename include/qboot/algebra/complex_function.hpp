@@ -254,7 +254,7 @@ namespace qboot::algebra
 				}
 		return ans;
 	}
-	template <class R>
+	template <Ring R>
 	std::ostream& operator<<(std::ostream& out, const ComplexFunction<R>& v)
 	{
 		out << "[";
