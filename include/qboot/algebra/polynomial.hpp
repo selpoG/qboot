@@ -71,7 +71,7 @@ namespace qboot::algebra
 			auto s = coeff_[d];
 			for (uint32_t i = d - 1; i <= d; --i)
 			{
-				if constexpr (std::is_same_v<R, mp::real>)
+				if constexpr (std::same_as<R, mp::real>)
 					mp::fma(s, s, x, coeff_[i]);
 				else
 				{
@@ -194,8 +194,7 @@ namespace qboot::algebra
 	}
 	Matrix<mp::real> interpolation_matrix(const Vector<mp::real>& points);
 	template <Ring R>
-	_polynomialize_t<R> polynomial_interpolate(const Vector<R>& vals,
-	                                              const Matrix<mp::real>& interpolation_matrix)
+	_polynomialize_t<R> polynomial_interpolate(const Vector<R>& vals, const Matrix<mp::real>& interpolation_matrix)
 	{
 		assert(vals.size() == interpolation_matrix.row() && vals.size() > 0 && interpolation_matrix.is_square());
 		auto coeffs = dot(interpolation_matrix, vals);

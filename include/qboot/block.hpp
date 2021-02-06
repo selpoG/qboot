@@ -1,11 +1,10 @@
 #ifndef QBOOT_BLOCK_HPP_
 #define QBOOT_BLOCK_HPP_
 
-#include <concepts>     // for same_as
-#include <cstdint>      // for uint32_t
-#include <string>       // for string
-#include <type_traits>  // enable_if, is_same_v
-#include <variant>      // for varinat
+#include <concepts>  // for same_as
+#include <cstdint>   // for uint32_t
+#include <string>    // for string
+#include <variant>   // for varinat
 
 #include "qboot/algebra/complex_function.hpp"  // for FunctionSymmetry
 #include "qboot/mp/real.hpp"                   // for real

@@ -2,15 +2,15 @@
 #define QBOOT_ALGEBRA_MATRIX_HPP_
 
 #include <cassert>           // for assert
-#include <concepts>          // for is_constructible_v, is_nothrow_destructible_v, same_as
+#include <concepts>          // for same_as
 #include <cstdint>           // for uint32_t
 #include <initializer_list>  // for initializer_list
 #include <memory>            // for unique_ptr, make_unique
 #include <ostream>           // for ostream
-#include <type_traits>       // for true_type, false_type, is_same_v, enable_if, void_t
 #include <utility>           // for move, swap
 
-#include "qboot/mp/real.hpp"  // for real
+#include "qboot/mp/real.hpp"      // for real
+#include "qboot/my_concepts.hpp"  // for default_initializable
 
 namespace qboot::algebra
 {
@@ -65,18 +65,6 @@ namespace qboot::algebra
 	};
 	inline mp::real eval(const mp::real& v, [[maybe_unused]] const mp::real& x) { return v; }
 
-	// clang does not implement std::default_initializable
-	template <class T>
-	concept _destructible = std::is_nothrow_destructible_v<T>;
-	template <class T, class... Args>
-	concept _constructible_from = _destructible<T>&& std::is_constructible_v<T, Args...>;
-	template <class T>
-	concept _default_initializable = _constructible_from<T>&& requires
-	{
-		T{};
-	}
-	&&requires { ::new (static_cast<void*>(nullptr)) T; };
-
 	template <class T>
 	concept _ring_base = requires(T x, T y, const T c)
 	{
@@ -89,7 +77,7 @@ namespace qboot::algebra
 		}
 		->std::same_as<T>;
 	}
-	&&_zero_checkable<T>&& _default_initializable<T>;
+	&&_zero_checkable<T>&& default_initializable<T>;
 	template <class T>
 	concept _ring_ops = requires(const T& x, const T& y, T& r)
 	{
