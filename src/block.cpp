@@ -7,10 +7,11 @@ using std::string, std::ostringstream;
 
 namespace qboot
 {
-	template class ConformalBlock<PrimaryOperator>;
-	template class ConformalBlock<GeneralPrimaryOperator>;
+	[[maybe_unused]] static void _instantiate(ConformalBlock<PrimaryOperator>, ConformalBlock<GeneralPrimaryOperator>)
+	{
+	}
 
-	template <class Operator>
+	template <_operator Operator>
 	[[nodiscard]] string ConformalBlock<Operator>::str() const
 	{
 		ostringstream os;

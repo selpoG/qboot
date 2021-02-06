@@ -7,7 +7,7 @@
 #include <string_view>  // for string_view
 #include <utility>      // for move
 
-namespace fs = qboot::fs;
+namespace fs = std::filesystem;
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real;

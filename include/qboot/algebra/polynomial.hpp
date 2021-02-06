@@ -71,7 +71,7 @@ namespace qboot::algebra
 			auto s = coeff_[d];
 			for (uint32_t i = d - 1; i <= d; --i)
 			{
-				if constexpr (std::is_same_v<R, mp::real>)
+				if constexpr (std::same_as<R, mp::real>)
 					mp::fma(s, s, x, coeff_[i]);
 				else
 				{
@@ -163,14 +163,14 @@ namespace qboot::algebra
 	};
 	template <class T>
 	using _polynomialize_t = _substitute_t<T, Polynomial>;
-	// schematically, to_pol(Vector<Ring>{a, b, c, ...}) = a + b x + c x ^ 2 + ...
+	// schematically, to_pol(Vector<R>{a, b, c, ...}) = a + b x + c x ^ 2 + ...
 	inline auto to_pol(Vector<mp::real>* coeffs) { return Polynomial(coeffs->clone()); }
-	template <class Ring>
-	Matrix<_polynomialize_t<Ring>> to_pol(Vector<Matrix<Ring>>* coeffs)
+	template <Ring R>
+	Matrix<_polynomialize_t<R>> to_pol(Vector<Matrix<R>>* coeffs)
 	{
 		uint32_t row = coeffs->at(0).row(), column = coeffs->at(0).column(), len = coeffs->size();
-		Matrix<_polynomialize_t<Ring>> ans(row, column);
-		Vector<Ring> v(len);
+		Matrix<_polynomialize_t<R>> ans(row, column);
+		Vector<R> v(len);
 		for (uint32_t r = 0; r < row; ++r)
 			for (uint32_t c = 0; c < column; ++c)
 			{
@@ -179,12 +179,12 @@ namespace qboot::algebra
 			}
 		return ans;
 	}
-	template <class Ring>
-	Vector<_polynomialize_t<Ring>> to_pol(Vector<Vector<Ring>>* coeffs)
+	template <Ring R>
+	Vector<_polynomialize_t<R>> to_pol(Vector<Vector<R>>* coeffs)
 	{
 		uint32_t sz = coeffs->at(0).size(), len = coeffs->size();
-		Vector<_polynomialize_t<Ring>> ans(sz);
-		Vector<Ring> v(len);
+		Vector<_polynomialize_t<R>> ans(sz);
+		Vector<R> v(len);
 		for (uint32_t r = 0; r < sz; ++r)
 		{
 			for (uint32_t i = 0; i < len; ++i) v[i].swap(coeffs->at(i).at(r));
@@ -193,9 +193,8 @@ namespace qboot::algebra
 		return ans;
 	}
 	Matrix<mp::real> interpolation_matrix(const Vector<mp::real>& points);
-	template <class Ring>
-	_polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals,
-	                                              const Matrix<mp::real>& interpolation_matrix)
+	template <Ring R>
+	_polynomialize_t<R> polynomial_interpolate(const Vector<R>& vals, const Matrix<mp::real>& interpolation_matrix)
 	{
 		assert(vals.size() == interpolation_matrix.row() && vals.size() > 0 && interpolation_matrix.is_square());
 		auto coeffs = dot(interpolation_matrix, vals);
@@ -204,16 +203,16 @@ namespace qboot::algebra
 	// calculate coefficients c of polynomial f(x) s.t. for each i, f(points[i]) = vals[i]
 	// vals[i] = c[0] + c[1] points[i] + c[2] points[i] ^ 2 + ... + c[deg] points[i] ^ {deg}
 	// evals(polynomial_interpolate(vals, points), points) == vals (up to rounding errors)
-	template <class Ring>
-	_polynomialize_t<Ring> polynomial_interpolate(const Vector<Ring>& vals, const Vector<mp::real>& points)
+	template <Ring R>
+	_polynomialize_t<R> polynomial_interpolate(const Vector<R>& vals, const Vector<mp::real>& points)
 	{
 		assert(vals.size() == points.size() && points.size() > 0);
 		return polynomial_interpolate(vals, interpolation_matrix(points));
 	}
-	template <class Ring>
-	Vector<_evaluated_t<Ring>> evals(const Ring& v, const Vector<mp::real>& xs)
+	template <Ring R>
+	Vector<_evaluated_t<R>> evals(const R& v, const Vector<mp::real>& xs)
 	{
-		Vector<_evaluated_t<Ring>> ans(xs.size());
+		Vector<_evaluated_t<R>> ans(xs.size());
 		for (uint32_t i = 0; i < xs.size(); ++i) ans[i] = v.eval(xs[i]);
 		return ans;
 	}

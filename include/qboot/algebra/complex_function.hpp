@@ -57,15 +57,15 @@ namespace qboot::algebra
 	//   \sum_{n = 0}^{lambda / 2} \sum_{m = 0}^{lambda - 2 n} this->at(n, m) (x - x0) ^ m (y - y0) ^ n + ...
 	// we take (x0, y0) = (1 / 2, 0)
 	// if a nontrivial symmetry even (resp. odd) is given, m runs over even (resp. odd) number only.
-	// Ring must be mp::real or Polynomial
-	template <class Ring>
+	// R must be mp::real or Polynomial
+	template <Ring R>
 	class ComplexFunction
 	{
-		template <class Ring2>
+		template <Ring R2>
 		friend class ComplexFunction;
 		FunctionSymmetry sym_ = FunctionSymmetry::Mixed;
 		uint32_t lambda_;
-		Vector<Ring> coeffs_;
+		Vector<R> coeffs_;
 		// indices are aligned by lexicographical order of (dy, dx)
 		// i.e., (dx, dy) is the index(dx, dy)-th element in
 		//   [(dx, dy) for dy in range(lambda // 2) for dx in range(lambda - 2 * dy) if sym is Mixed or dx % 2 == sym]
@@ -79,7 +79,7 @@ namespace qboot::algebra
 			default: return (lambda_ + 2 - dy) * dy + dx;
 			}
 		}
-		ComplexFunction(Vector<Ring>&& v, uint32_t l, FunctionSymmetry sym)
+		ComplexFunction(Vector<R>&& v, uint32_t l, FunctionSymmetry sym)
 		    : sym_(sym), lambda_(l), coeffs_(std::move(v))
 		{
 		}
@@ -112,9 +112,9 @@ namespace qboot::algebra
 		// get coefficient of the term (x - x0) ^ {dx} (y - y0) ^ {dy}
 		// 0 <= dx, dy and dx + 2 dy <= lambda
 		// if symmetry is even or odd, the parity of dx must equals symmetry
-		[[nodiscard]] Ring& at(uint32_t dx, uint32_t dy) & { return coeffs_[index(dx, dy)]; }
-		[[nodiscard]] const Ring& at(uint32_t dx, uint32_t dy) const& { return coeffs_[index(dx, dy)]; }
-		[[nodiscard]] Vector<Ring> flatten() && { return std::move(coeffs_); }
+		[[nodiscard]] R& at(uint32_t dx, uint32_t dy) & { return coeffs_[index(dx, dy)]; }
+		[[nodiscard]] const R& at(uint32_t dx, uint32_t dy) const& { return coeffs_[index(dx, dy)]; }
+		[[nodiscard]] Vector<R> flatten() && { return std::move(coeffs_); }
 
 		[[nodiscard]] auto abs() const { return coeffs_.abs(); }
 		[[nodiscard]] auto norm() const { return coeffs_.norm(); }
@@ -144,14 +144,14 @@ namespace qboot::algebra
 			coeffs_ -= f.coeffs_;
 			return *this;
 		}
-		template <class T>
-		ComplexFunction& operator*=(const T& r) &
+		template <class S>
+		ComplexFunction& operator*=(const S& r) &
 		{
 			coeffs_ *= r;
 			return *this;
 		}
-		template <class T>
-		ComplexFunction& operator/=(const T& r) &
+		template <class S>
+		ComplexFunction& operator/=(const S& r) &
 		{
 			coeffs_ /= r;
 			return *this;
@@ -204,23 +204,23 @@ namespace qboot::algebra
 				}
 			return z;
 		}
-		template <class R>
-		friend ComplexFunction mul_scalar(const R& r, const ComplexFunction& x)
+		template <class S>
+		friend ComplexFunction mul_scalar(const S& r, const ComplexFunction& x)
 		{
 			return ComplexFunction(mul_scalar(r, x.coeffs_), x.lambda_, x.sym_);
 		}
-		template <class R>
-		friend ComplexFunction mul_scalar(const R& r, ComplexFunction&& x)
+		template <class S>
+		friend ComplexFunction mul_scalar(const S& r, ComplexFunction&& x)
 		{
 			return std::move(x *= r);
 		}
-		template <class R>
-		friend ComplexFunction operator/(const ComplexFunction& x, const R& r)
+		template <class S>
+		friend ComplexFunction operator/(const ComplexFunction& x, const S& r)
 		{
 			return ComplexFunction(x.coeffs_ / r, x.lambda_, x.sym_);
 		}
-		template <class R>
-		friend ComplexFunction operator/(ComplexFunction&& x, const R& r)
+		template <class S>
+		friend ComplexFunction operator/(ComplexFunction&& x, const S& r)
 		{
 			return std::move(x /= r);
 		}
@@ -229,22 +229,22 @@ namespace qboot::algebra
 			return x.lambda_ == y.lambda_ && x.sym_ == y.sym_ && x.coeffs_ == y.coeffs_;
 		}
 		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
-		[[nodiscard]] ComplexFunction<_evaluated_t<Ring>> eval(const mp::real& x) const
+		[[nodiscard]] ComplexFunction<_evaluated_t<R>> eval(const mp::real& x) const
 		{
-			return ComplexFunction<_evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
+			return ComplexFunction<_evaluated_t<R>>(coeffs_.eval(x), lambda_, sym_);
 		}
 	};
 	template <>
 	ComplexFunction<mp::real> ComplexFunction<mp::real>::proj(FunctionSymmetry sym) &&;
 	template <>
 	ComplexFunction<Polynomial> ComplexFunction<Polynomial>::proj(FunctionSymmetry sym) &&;
-	template <class Ring>
-	ComplexFunction<_polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>* coeffs)
+	template <Ring R>
+	ComplexFunction<_polynomialize_t<R>> to_pol(Vector<ComplexFunction<R>>* coeffs)
 	{
 		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();
 		auto sym = coeffs->at(0).symmetry();
-		ComplexFunction<_polynomialize_t<Ring>> ans(lambda, sym);
-		Vector<Ring> v(len);
+		ComplexFunction<_polynomialize_t<R>> ans(lambda, sym);
+		Vector<R> v(len);
 		for (uint32_t dy = 0; dy <= lambda / 2; ++dy)
 			for (uint32_t dx = 0; dx + 2 * dy <= lambda; ++dx)
 				if (_matches(sym, dx))
@@ -254,7 +254,7 @@ namespace qboot::algebra
 				}
 		return ans;
 	}
-	template <class R>
+	template <Ring R>
 	std::ostream& operator<<(std::ostream& out, const ComplexFunction<R>& v)
 	{
 		out << "[";

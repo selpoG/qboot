@@ -1,13 +1,12 @@
 #ifndef QBOOT_PRIMARY_OP_HPP_
 #define QBOOT_PRIMARY_OP_HPP_
 
-#include <cassert>      // for assert
-#include <cstdint>      // for uint32_t
-#include <optional>     // for optional
-#include <sstream>      // for ostringstream
-#include <string>       // for string
-#include <type_traits>  // for true_type
-#include <variant>      // for variant
+#include <cassert>   // for assert
+#include <cstdint>   // for uint32_t
+#include <optional>  // for optional
+#include <sstream>   // for ostringstream
+#include <string>    // for string
+#include <variant>   // for variant
 
 #include "qboot/mp/rational.hpp"  // for rational
 #include "qboot/mp/real.hpp"      // for real, isinteger

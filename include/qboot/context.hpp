@@ -86,7 +86,7 @@ namespace qboot
 		}
 		// cutoff of the power series expansion of conformal blocks at rho = 0
 		[[nodiscard]] uint32_t n_Max() const { return n_Max_; }
-		// passed to the constructor of ComplexFunction<Ring>
+		// passed to the constructor of ComplexFunction<R>
 		[[nodiscard]] uint32_t lambda() const { return lambda_; }
 		// the dimension of the spacetime
 		[[nodiscard]] const mp::rational& dimension() const { return dim_; }

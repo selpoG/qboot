@@ -1,10 +1,10 @@
 #ifndef QBOOT_BLOCK_HPP_
 #define QBOOT_BLOCK_HPP_
 
-#include <cstdint>      // for uint32_t
-#include <string>       // for string
-#include <type_traits>  // enable_if, is_same_v
-#include <variant>      // for varinat
+#include <concepts>  // for same_as
+#include <cstdint>   // for uint32_t
+#include <string>    // for string
+#include <variant>   // for varinat
 
 #include "qboot/algebra/complex_function.hpp"  // for FunctionSymmetry
 #include "qboot/mp/real.hpp"                   // for real
@@ -22,8 +22,12 @@ namespace qboot
 	{
 		return _delta_P(d1 - d2, d3 - d4);
 	}
+	class PrimaryOperator;
+	class GeneralPrimaryOperator;
+	template <class T>
+	concept _operator = std::same_as<T, PrimaryOperator> || std::same_as<T, GeneralPrimaryOperator>;
 	// F_{\mp, op}^{d1 d2, d3 d4}
-	template <class Operator>
+	template <_operator Operator>
 	class ConformalBlock
 	{
 		Operator op_;
@@ -63,8 +67,7 @@ namespace qboot
 		    : ConformalBlock(op, op1.delta(), op2.delta(), op3.delta(), op4.delta(), sym)
 		{
 		}
-		template <class = std::enable_if<std::is_same_v<Operator, PrimaryOperator>>>
-		[[nodiscard]] const mp::real& delta() const
+		[[nodiscard]] const mp::real& delta() const requires std::same_as<Operator, PrimaryOperator>
 		{
 			return op_.delta();
 		}
@@ -76,13 +79,13 @@ namespace qboot
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
 		[[nodiscard]] const Operator& get_op() const { return op_; }
-		template <class = std::enable_if<!std::is_same_v<Operator, PrimaryOperator>>>
 		[[nodiscard]] PrimaryOperator get_op(const mp::real& delta) const
+		    requires std::same_as<Operator, GeneralPrimaryOperator>
 		{
 			return op_.fix_delta(delta);
 		}
-		template <class = std::enable_if<!std::is_same_v<Operator, PrimaryOperator>>>
 		[[nodiscard]] ConformalBlock<PrimaryOperator> fix_delta(const mp::real& delta) const
+		    requires std::same_as<Operator, GeneralPrimaryOperator>
 		{
 			return ConformalBlock<PrimaryOperator>(op_.fix_delta(delta), d12_, d34_, d23h_, sym_);
 		}
@@ -130,7 +133,7 @@ namespace qboot
 		[[nodiscard]] const mp::real& P() const { return P_; }
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
-		template <class Operator>
+		template <_operator Operator>
 		[[nodiscard]] ConformalBlock<Operator> fix_op(const Operator& op) const
 		{
 			return ConformalBlock<Operator>(op, d12_, d34_, d23h_, sym_);

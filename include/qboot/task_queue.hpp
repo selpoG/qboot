@@ -2,6 +2,7 @@
 #define QBOOT_TASK_QUEUE_HPP_
 
 #include <atomic>              // for atomic
+#include <concepts>            // for same_as
 #include <condition_variable>  // for condition_variable
 #include <functional>          // for function
 #include <future>              // for future, promise
@@ -11,13 +12,14 @@
 #include <string>              // for string
 #include <string_view>         // for string_view
 #include <thread>              // for thread
-#include <type_traits>         // for is_default_constructible_v
 #include <utility>             // for declval, move
 #include <vector>              // for vector
 
+#include "qboot/my_concepts.hpp"  // for default_initializable
+
 namespace qboot
 {
-	template <class T>
+	template <default_initializable T>
 	std::vector<T> _seq_eval(const std::vector<std::function<T()>>& fs)
 	{
 		std::vector<T> ans;
@@ -30,11 +32,10 @@ namespace qboot
 	}
 	// evaluate fs in parallel and returns its value
 	// if p <= 1, evaluate sequentially
-	template <class T>
+	template <default_initializable T>
 	std::vector<T> _parallel_evaluate(const std::vector<std::function<T()>>& fs,
 	                                  uint32_t p = std::thread::hardware_concurrency())
 	{
-		static_assert(std::is_default_constructible_v<T>);
 		if (p <= 1) return _seq_eval(fs);
 		auto N = fs.size();
 		std::vector<T> ans(N);
@@ -100,7 +101,7 @@ namespace qboot
 		~_task() override = default;
 		void run() override
 		{
-			if constexpr (std::is_same_v<T, void>)
+			if constexpr (std::same_as<T, void>)
 			{
 				f_();
 				p_.set_value();

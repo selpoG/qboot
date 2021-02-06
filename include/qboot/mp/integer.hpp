@@ -1,6 +1,8 @@
 #ifndef QBOOT_MP_INTEGER_HPP_
 #define QBOOT_MP_INTEGER_HPP_
 
+#include <compare>      // for strong_ordering
+#include <concepts>     // for same_as
 #include <istream>      // for basic_istream
 #include <limits>       // for numeric_limits
 #include <optional>     // for optional
@@ -8,11 +10,12 @@
 #include <stdexcept>    // for runtime_error
 #include <string>       // for to_string, string_literals
 #include <string_view>  // for string_view
-#include <type_traits>  // for enable_if_t, is_same_v, is_integral_v, is_signed_v, conjunction_v, integral_constant
 #include <utility>      // for move
 
-#include "gmpxx.h"
-#include "mpfr.h"
+#include <gmpxx.h>
+#include <mpfr.h>
+
+#include "qboot/my_concepts.hpp"  // for integral, signed_integral, unsigned_integral
 
 namespace qboot::mp
 {
@@ -25,26 +28,18 @@ namespace qboot::mp
 	class real;
 
 	template <class Tp>
-	inline constexpr bool _is_mp =
-	    std::is_same_v<Tp, integer> || std::is_same_v<Tp, rational> || std::is_same_v<Tp, real>;
+	concept _is_mp = std::same_as<Tp, integer> || std::same_as<Tp, rational> || std::same_as<Tp, real>;
 
 	// check all values in integral class I1 are included in integral class I2
 	// and I1, I2 has the same signed property
 	template <class I1, class I2>
-	inline constexpr bool _is_included_v = std::numeric_limits<I2>::min() <= std::numeric_limits<I1>::min() &&
-	                                       std::numeric_limits<I1>::max() <= std::numeric_limits<I2>::max();
-
-	template <class I1, class I2>
-	struct _is_included : std::integral_constant<bool, _is_included_v<I1, I2>>
-	{
-	};
+	concept _is_included = std::numeric_limits<I2>::min() <= std::numeric_limits<I1>::min() &&
+	                       std::numeric_limits<I1>::max() <= std::numeric_limits<I2>::max();
 
 	template <class Tp>
-	inline constexpr bool _ulong_convertible_v =
-	    std::conjunction_v<std::is_integral<Tp>, std::is_unsigned<Tp>, _is_included<Tp, _ulong>>;
+	concept _ulong_convertible = unsigned_integral<Tp>&& _is_included<Tp, _ulong>;
 	template <class Tp>
-	inline constexpr bool _long_convertible_v =
-	    std::conjunction_v<std::is_integral<Tp>, std::is_signed<Tp>, _is_included<Tp, _long>>;
+	concept _long_convertible = signed_integral<Tp>&& _is_included<Tp, _long>;
 
 	inline bool _is_even(mpz_srcptr p) { return mpz_even_p(p) != 0; }           // NOLINT
 	inline bool _is_odd(mpz_srcptr p) { return mpz_odd_p(p) != 0; }             // NOLINT
@@ -54,7 +49,10 @@ namespace qboot::mp
 	inline int _cmp_si(mpq_srcptr p, _long o) { return mpq_cmp_si(p, o, 1); }   // NOLINT
 
 	template <class Tp>
-	inline constexpr bool _mpz_is_other_operands = _long_convertible_v<Tp> || _ulong_convertible_v<Tp>;
+	concept _mpz_is_other_operands = _long_convertible<Tp> || _ulong_convertible<Tp>;
+
+	template <class Tp>
+	concept _mpz_is_other_operands_d = _mpz_is_other_operands<Tp> || std::same_as<Tp, double>;
 
 	template <class Tp>
 	struct _mp_ops;
@@ -401,37 +399,10 @@ namespace qboot::mp
 		inline static int cmp(mpfr_srcptr op1, double op2) { return mpfr_cmp_d(op1, op2); }
 	};
 
-	// generate relational operators from _cmp (using ADL)
-
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
+	template <_is_mp Tp1, class Tp2>
 	inline bool operator==(const Tp1& r1, const Tp2& r2)
 	{
-		return _cmp(r1, r2) == 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator!=(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) != 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator<(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) < 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator>(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) > 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator<=(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) <= 0;
-	}
-	template <class Tp1, class Tp2, class = std::enable_if_t<_is_mp<Tp1> || _is_mp<Tp2>>>
-	inline bool operator>=(const Tp1& r1, const Tp2& r2)
-	{
-		return _cmp(r1, r2) >= 0;
+		return (r1 <=> r2) == 0;
 	}
 
 	inline std::optional<rational> parse(std::string_view str);
@@ -487,6 +458,13 @@ namespace qboot::mp
 		[[nodiscard]] bool divisible_by(const integer& o) const { return mpz_divisible_p(_x, o._x) != 0; }
 		[[nodiscard]] bool divisible_by(_ulong o) const { return mpz_divisible_ui_p(_x, o) != 0; }
 
+		[[nodiscard]] integer norm() const& { return *this * *this; }
+		[[nodiscard]] integer norm() &&
+		{
+			*this *= *this;
+			return std::move(*this);
+		}
+
 		template <class T>
 		[[nodiscard]] integer eval([[maybe_unused]] const T& x) const
 		{
@@ -508,7 +486,7 @@ namespace qboot::mp
 			return {std::move(x)};
 		}
 
-		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
+		template <_mpz_is_other_operands_d T>
 		explicit integer(T o)
 		{
 			_mp_ops<T>::init_set(_x, o);
@@ -523,7 +501,7 @@ namespace qboot::mp
 				throw std::runtime_error("in qboot::mp::integer(string_view):\n  invalid input format "s += o);
 			}
 		}
-		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
+		template <_mpz_is_other_operands_d T>
 		integer& operator=(T o) &
 		{
 			_mp_ops<T>::set(_x, o);
@@ -540,30 +518,26 @@ namespace qboot::mp
 				throw std::runtime_error("in qboot::mp::integer(string_view):\n  invalid input format "s += o);
 			return *this;
 		}
-		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
+		template <_mpz_is_other_operands_d T>
 		explicit operator T() const
 		{
 			return _mp_ops<T>::get(_x);
 		}
 
-		// _cmp(a, b) returns the sign of a - b
-
-		friend int _cmp(const integer& r1, const integer& r2) { return mpz_cmp(r1._x, r2._x); }
-		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
-		friend int _cmp(const integer& r1, T r2)
+		friend std::strong_ordering operator<=>(const integer& r1, const integer& r2)
 		{
-			return _mp_ops<T>::cmp(r1._x, r2);
+			return mpz_cmp(r1._x, r2._x) <=> 0;
 		}
-		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
-		friend int _cmp(T r1, const integer& r2)
+		template <_mpz_is_other_operands_d T>
+		friend std::strong_ordering operator<=>(const integer& r1, T r2)
 		{
-			return -_cmp(r2, r1);
+			return _mp_ops<T>::cmp(r1._x, r2) <=> 0;
 		}
 
 		template <class Tp>
 		integer& operator+=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, integer>)
+			if constexpr (std::same_as<Tp, integer>)
 				mpz_add(_x, _x, o._x);
 			else
 				_mp_ops<Tp>::add(_x, _x, o);
@@ -573,7 +547,7 @@ namespace qboot::mp
 		template <class Tp>
 		integer& operator-=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, integer>)
+			if constexpr (std::same_as<Tp, integer>)
 				mpz_sub(_x, _x, o._x);
 			else
 				_mp_ops<Tp>::sub_a(_x, _x, o);
@@ -583,7 +557,7 @@ namespace qboot::mp
 		template <class Tp>
 		integer& operator*=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, integer>)
+			if constexpr (std::same_as<Tp, integer>)
 				mpz_mul(_x, _x, o._x);
 			else
 				_mp_ops<Tp>::mul(_x, _x, o);
@@ -719,73 +693,73 @@ namespace qboot::mp
 		}
 		friend integer operator<<(integer&& a, mp_bitcnt_t o) { return std::move(a <<= o); }
 
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator+(const integer& r1, const Tp& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::add(temp._x, r1._x, r2);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator+(integer&& r1, const Tp& r2)
 		{
 			return std::move(r1 += r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator+(const Tp& r1, const integer& r2)
 		{
 			return r2 + r1;
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator+(const Tp& r1, integer&& r2)
 		{
 			return std::move(r2 += r1);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator-(const integer& r1, const Tp& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::sub_a(temp._x, r1._x, r2);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator-(integer&& r1, const Tp& r2)
 		{
 			return std::move(r1 -= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator-(const Tp& r1, const integer& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::sub_b(temp._x, r1, r2._x);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator-(const Tp& r1, integer&& r2)
 		{
 			_mp_ops<Tp>::sub_b(r2._x, r1, r2._x);
 			return std::move(r2);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator*(const integer& r1, const Tp& r2)
 		{
 			integer temp;
 			_mp_ops<Tp>::mul(temp._x, r1._x, r2);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator*(integer&& r1, const Tp& r2)
 		{
 			return std::move(r1 *= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator*(const Tp& r1, const integer& r2)
 		{
 			return r2 * r1;
 		}
-		template <class Tp, class = std::enable_if_t<_mpz_is_other_operands<Tp>>>
+		template <_mpz_is_other_operands Tp>
 		friend integer operator*(const Tp& r1, integer&& r2)
 		{
 			return std::move(r2 *= r1);

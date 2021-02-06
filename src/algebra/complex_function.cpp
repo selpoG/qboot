@@ -2,17 +2,17 @@
 
 #include "qboot/mp/real.hpp"  // for real, pow
 
-using qboot::algebra::ComplexFunction, qboot::algebra::FunctionSymmetry;
+using qboot::algebra::ComplexFunction, qboot::algebra::FunctionSymmetry, qboot::algebra::Ring;
 using qboot::mp::real;
 using std::move;
 
 namespace
 {
-	template <class Ring>
-	ComplexFunction<Ring> _proj(ComplexFunction<Ring>&& f, FunctionSymmetry sym)
+	template <Ring R>
+	ComplexFunction<R> _proj(ComplexFunction<R>&& f, FunctionSymmetry sym)
 	{
 		if (f.symmetry() == sym) return move(f);
-		ComplexFunction<Ring> z(f.lambda(), sym);
+		ComplexFunction<R> z(f.lambda(), sym);
 		if (f.symmetry() == FunctionSymmetry::Mixed)
 		{
 			for (uint32_t dy = 0; dy <= f.lambda() / 2; ++dy)

@@ -73,7 +73,7 @@ add_library(${MY_TARGET} STATIC
 	include/qboot/context.hpp
 	include/qboot/hor_formula.hpp
 	include/qboot/hor_recursion.hpp
-	include/qboot/my_filesystem.hpp
+	include/qboot/my_concepts.hpp
 	include/qboot/polynomial_program.hpp
 	include/qboot/primary_op.hpp
 	include/qboot/qboot.hpp
@@ -93,6 +93,9 @@ target_link_libraries(
 )
 if(NOT MSVC)
 	target_link_libraries(${MY_TARGET} INTERFACE stdc++fs)
+	if(NOT CMAKE_COMPILER_IS_GNUCXX)
+		target_link_libraries(${MY_TARGET} INTERFACE c++abi)
+	endif()
 endif()
 
 target_include_directories(${MY_TARGET} PUBLIC

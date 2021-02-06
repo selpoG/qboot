@@ -173,18 +173,18 @@ namespace qboot
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
 			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event] {
 				_scoped_event scope(std::to_string(j), event);
-				auto ineq = std::move(inequality_[j]);
+				auto ineq = move(inequality_[j].value());
 				// convert ineq to DualConstraint
-				uint32_t sz = ineq->size(), deg = ineq->max_degree(), schur_sz = (deg + 1) * sz * (sz + 1) / 2,
+				uint32_t sz = ineq.size(), deg = ineq.max_degree(), schur_sz = (deg + 1) * sz * (sz + 1) / 2,
 				         d0 = deg / 2, d1 = deg == 0 ? 0 : (deg - 1) / 2;
 				Vector<real> d_c(schur_sz);
 				Matrix<real> d_B(schur_sz, M);
 				Matrix<real> q0(d0 + 1, deg + 1);
 				Matrix<real> q1(d1 + 1, deg + 1);
 				{
-					const auto& xs = ineq->sample_points();
-					const auto& scs = ineq->sample_scalings();
-					auto q = ineq->bilinear_bases();
+					const auto& xs = ineq.sample_points();
+					const auto& scs = ineq.sample_scalings();
+					auto q = ineq.bilinear_bases();
 					for (uint32_t m = 0; m <= d0; ++m)
 						for (uint32_t k = 0; k <= deg; ++k) q0.at(m, k) = q[m].eval(xs[k]) * mp::sqrt(scs[k]);
 					for (uint32_t m = 0; m <= d1; ++m)
@@ -193,13 +193,13 @@ namespace qboot
 				{
 					Vector<Matrix<real>> e_c(deg + 1);
 					Vector<Vector<Matrix<real>>> e_B(N_);
-					for (uint32_t k = 0; k <= deg; ++k) e_c[k] = -ineq->target_eval_with_scale(k);
+					for (uint32_t k = 0; k <= deg; ++k) e_c[k] = -ineq.target_eval_with_scale(k);
 					for (uint32_t n = 0; n < N_; ++n)
 					{
 						e_B[n] = Vector<Matrix<real>>{deg + 1};
-						for (uint32_t k = 0; k <= deg; ++k) e_B[n][k] = -ineq->matrix_eval_with_scale(n, k);
+						for (uint32_t k = 0; k <= deg; ++k) e_B[n][k] = -ineq.matrix_eval_with_scale(n, k);
 					}
-					ineq.reset();
+					move(ineq)._reset();
 					// Tr(A_p Y) + (e_B y)_p = (e_c)_p
 					// convert to Tr(A_p Z) + (d_B z)_p = (d_c)_p
 					uint32_t p = 0;
@@ -247,17 +247,17 @@ namespace qboot
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
 			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event] {
 				_scoped_event scope(std::to_string(j), event);
-				auto ineq = std::move(inequality_[j]);
-				uint32_t sz = ineq->size();
+				auto ineq = move(inequality_[j].value());
+				uint32_t sz = ineq.size();
 				Matrix<Vector<Polynomial>> mat(sz, sz);
 				for (uint32_t r = 0; r < sz; ++r)
 					for (uint32_t c = 0; c < sz; ++c) mat.at(r, c) = Vector<Polynomial>(M + 1);
-				auto target = -ineq->target_polynomial();
+				auto target = -ineq.target_polynomial();
 				Vector<Matrix<Polynomial>> new_mat(M);
-				for (uint32_t m = 0; m < M; ++m) new_mat[m] = ineq->matrix_polynomial(free_indices_[m]);
+				for (uint32_t m = 0; m < M; ++m) new_mat[m] = ineq.matrix_polynomial(free_indices_[m]);
 				for (uint32_t e = 0; e < eq_sz; ++e)
 				{
-					auto t = ineq->matrix_polynomial(leading_indices_[e]);
+					auto t = ineq.matrix_polynomial(leading_indices_[e]);
 					for (uint32_t m = 0; m < M; ++m) new_mat[m] -= mul_scalar(equation_[e][free_indices_[m]], t);
 					target += mul_scalar(equation_targets_[e], move(t));
 				}
@@ -268,8 +268,8 @@ namespace qboot
 						for (uint32_t m = 0; m < M; ++m) mat.at(r, c).at(m + 1) = move(new_mat[m].at(r, c));
 					}
 				sdpb.register_constraint(
-				    j, PVM(move(mat), ineq->sample_points(), ineq->sample_scalings(), ineq->bilinear_bases()));
-				ineq.reset();
+				    j, PVM(move(mat), ineq.sample_points(), ineq.sample_scalings(), ineq.bilinear_bases()));
+				move(ineq)._reset();
 			});
 		_parallel_evaluate(tasks, parallel);
 		equation_.clear();
