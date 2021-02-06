@@ -1,5 +1,6 @@
 #include <array>
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <future>
 #include <iostream>
@@ -11,11 +12,10 @@
 #include <vector>
 
 #include "qboot/mp/real.hpp"
-#include "qboot/my_filesystem.hpp"
 #include "qboot/task_queue.hpp"
 
 namespace mp = qboot::mp;
-namespace fs = qboot::fs;
+namespace fs = std::filesystem;
 using fs::path;
 using mp::real, mp::rational, mp::integer;
 using std::ostringstream, std::ifstream, std::endl, std::cout;

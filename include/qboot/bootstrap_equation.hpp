@@ -4,6 +4,7 @@
 #include <algorithm>    // for min
 #include <array>        // for array
 #include <cstdint>      // for uint32_t
+#include <filesystem>   // for path
 #include <functional>   // for function
 #include <map>          // for map
 #include <memory>       // for unique_ptr
@@ -21,7 +22,6 @@
 #include "qboot/context.hpp"                   // for Context
 #include "qboot/mp/rational.hpp"               // for rational
 #include "qboot/mp/real.hpp"                   // for real
-#include "qboot/my_filesystem.hpp"             // for path
 #include "qboot/polynomial_program.hpp"        // for PolynomialProgram
 #include "qboot/primary_op.hpp"                // for GeneralPrimaryOperator, PrimaryOperator
 #include "qboot/task_queue.hpp"                // for _event_base
@@ -234,7 +234,7 @@ namespace qboot
 		return std::make_unique<_extremal_OPE>(maximize, target, norm);
 	}
 	// read raw functional from a result of sdpb
-	algebra::Vector<mp::real> read_raw_functional(const fs::path& y_txt);
+	algebra::Vector<mp::real> read_raw_functional(const std::filesystem::path& y_txt);
 	class Equation;
 	// one bootrap equation contains
 	// - constant terms (from the unit operator)

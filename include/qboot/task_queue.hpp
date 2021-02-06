@@ -19,7 +19,7 @@
 
 namespace qboot
 {
-	template <class T>
+	template <default_initializable T>
 	std::vector<T> _seq_eval(const std::vector<std::function<T()>>& fs)
 	{
 		std::vector<T> ans;

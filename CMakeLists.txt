@@ -74,7 +74,6 @@ add_library(${MY_TARGET} STATIC
 	include/qboot/hor_formula.hpp
 	include/qboot/hor_recursion.hpp
 	include/qboot/my_concepts.hpp
-	include/qboot/my_filesystem.hpp
 	include/qboot/polynomial_program.hpp
 	include/qboot/primary_op.hpp
 	include/qboot/qboot.hpp

@@ -1,13 +1,13 @@
 #ifndef QBOOT_XML_INPUT_HPP_
 #define QBOOT_XML_INPUT_HPP_
 
-#include <memory>    // for unique_ptr
-#include <optional>  // for optional
+#include <filesystem>  // for path
+#include <memory>      // for unique_ptr
+#include <optional>    // for optional
 
 #include "qboot/algebra/matrix.hpp"      // for Vector, Matrix
 #include "qboot/algebra/polynomial.hpp"  // for Polynomial
 #include "qboot/mp/real.hpp"             // for real
-#include "qboot/my_filesystem.hpp"       // for path
 
 namespace qboot
 {
@@ -54,7 +54,7 @@ namespace qboot
 		XMLInput(mp::real&& constant, algebra::Vector<mp::real>&& obj, uint32_t num_constraints);
 		[[nodiscard]] uint32_t num_constraints() const { return num_constraints_; }
 		void register_constraint(uint32_t index, PVM&& c) &;
-		void write(const fs::path& path) const;
+		void write(const std::filesystem::path& path) const;
 	};
 }  // namespace qboot
 

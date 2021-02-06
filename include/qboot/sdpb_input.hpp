@@ -1,18 +1,18 @@
 #ifndef QBOOT_SDPB_INPUT_HPP_
 #define QBOOT_SDPB_INPUT_HPP_
 
-#include <array>     // for array
-#include <cassert>   // for assert
-#include <cstdint>   // for uint32_t
-#include <fstream>   // for ofstream
-#include <iomanip>   // for setprecision
-#include <ios>       // for fixed
-#include <memory>    // for unique_ptr
-#include <optional>  // for optional
+#include <array>       // for array
+#include <cassert>     // for assert
+#include <cstdint>     // for uint32_t
+#include <filesystem>  // for path, create_directory
+#include <fstream>     // for ofstream
+#include <iomanip>     // for setprecision
+#include <ios>         // for fixed
+#include <memory>      // for unique_ptr
+#include <optional>    // for optional
 
 #include "qboot/algebra/matrix.hpp"  // for Matrix, Vector
 #include "qboot/mp/real.hpp"         // for real
-#include "qboot/my_filesystem.hpp"   // for path, create_directory
 #include "qboot/task_queue.hpp"      // for _event_base
 
 namespace qboot
@@ -63,15 +63,15 @@ namespace qboot
 		algebra::Vector<mp::real> objectives_;
 		std::unique_ptr<std::optional<DualConstraint>[]> constraints_;
 		uint32_t num_constraints_;
-		void write_objectives(const fs::path& root) const;
+		void write_objectives(const std::filesystem::path& root) const;
 		void write_objectives(std::ostream& out) const;
-		void write_bilinear_bases(const fs::path& root) const;
+		void write_bilinear_bases(const std::filesystem::path& root) const;
 		void write_bilinear_bases(std::ostream& out) const;
-		void write_free_var_matrix(const fs::path& root, uint32_t i) const;
+		void write_free_var_matrix(const std::filesystem::path& root, uint32_t i) const;
 		void write_free_var_matrix(std::ostream& out, const DualConstraint& cons) const;
-		void write_primal_objective_c(const fs::path& root, uint32_t i) const;
+		void write_primal_objective_c(const std::filesystem::path& root, uint32_t i) const;
 		void write_primal_objective_c(std::ostream& out, const DualConstraint& cons) const;
-		void write_blocks(const fs::path& root) const;
+		void write_blocks(const std::filesystem::path& root) const;
 		void write_blocks(std::ostream& out) const;
 
 	public:
@@ -93,8 +93,10 @@ namespace qboot
 		}
 		// call this for index = 0, ..., num_constraints() - 1 before call of write
 		void register_constraint(uint32_t index, DualConstraint&& c) &;
-		void write(const fs::path& root_, uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) const&;
-		void write(const fs::path& root_, uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) &&;
+		void write(const std::filesystem::path& root_, uint32_t parallel = 1,
+		           const std::unique_ptr<_event_base>& event = {}) const&;
+		void write(const std::filesystem::path& root_, uint32_t parallel = 1,
+		           const std::unique_ptr<_event_base>& event = {}) &&;
 	};
 }  // namespace qboot
 
