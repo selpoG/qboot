@@ -1,10 +1,9 @@
 #ifndef QBOOT_MP_RATIONAL_HPP_
 #define QBOOT_MP_RATIONAL_HPP_
 
-#include <cstdint>
-
 #include <array>        // for array
 #include <cassert>      // for assert
+#include <cstdint>      // for uint32_t
 #include <istream>      // for basic_istream
 #include <optional>     // for optional
 #include <ostream>      // for basic_ostream
