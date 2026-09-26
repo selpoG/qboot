@@ -64,7 +64,6 @@ function(my_find_include result head)
 			/usr
 			/usr/local
 		PATH_SUFFIXES include
-		NO_DEFAULT_PATH
 	)
 endfunction()
 
@@ -76,6 +75,5 @@ function(my_find_lib result lib)
 			/usr
 			/usr/local
 		PATH_SUFFIXES lib
-		NO_DEFAULT_PATH
 	)
 endfunction()
