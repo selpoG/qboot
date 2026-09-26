@@ -32,7 +32,7 @@ endmacro()
 macro(mark_external flag dir)
 	if (MSVC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.14))
 		set(${flag} "${${flag}} /external:I ${dir}")
-	else()
+	elseif(NOT "${dir}" IN_LIST CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
 		set(${flag} "${${flag}} -isystem ${dir}")
 	endif()
 endmacro()
@@ -64,7 +64,6 @@ function(my_find_include result head)
 			/usr
 			/usr/local
 		PATH_SUFFIXES include
-		NO_DEFAULT_PATH
 	)
 endfunction()
 
@@ -76,6 +75,5 @@ function(my_find_lib result lib)
 			/usr
 			/usr/local
 		PATH_SUFFIXES lib
-		NO_DEFAULT_PATH
 	)
 endfunction()
