@@ -1,5 +1,7 @@
 # qboot
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22981121.svg)](https://doi.org/10.5281/zenodo.22981121)
+
 Converter from Conformal Bootstrap Equations to Semidefinite Programming.
 Sum of operators may run over not only infinite range `[lb, infty)` but also finite one `[lb, ub)`.
 
