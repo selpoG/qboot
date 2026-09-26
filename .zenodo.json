@@ -1,0 +1,27 @@
+{
+  "title": "qboot: Converter from Conformal Bootstrap Equations to Semidefinite Programming",
+  "description": "<p>qboot is a C++ library that converts conformal bootstrap equations into semidefinite programming problems. It supports sums of operators over both infinite and finite ranges of scaling dimensions.</p><p>The implementation and its applications are described in Mocho Go's doctoral thesis, An Automated Generation of Bootstrap Equations for Numerical Study of Critical Phenomena (arXiv:2006.04173).</p>",
+  "upload_type": "software",
+  "creators": [
+    {
+      "name": "Go, Mocho",
+      "orcid": "0009-0000-8123-9408"
+    }
+  ],
+  "access_right": "open",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "conformal bootstrap",
+    "conformal field theory",
+    "semidefinite programming",
+    "C++"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.48550/arXiv.2006.04173",
+      "scheme": "doi",
+      "relation": "isSupplementTo",
+      "resource_type": "publication-thesis"
+    }
+  ]
+}
