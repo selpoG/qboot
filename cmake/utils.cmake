@@ -27,6 +27,13 @@ macro(set_flags)
 			set(cxx_flags ${cxx_flags} -Weverything -Wno-c++98-compat -Wno-shadow-field-in-constructor -Wno-c++98-compat-pedantic -Wno-global-constructors -Wno-exit-time-destructors -Wno-covered-switch-default)
 		endif()
 	endif()
+	if(qboot_warnings_as_errors)
+		if(MSVC)
+			list(APPEND cxx_flags /WX)
+		else()
+			list(APPEND cxx_flags -Werror)
+		endif()
+	endif()
 endmacro()
 
 macro(mark_external flag dir)
@@ -43,7 +50,7 @@ function(set_default_property target dir)
 		DEBUG_POSTFIX "-debug"
 		COMPILE_OPTIONS "${cxx_flags}"
 		CXX_EXTENSIONS OFF
-		CXX_STANDARD 17
+		CXX_STANDARD ${CMAKE_CXX_STANDARD}
 		CXX_STANDARD_REQUIRED ON
 		RUNTIME_OUTPUT_DIRECTORY_DEBUG ${dir}/bin
 		RUNTIME_OUTPUT_DIRECTORY_RELEASE ${dir}/bin

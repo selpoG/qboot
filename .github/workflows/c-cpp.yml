@@ -8,25 +8,44 @@ on:
 
 jobs:
   build_matrix:
-    name: build (${{ matrix.build_type }})
-    runs-on: ubuntu-latest
+    name: build (${{ matrix.compiler }}, C++${{ matrix.standard }}, ${{ matrix.build_type }})
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         build_type: [Debug, Release]
+        compiler: [g++-14, clang++-18]
+        standard: [17, 20, 23]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: requirement
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgmp-dev libmpfr-dev
+        sudo apt-get install -y libgmp-dev libmpfr-dev g++-14 clang-18
     - name: configure
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_INSTALL_PREFIX="$HOME/local"
+      run: >-
+        cmake -S . -B build
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+        -DCMAKE_CXX_STANDARD=${{ matrix.standard }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_INSTALL_PREFIX="$HOME/local"
+        -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
     - name: make
       run: cmake --build build --parallel 2
     - name: make install
       run: cmake --install build
+    - name: test
+      run: ctest --test-dir build --output-on-failure
+    - name: installed package
+      run: |
+        cmake -S test/consumer -B consumer-build \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build consumer-build --parallel 2
+        ctest --test-dir consumer-build --output-on-failure
 
   build:
     runs-on: ubuntu-latest

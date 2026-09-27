@@ -1,9 +1,16 @@
-set(MY_TARGET test)
+set(MY_TARGET bootstrap_example)
 add_executable(${MY_TARGET} src/main.cpp)
 target_link_libraries(${MY_TARGET} PRIVATE qboot)
 set_default_property(${MY_TARGET} ..)
+set_target_properties(${MY_TARGET} PROPERTIES OUTPUT_NAME test)
 
 set(MY_TARGET comp)
 add_executable(${MY_TARGET} src/comp.cpp)
 target_link_libraries(${MY_TARGET} PRIVATE qboot)
 set_default_property(${MY_TARGET} ..)
+
+add_executable(qboot_smoke src/smoke.cpp)
+target_link_libraries(qboot_smoke PRIVATE qboot)
+set_default_property(qboot_smoke ..)
+add_test(NAME qboot_smoke COMMAND qboot_smoke)
+set_tests_properties(qboot_smoke PROPERTIES TIMEOUT 120)

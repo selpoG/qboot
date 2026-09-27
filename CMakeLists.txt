@@ -5,6 +5,15 @@ set(QBOOT_PATCH_VERSION 2)
 set(QBOOT_VERSION ${QBOOT_MAJOR_VERSION}.${QBOOT_MINOR_VERSION}.${QBOOT_PATCH_VERSION})
 project(qboot LANGUAGES CXX VERSION ${QBOOT_VERSION})
 
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+	set(CMAKE_CXX_STANDARD 17)
+endif()
+if(CMAKE_CXX_STANDARD LESS 17)
+	message(FATAL_ERROR "qboot requires C++17 or later")
+endif()
+
+option(qboot_warnings_as_errors "Treat compiler warnings as errors" OFF)
+
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 
 option(qboot_build_tests "Build test targets (for developers)" OFF)
@@ -83,6 +92,8 @@ add_library(${MY_TARGET} STATIC
 	include/qboot/xml_input.hpp
 )
 
+target_compile_features(${MY_TARGET} PUBLIC cxx_std_17)
+
 find_package(Threads)
 target_link_libraries(${MY_TARGET} INTERFACE Threads::Threads)
 target_link_libraries(
@@ -131,8 +142,9 @@ install(TARGETS ${MY_TARGET}
 	LIBRARY DESTINATION lib)
 
 if(qboot_build_tests)
+	enable_testing()
 	add_subdirectory(test)
-	set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT test)
+	set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT bootstrap_example)
 else()
 	set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT qboot)
 endif()
