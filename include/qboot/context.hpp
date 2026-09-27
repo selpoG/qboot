@@ -39,12 +39,14 @@ namespace qboot
 		const T& operator()(const TArgs&... args) const
 		{
 			auto key = std::tuple<TArgs...>(args...);
+			std::shared_future<T> result;
 			{
 				std::lock_guard<std::mutex> guard(mutex_);
 				if (memo_.find(key) == memo_.end())
 					memo_.emplace(key, tq_.push([this, key] { return std::apply(f_, key); }).share());
+				result = memo_.at(key);
 			}
-			return memo_.at(key).get();
+			return result.get();
 		}
 		[[nodiscard]] uint32_t _total_memory() const
 		{

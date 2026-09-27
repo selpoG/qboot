@@ -4,6 +4,7 @@
 #include <cassert>           // for assert
 #include <cstdint>           // for uint32_t
 #include <initializer_list>  // for initializer_list
+#include <iterator>          // for next
 #include <memory>            // for unique_ptr, make_unique
 #include <ostream>           // for ostream
 #include <type_traits>       // for true_type, false_type, is_same_v, enable_if, void_t
@@ -113,9 +114,9 @@ namespace qboot::algebra
 		[[nodiscard]] const Ring& operator[](uint32_t i) const& { return at(i); }
 		[[nodiscard]] const uint32_t& size() const noexcept { return sz_; }
 		[[nodiscard]] const Ring* begin() const& noexcept { return arr_.get(); }
-		[[nodiscard]] const Ring* end() const& noexcept { return arr_.get() + sz_; }
+		[[nodiscard]] const Ring* end() const& noexcept { return sz_ == 0 ? arr_.get() : std::next(arr_.get(), sz_); }
 		[[nodiscard]] Ring* begin() & noexcept { return arr_.get(); }
-		[[nodiscard]] Ring* end() & noexcept { return arr_.get() + sz_; }
+		[[nodiscard]] Ring* end() & noexcept { return sz_ == 0 ? arr_.get() : std::next(arr_.get(), sz_); }
 		[[nodiscard]] Vector clone() const
 		{
 			Vector v(sz_);

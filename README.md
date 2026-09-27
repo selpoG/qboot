@@ -19,6 +19,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 		- [Windows](#windows)
 	- [Use installed `qboot`](#use-installed-qboot)
 	- [Docker](#docker)
+	- [Development and testing](#development-and-testing)
 
 ## Requirements
 
@@ -130,4 +131,16 @@ cd qboot/sample
 docker build -t qboot.sample .
 docker run -it --rm qboot.sample
 ./build/bin/sample-debug
+```
+
+## Development and testing
+
+qboot defaults to C++17; use `CMAKE_CXX_STANDARD=20` or `23` to select a newer standard.
+C++23 requires CMake 3.20+ and a compatible compiler.
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 \
+  -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
+cmake --build build --parallel 2
+ctest --test-dir build --output-on-failure
 ```

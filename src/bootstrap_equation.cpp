@@ -12,11 +12,53 @@
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real, qboot::mp::rational, qboot::mp::integer;
-using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view, std::vector,
+using std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view, std::vector,
     std::optional, std::map, std::function, std::tuple, std::shared_ptr, std::array;
 
 namespace qboot
 {
+	void BootstrapEquation::_reset() &&
+	{
+		std::vector<Sector>{}.swap(sectors_);
+		std::map<std::string, uint32_t, std::less<>>{}.swap(sector_id_);
+		std::vector<Equation>{}.swap(eqs_);
+		N_ = 0;
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
+	    : BootstrapEquation(cont, sectors, _pole_selector(numax))
+	{
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors, uint32_t numax)
+	    : BootstrapEquation(cont, std::move(sectors), _pole_selector(numax))
+	{
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors,
+	                                     const std::function<uint32_t(uint32_t)>& num_poles)
+	    : BootstrapEquation(cont, std::vector(sectors), num_poles)
+	{
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors,
+	                                     const std::function<uint32_t(uint32_t)>& num_poles)
+	    : cont_(cont), sectors_(std::move(sectors)), eqs_{}
+	{
+		for (uint32_t id = 0; id < sectors_.size(); ++id)
+		{
+			sector_id_[sectors_[id].name()] = id;
+			if (sectors_[id].type() == SectorType::Continuous)
+				sectors_[id].set_operators(cont.epsilon(), num_poles);
+		}
+	}
+	void BootstrapEquation::add_equation(const Equation& eq) &
+	{
+		assert(N_ == 0);
+		eqs_.push_back(eq);
+	}
+	void BootstrapEquation::add_equation(Equation&& eq) &
+	{
+		assert(N_ == 0);
+		eqs_.push_back(std::move(eq));
+	}
+
 	class ExactPolynomial
 	{
 		// coeff_[N_] must be positive
@@ -54,7 +96,7 @@ namespace qboot
 			return binom_->at(n)[m];
 		}
 		ExactPolynomial(vector<integer>&& coeff, const shared_ptr<vector<vector<integer>>>& binom)
-		    : coeff_(move(coeff)), N_(0), binom_(binom)
+		    : coeff_(std::move(coeff)), N_(0), binom_(binom)
 		{
 			assert(!coeff_.empty() && coeff_.back() != 0);
 			N_ = uint32_t(coeff_.size()) - 1;
@@ -63,7 +105,7 @@ namespace qboot
 		}
 
 	public:
-		explicit ExactPolynomial(vector<integer>&& coeff) : coeff_(move(coeff)), N_(0)
+		explicit ExactPolynomial(vector<integer>&& coeff) : coeff_(std::move(coeff)), N_(0)
 		{
 			assert(!coeff_.empty() && coeff_.back() != 0);
 			N_ = uint32_t(coeff_.size()) - 1;
@@ -178,7 +220,7 @@ namespace qboot
 				q[j] *= pow_a;
 				pow_a *= a;
 			}
-			return ExactPolynomial(move(q), binom_);
+			return ExactPolynomial(std::move(q), binom_);
 		}
 		// num of roots in (a, infty)
 		[[nodiscard]] uint32_t count_roots_pos(const integer& a) const
@@ -270,7 +312,7 @@ namespace qboot
 			vector<integer> q(N_ + 1);
 			for (uint32_t j = 0; j <= N_; ++j)
 				for (uint32_t i = j; i <= N_; ++i) addmul(q[j], coeff_[i], binom(i, j));
-			return ExactPolynomial(move(q), binom_);
+			return ExactPolynomial(std::move(q), binom_);
 		}
 		void isolate_helper(vector<array<rational, 2>>* ans) &&
 		{
@@ -284,11 +326,11 @@ namespace qboot
 				left_child();
 				auto right = shift_one();
 				auto it = ans->end();
-				move(*this).isolate_helper(ans);
+				std::move(*this).isolate_helper(ans);
 				for (; it != ans->end(); ++it)
 					for (uint32_t i = 0; i < 2; ++i) it->at(i) /= 2;
 				vector<integer>().swap(coeff_);
-				move(right).isolate_helper(ans);
+				std::move(right).isolate_helper(ans);
 				for (; it != ans->end(); ++it)
 					for (uint32_t i = 0; i < 2; ++i) it->at(i) = (1 + it->at(i)) / 2;
 			}
@@ -374,7 +416,7 @@ namespace qboot
 		auto mats = make_disc_mat(id);
 		auto sz = sec.size();
 		Matrix<real> mat{sz, sz};
-		for (uint32_t n = 0; n < N_; ++n) mat += mul_scalar(func[n], move(mats[n]));
+		for (uint32_t n = 0; n < N_; ++n) mat += mul_scalar(func[n], std::move(mats[n]));
 		return mat;
 	}
 	[[nodiscard]] Vector<Matrix<real>> BootstrapEquation::make_disc_mat(uint32_t id) const
@@ -405,7 +447,7 @@ namespace qboot
 			}
 			for (uint32_t j = 0; j < n; ++j)
 				for (uint32_t r = 0; r < sz; ++r)
-					for (uint32_t c = 0; c < sz; ++c) mat[j + p].at(r, c) = move(tmp.at(r, c)[j]);
+					for (uint32_t c = 0; c < sz; ++c) mat[j + p].at(r, c) = std::move(tmp.at(r, c)[j]);
 			p += n;
 		}
 		return mat;
@@ -453,7 +495,7 @@ namespace qboot
 				}
 				for (uint32_t j = 0; j < n; ++j)
 					for (uint32_t r = 0; r < sz; ++r)
-						for (uint32_t c = 0; c < sz; ++c) mat[j + p][k].at(r, c) = move(tmp.at(r, c)[j]);
+						for (uint32_t c = 0; c < sz; ++c) mat[j + p][k].at(r, c) = std::move(tmp.at(r, c)[j]);
 			}
 			p += n;
 		}
@@ -473,23 +515,23 @@ namespace qboot
 			if (sector(id).type_ != SectorType::Continuous) continue;
 			auto sz = sector(id).size();
 			for (const auto& op : sector(id).ops_)
-				spectrums.emplace_back([this, id = id, sec = sec, op = op, sz, &recovered_func, &inv, &event]() {
+				spectrums.emplace_back([this, index = id, name = sec, primary = op, sz, &recovered_func, &inv, &event]() {
 					vector<PrimaryOperator> spectrum;
-					auto tag = op.str();
+					auto tag = primary.str();
 					tag += " in ";
-					tag += sec;
+					tag += name;
 					cout << tag << endl;
 					_scoped_event scope(tag, event);
-					auto ag = common_scale(id, op);
+					auto ag = common_scale(index, primary);
 					auto ps = ag->sample_points();
-					auto mat = make_cont_mat(id, op, ag);
+					auto mat = make_cont_mat(index, primary, ag);
 					auto num_pts = ps.size();
 					assert(N_ == mat.size());
 					Vector<Matrix<real>> mats(num_pts);
 					for (uint32_t k = 0; k < num_pts; ++k)
 					{
 						mats[k] = {sz, sz};
-						for (uint32_t n = 0; n < N_; ++n) mats[k] += mul_scalar(recovered_func[n], move(mat[n][k]));
+						for (uint32_t n = 0; n < N_; ++n) mats[k] += mul_scalar(recovered_func[n], std::move(mat[n][k]));
 						mats[k] /= ag->eval(ps[k]);
 					}
 					auto mat_pol = polynomial_interpolate(mats, inv(ag->max_degree()));
@@ -502,7 +544,7 @@ namespace qboot
 					{
 						if (t[0] == t[1])
 						{
-							spectrum.push_back(op.fix_delta(ag->get_delta(real(t[0]))));
+							spectrum.push_back(primary.fix_delta(ag->get_delta(real(t[0]))));
 							continue;
 						}
 						rational lb(t[0]), ub(t[1]);
@@ -518,7 +560,7 @@ namespace qboot
 								ub = x;
 							else if (pol2.eval(x) > 0)
 							{
-								spectrum.push_back(op.fix_delta(ag->get_delta(real(x))));
+								spectrum.push_back(primary.fix_delta(ag->get_delta(real(x))));
 								flag = false;
 								break;
 							}
@@ -529,11 +571,11 @@ namespace qboot
 						real x((lb + ub) / 2);
 						for (uint32_t i = 0; i < 15; ++i) x = x - d.eval(x) / d2.eval(x);
 						assert(t[0] <= x && x <= t[1]);
-						spectrum.push_back(op.fix_delta(ag->get_delta(x)));
+						spectrum.push_back(primary.fix_delta(ag->get_delta(x)));
 						cout << x << ": " << det.eval(x) / d2.eval(x) << endl;
 					}
 					cout << "at zero: " << det.eval(0) / d.eval(0) << endl;
-					return tuple{sec, spectrum};
+					return tuple{name, spectrum};
 				});
 		}
 		for (auto&& [sec, ops] : _parallel_evaluate(spectrums, parallel))
@@ -565,30 +607,30 @@ namespace qboot
 			auto sz = sector(id).size();
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
-					ineqs.emplace_back([this, id = id, sz, sec = sec, &event] {
-						_scoped_event scope(sec, event);
-						return optional{PolynomialInequality(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz))};
+					ineqs.emplace_back([this, index = id, sz, name = sec, &event] {
+						_scoped_event scope(name, event);
+						return optional{PolynomialInequality(N_, sz, make_disc_mat(index), Matrix<real>(sz, sz))};
 					});
 				else
-					ineqs.emplace_back([this, id = id, sec = sec, &event] {
-						_scoped_event scope(sec, event);
-						return optional{PolynomialInequality(N_, make_disc_mat_v(id), real(0))};
+					ineqs.emplace_back([this, index = id, name = sec, &event] {
+						_scoped_event scope(name, event);
+						return optional{PolynomialInequality(N_, make_disc_mat_v(index), real(0))};
 					});
 			else
 				for (const auto& op : sector(id).ops_)
-					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, &event] {
-						auto tag = op.str();
+					ineqs.emplace_back([this, index = id, sz, primary = op, name = sec, &event] {
+						auto tag = primary.str();
 						tag += " in ";
-						tag += sec;
+						tag += name;
 						_scoped_event scope(tag, event);
-						auto ag = common_scale(id, op);
-						auto mat = make_cont_mat(id, op, ag);
+						auto ag = common_scale(index, primary);
+						auto mat = make_cont_mat(index, primary, ag);
 						auto deg = ag->max_degree();
 						return optional{
-						    PolynomialInequality(N_, sz, move(ag), move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};
+						    PolynomialInequality(N_, sz, std::move(ag), std::move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};
 					});
 		}
-		for (auto&& x : _parallel_evaluate(ineqs, parallel)) prg.add_inequality(move(x));
+		for (auto&& x : _parallel_evaluate(ineqs, parallel)) prg.add_inequality(std::move(x));
 		return prg;
 	}
 }  // namespace qboot

@@ -2,7 +2,7 @@
 
 using qboot::algebra::RealFunction, qboot::algebra::ComplexFunction, qboot::algebra::RealConverter;
 using qboot::mp::real, qboot::mp::rational;
-using std::move, std::optional;
+using std::optional;
 
 namespace
 {
@@ -65,7 +65,7 @@ namespace qboot
 		assert(realAxisResult.lambda() == lambda_);
 		ComplexFunction<real> f(lambda_);
 		for (uint32_t m = 0; m <= lambda_; ++m) f.at(m, 0u).swap(realAxisResult.at(m));
-		move(realAxisResult)._reset();
+		std::move(realAxisResult)._reset();
 
 		real val{}, term{}, quad_casimir4 = 4 * op.quadratic_casimir();
 

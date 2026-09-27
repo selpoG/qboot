@@ -42,7 +42,7 @@ namespace qboot
 		auto h_at_0 = hBlock_shifted(op, S, P, context.n_Max());
 		h_at_0 *= mp::pow(4, op.delta());
 		const auto& rho = context.rho();
-		RealFunctionWithPower f_at_0(move(h_at_0), op.delta());
+		RealFunctionWithPower f_at_0(std::move(h_at_0), op.delta());
 		RealFunction<real> f_of_rho(context.lambda());
 		f_of_rho.at(0) = f_at_0.approximate(rho);
 		real tmp(1);

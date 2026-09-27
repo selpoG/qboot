@@ -3,6 +3,7 @@
 
 #include <atomic>              // for atomic
 #include <condition_variable>  // for condition_variable
+#include <cstdint>             // for uint32_t
 #include <functional>          // for function
 #include <future>              // for future, promise
 #include <memory>              // for unique_ptr, make_unique
@@ -11,12 +12,15 @@
 #include <string>              // for string
 #include <string_view>         // for string_view
 #include <thread>              // for thread
-#include <type_traits>         // for is_default_constructible_v
+#include <type_traits>         // for is_default_constructible_v, is_same_v
 #include <utility>             // for declval, move
 #include <vector>              // for vector
 
 namespace qboot
 {
+	// MPFR retains per-thread caches unless they are freed before the worker exits.
+	void _free_mpfr_cache();
+
 	template <class T>
 	std::vector<T> _seq_eval(const std::vector<std::function<T()>>& fs)
 	{
@@ -52,8 +56,17 @@ namespace qboot
 						++now;
 					}
 					if (now_local >= N) break;
-					ans[now_local] = fs[now_local]();
+					if constexpr (std::is_same_v<T, bool>)
+					{
+						// vector<bool> packs distinct elements into shared storage.
+						const bool value = fs[now_local]();
+						std::lock_guard<std::mutex> lock(mtx);
+						ans[now_local] = value;
+					}
+					else
+						ans[now_local] = fs[now_local]();
 				}
+				_free_mpfr_cache();
 			});
 		for (uint32_t i = 0; i < p; ++i) worker[i].join();
 		return ans;
@@ -137,7 +150,11 @@ namespace qboot
 	public:
 		_task_queue(uint32_t p = std::thread::hardware_concurrency())
 		{
-			for (uint32_t i = 0; i < p; ++i) ts_.emplace_back([this] { work(); });
+			for (uint32_t i = 0; i < p; ++i)
+				ts_.emplace_back([this] {
+					work();
+					_free_mpfr_cache();
+				});
 		}
 		~_task_queue()
 		{

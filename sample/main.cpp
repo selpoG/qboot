@@ -10,7 +10,7 @@
 
 using qboot::Context, qboot::Sector, qboot::BootstrapEquation;
 using qboot::mp::real, qboot::mp::rational, qboot::mp::parse;
-using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::move, std::vector, std::string;
+using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::vector, std::string;
 namespace fs = qboot::fs;
 
 template <class T>
@@ -19,7 +19,6 @@ using Op = qboot::PrimaryOperator;
 using Eq = qboot::Equation;
 constexpr auto ContinuousType = qboot::SectorType::Continuous;
 constexpr auto Odd = qboot::algebra::FunctionSymmetry::Odd;
-constexpr auto Even = qboot::algebra::FunctionSymmetry::Even;
 
 static string name(const dict<rational>& deltas);
 static BootstrapEquation create(const Context& c, const dict<rational>& deltas, uint32_t numax, uint32_t maxspin);
@@ -45,15 +44,15 @@ BootstrapEquation create(const Context& c, const dict<rational>& deltas, uint32_
 		even.add_op(0, real(6));
 		even.add_op(2, real(5));
 		for (uint32_t spin = 4; spin <= maxspin; spin += 2) even.add_op(spin);
-		secs.push_back(move(even));
+		secs.push_back(std::move(even));
 	}
-	BootstrapEquation boot(c, move(secs), numax);
+	BootstrapEquation boot(c, std::move(secs), numax);
 	Eq eq(boot, Odd);
 	eq.add("unit", u, ext("s", "s", "s", "s"));
 	eq.add("e", ops.at("e"), ext("s", "s", "s", "s"));
 	eq.add("T", T, ext("s", "s", "s", "s"));
 	eq.add("even", ext("s", "s", "s", "s"));
-	boot.add_equation(move(eq));
+	boot.add_equation(std::move(eq));
 	boot.finish();
 	return boot;
 }
@@ -84,6 +83,6 @@ int main(int argc, char* argv[])
 	auto pmp = eqn.convert(qboot::FindContradiction("unit"), parallel);
 	auto root = fs::current_path() / name(deltas);
 	cout << root << endl;
-	move(pmp).create_input(parallel).write(root, parallel);
+	std::move(pmp).create_input(parallel).write(root, parallel);
 	return 0;
 }
