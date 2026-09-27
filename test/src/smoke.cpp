@@ -91,6 +91,10 @@ namespace
 		auto xml = std::move(xml_program).create_xml(parallel);
 		require(xml.num_constraints() == 2, "XML spectral constraints");
 		xml.write(output / "input.xml");
+		auto json_program = equations.convert(qboot::FindContradiction("unit"), parallel);
+		auto json = std::move(json_program).create_json(parallel);
+		require(json.num_constraints() == 2, "JSON spectral constraints");
+		json.write(output / "input.json");
 	}
 
 	std::string read(const fs::path& path)
@@ -122,13 +126,13 @@ namespace
 			require(contents.find("inf") == std::string::npos, "infinity in SDPB output");
 			++count;
 		}
-		require(count == 8, "unexpected SDPB output file count");
+		require(count == 9, "unexpected SDPB output file count");
 		fs::remove_all(serial);
 		fs::remove_all(parallel);
 	}
 }  // namespace
 
-int main()
+int main(int argc, char** argv)
 {
 	qboot::mp::global_prec = 256;
 	qboot::mp::global_rnd = MPFR_RNDN;
@@ -137,6 +141,7 @@ int main()
 		arithmetic();
 		concurrency();
 		output_test();
+		if (argc > 1) bootstrap(argv[1], 2);
 	}
 	catch (const std::exception& error)
 	{

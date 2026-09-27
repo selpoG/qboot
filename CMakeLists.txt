@@ -63,6 +63,7 @@ add_library(${MY_TARGET} STATIC
 	src/context.cpp
 	src/hor_formula.cpp
 	src/hor_recursion.cpp
+	src/json_input.cpp
 	src/polynomial_program.cpp
 	src/primary_op.cpp
 	src/scale_factor.cpp
@@ -82,6 +83,7 @@ add_library(${MY_TARGET} STATIC
 	include/qboot/context.hpp
 	include/qboot/hor_formula.hpp
 	include/qboot/hor_recursion.hpp
+	include/qboot/json_input.hpp
 	include/qboot/my_filesystem.hpp
 	include/qboot/polynomial_program.hpp
 	include/qboot/primary_op.hpp

@@ -8,6 +8,7 @@
 
 #include "qboot/algebra/matrix.hpp"      // for Matrix, Vector
 #include "qboot/algebra/polynomial.hpp"  // for Polynomial
+#include "qboot/json_input.hpp"          // for JSONInput
 #include "qboot/mp/real.hpp"             // for real
 #include "qboot/scale_factor.hpp"        // for ScaleFactor
 #include "qboot/sdpb_input.hpp"          // for SDPBInput
@@ -151,6 +152,9 @@ namespace qboot
 		std::vector<uint32_t> free_indices_{};
 		std::vector<std::optional<PolynomialInequality>> inequality_{};
 
+		template <class Input>
+		Input create_pmp(uint32_t parallel, const std::unique_ptr<_event_base>& event) &&;
+
 	public:
 		void _reset() &&
 		{
@@ -198,6 +202,7 @@ namespace qboot
 			inequality_.push_back(std::move(ineq));
 		}
 		SDPBInput create_input(uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) &&;
+		JSONInput create_json(uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) &&;
 		XMLInput create_xml(uint32_t parallel = 1, const std::unique_ptr<_event_base>& event = {}) &&;
 	};
 }  // namespace qboot
