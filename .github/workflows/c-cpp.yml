@@ -103,6 +103,14 @@ jobs:
           --maxIterations=300 --dualityGapThreshold=1e-30 \
           --primalErrorThreshold=1e-30 --dualErrorThreshold=1e-30
         python3 test/check_sdpb.py pmp/out/out.txt
+        for degree in 0 1 2; do
+          for format in json xml; do
+            docker run --rm -v "$PWD/pmp:/data" bootstrapcollaboration/sdpb:3.1.0 \
+              pmp2sdp --precision=256 --outputFormat=json \
+              --input="/data/consistency-$degree.$format" --output="/data/converted-$degree-$format"
+          done
+        done
+        python3 test/check_sdpb_consistency.py pmp
 
   build:
     runs-on: ubuntu-24.04

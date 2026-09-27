@@ -176,18 +176,18 @@ namespace qboot
 				auto ineq = std::move(inequality_[j].value());
 				// convert ineq to DualConstraint
 				uint32_t sz = ineq.size(), deg = ineq.max_degree(), schur_sz = (deg + 1) * sz * (sz + 1) / 2,
-				         d0 = deg / 2, d1 = deg == 0 ? 0 : (deg - 1) / 2;
+				         d0 = deg / 2 + 1, d1 = (deg + 1) / 2;
 				Vector<real> d_c(schur_sz);
 				Matrix<real> d_B(schur_sz, M);
-				Matrix<real> q0(d0 + 1, deg + 1);
-				Matrix<real> q1(d1 + 1, deg + 1);
+				Matrix<real> q0(d0, deg + 1);
+				Matrix<real> q1(d1, deg + 1);
 				{
 					const auto& xs = ineq.sample_points();
 					const auto& scs = ineq.sample_scalings();
 					auto q = ineq.bilinear_bases();
-					for (uint32_t m = 0; m <= d0; ++m)
+					for (uint32_t m = 0; m < d0; ++m)
 						for (uint32_t k = 0; k <= deg; ++k) q0.at(m, k) = q[m].eval(xs[k]) * mp::sqrt(scs[k]);
-					for (uint32_t m = 0; m <= d1; ++m)
+					for (uint32_t m = 0; m < d1; ++m)
 						for (uint32_t k = 0; k <= deg; ++k) q1.at(m, k) = q[m].eval(xs[k]) * mp::sqrt(scs[k] * xs[k]);
 				}
 				{

@@ -181,6 +181,10 @@ namespace
 		mat.at(0, 0) = Polynomial(1u);
 		mat.at(1, 0) = Polynomial(real(3));
 		require(dot(row, mat)[0] == Polynomial{real(6), real(1), real(1)}, "polynomial matrix product");
+		Matrix<Polynomial> transposed(1, 2);
+		transposed.at(0, 0) = mat.at(0, 0).clone();
+		transposed.at(0, 1) = mat.at(1, 0).clone();
+		require(dot(transposed, row)[0] == Polynomial{real(6), real(1), real(1)}, "polynomial matrix column product");
 	}
 
 #ifndef NDEBUG
@@ -218,6 +222,50 @@ namespace
 		    });
 		require(result->begins == 2 && result->ends == 2, "event callback during unwinding");
 #endif
+	}
+
+	void identities()
+	{
+		const real tolerance("1e-60");
+		for (uint32_t degree = 0; degree <= 6; ++degree)
+		{
+			Vector<real> coefficients(degree + 1), points(degree + 1);
+			for (uint32_t i = 0; i <= degree; ++i)
+			{
+				coefficients[i] = real(i + 1);
+				points[i] = real(i + 1) / 2;
+			}
+			Polynomial p(std::move(coefficients));
+			auto values = qboot::algebra::evals(p, points);
+			auto interpolated = qboot::algebra::polynomial_interpolate(values, points);
+			require((p - interpolated).abs() < tolerance, "interpolation coefficient round trip");
+			for (const auto& x : {real(-2), real(0), real("1.25")})
+			{
+				Polynomial q{real(3), real(-2)};
+				require(mul(p, q).eval(x) == p.eval(x) * q.eval(x), "product evaluation identity");
+				require((p + q).eval(x) == p.eval(x) + q.eval(x), "sum evaluation identity");
+				require((p - q).eval(x) == p.eval(x) - q.eval(x), "difference evaluation identity");
+				auto r = p.clone();
+				r += q;
+				require(r == p + q, "in-place polynomial addition");
+				r -= q;
+				require(r == p, "in-place polynomial subtraction");
+			}
+		}
+		for (uint32_t n = 1; n <= 5; ++n)
+		{
+			Matrix<real> a(n, n);
+			for (uint32_t r = 0; r < n; ++r)
+				for (uint32_t c = 0; c < n; ++c) a.at(r, c) = real(1) / real(r + c + 1);
+			auto inv = qboot::algebra::inverse(a);
+			auto identity = Matrix<real>::constant(real(1), n);
+			require((dot(a, inv) - identity).abs() < tolerance, "right inverse identity");
+			require((dot(inv, a) - identity).abs() < tolerance, "left inverse identity");
+			auto lower = qboot::algebra::cholesky_decomposition(a);
+			auto upper = lower.clone();
+			upper.transpose();
+			require((dot(lower, upper) - a).abs() < tolerance, "Cholesky reconstruction");
+		}
 	}
 
 	void parallel()
@@ -282,7 +330,8 @@ int main()
 		                                                         {"number_strings", number_strings},
 		                                                         {"real_parsing", real_parsing},
 		                                                         {"conversion", conversion},
-		                                                         {"events", events}};
+		                                                         {"events", events},
+		                                                         {"identities", identities}};
 		if (const auto* name = std::getenv("QBOOT_REGRESSION"))
 			tests.at(name)();
 		else

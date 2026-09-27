@@ -433,12 +433,18 @@ namespace qboot::algebra
 		friend Vector<R> dot(const Matrix& x, const Vector<R>& y)
 		{
 			assert(x.col_ == y.size());
+			auto product = [](const Ring& a, const R& b) {
+				if constexpr (std::is_same_v<Ring, R>)
+					return mul(a, b);
+				else
+					return mul_scalar(a, b);
+			};
 			Vector<R> z(x.row_);
 			if (x.col_ > 0)
 				for (uint32_t i = 0; i < x.row_; ++i)
 				{
-					z[i] = mul_scalar(x.arr_[i * x.col_], y[0]);
-					for (uint32_t j = 1, p = i * x.col_ + 1; j < x.col_; ++j, ++p) z[i] += mul_scalar(x.arr_[p], y[j]);
+					z[i] = product(x.arr_[i * x.col_], y[0]);
+					for (uint32_t j = 1, p = i * x.col_ + 1; j < x.col_; ++j, ++p) z[i] += product(x.arr_[p], y[j]);
 				}
 			return z;
 		}

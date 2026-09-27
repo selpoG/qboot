@@ -2,7 +2,7 @@
 
 import json
 import os
-from decimal import Decimal
+from decimal import Decimal, getcontext
 from pathlib import Path
 import subprocess
 import sys
@@ -19,7 +19,77 @@ def numbers(value):
     return result
 
 
+def close(actual, expected):
+    assert abs(actual - expected) < Decimal("1e-60"), (actual, expected)
+
+
+def read_matrix(tokens):
+    rows, columns = int(next(tokens)), int(next(tokens))
+    return [[Decimal(next(tokens)) for _ in range(columns)] for _ in range(rows)]
+
+
+def consistency(directory, degree):
+    name = f"consistency-{degree}"
+    pmp = json.loads((directory / f"{name}.json").read_text())
+    xml = ET.parse(directory / f"{name}.xml").getroot()
+    direct = directory / f"{name}-sdp"
+    objective = numbers(pmp["objective"])
+    for actual, expected in zip(objective, [Decimal("11.625"), Decimal(5)]):
+        close(actual, expected)
+    assert objective == [Decimal(x.text) for x in xml.find("objective")]
+    raw = (direct / "objectives").read_text().split()
+    assert int(raw[1]) == 1
+    close(Decimal(raw[0]), objective[0])
+    close(Decimal(raw[2]), objective[1])
+    block = pmp["PositiveMatrixWithPrefactorArray"][0]
+    xml_block = xml.find("polynomialVectorMatrices")[0]
+    polynomials = numbers(block["polynomials"])
+    xml_polynomials = iter(xml_block.find("elements"))
+    for r, row in enumerate(polynomials):
+        for c, vector in enumerate(row):
+            factor = r + 2 if r == c else 1
+            reference = next(xml_polynomials)
+            for n, polynomial in enumerate(vector):
+                assert len(polynomial) == degree + 1
+                for j, value in enumerate(polynomial):
+                    expected = Decimal("0.5") + Decimal("1.5") * j if n == 0 else Decimal(2 + j)
+                    close(value, factor * expected)
+                    close(value, Decimal(reference[n][j].text))
+    points = numbers(block["samplePoints"])
+    scales = numbers(block["sampleScalings"])
+    assert points == list(range(1, degree + 2))
+    assert scales == list(range(2, degree + 3))
+    for field in ("samplePoints", "sampleScalings"):
+        assert numbers(block[field]) == [Decimal(x.text) for x in xml_block.find(field)]
+    b = read_matrix(iter((direct / "free_var_matrix.0").read_text().split()))
+    raw_c = (direct / "primal_objective_c.0").read_text().split()
+    assert int(raw_c[0]) == 3 * (degree + 1)
+    rhs = iter(map(Decimal, raw_c[1:]))
+    rows = iter(b)
+    for r in range(2):
+        for c in range(r + 1):
+            for x, scale in zip(points, scales):
+                const, variable = [sum(coefficient * x**j for j, coefficient in enumerate(p))
+                                   for p in polynomials[r][c]]
+                close(next(rhs), const * scale)
+                close(next(rows)[0], -variable * scale)
+    tokens = iter((direct / "bilinear_bases.0").read_text().split())
+    assert int(next(tokens)) == 1
+    for parity in (0, 1):
+        basis = read_matrix(tokens)
+        expected_rows = degree // 2 + 1 if parity == 0 else (degree + 1) // 2
+        assert len(basis) == expected_rows, (degree, parity, len(basis), expected_rows)
+        assert len(block[f"bilinearBasis_{parity}"]) == expected_rows
+        for m, row in enumerate(basis):
+            for value, x, scale in zip(row, points, scales):
+                close(value * value, x ** (2 * m + parity) * scale)
+    assert next(tokens, None) is None
+
+
 def check(directory):
+    getcontext().prec = 100
+    for degree in range(3):
+        consistency(directory, degree)
     matrices = json.loads((directory / "matrices.json").read_text())
     assert numbers(matrices["objective"]) == [Decimal("0.125"), 1]
     assert numbers(matrices["normalization"]) == [1, 0]
