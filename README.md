@@ -135,9 +135,8 @@ docker run -it --rm qboot.sample
 
 ## Development and testing
 
-qboot defaults to C++17. Select C++20 or C++23 with `CMAKE_CXX_STANDARD`;
-C++23 requires CMake 3.20 or later and a compiler supporting that mode.
-The sample project accepts the same option.
+qboot defaults to C++17; use `CMAKE_CXX_STANDARD=20` or `23` to select a newer standard.
+C++23 requires CMake 3.20+ and a compatible compiler.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 \
@@ -145,14 +144,3 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 \
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 ```
-
-CI checks C++17, C++20, and C++23 with GCC and Clang in Debug and Release,
-treating compiler warnings as errors. Tests check multiprecision arithmetic,
-polynomial operations, and a small conformal-bootstrap problem with finite
-and infinite spectral ranges. Serial and parallel SDPB/XML output must agree.
-The same tests also run against the installed CMake package. CI also builds the
-sample project and runs AddressSanitizer, LeakSanitizer, and UndefinedBehaviorSanitizer.
-Concurrency tests cover memoized calculations and parallel boolean results.
-
-The existing larger calculation and comparison tools are built as `bootstrap_example`
-(executable `test` or `test-debug`) and `comp`; they are not automatic CTest tests.
