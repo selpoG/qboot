@@ -9,7 +9,7 @@
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real;
-using std::move, std::unique_ptr, std::make_unique, std::vector;
+using std::unique_ptr, std::make_unique, std::vector;
 
 namespace qboot
 {

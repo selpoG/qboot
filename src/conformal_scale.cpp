@@ -4,7 +4,7 @@
 
 using qboot::algebra::Vector, qboot::algebra::Polynomial, qboot::algebra::Matrix;
 using qboot::mp::real, qboot::mp::rational, qboot::mp::log, qboot::mp::gamma_inc;
-using std::move, std::optional;
+using std::optional;
 
 namespace
 {

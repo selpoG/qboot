@@ -9,7 +9,7 @@ namespace fs = qboot::fs;
 
 using qboot::algebra::Vector, qboot::algebra::Matrix;
 using qboot::mp::real;
-using std::array, std::move, std::optional, std::make_unique, std::vector;
+using std::array, std::optional, std::make_unique, std::vector;
 using std::ostream, std::ofstream, std::string, std::to_string, fs::path, fs::create_directory;
 
 namespace

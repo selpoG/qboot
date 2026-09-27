@@ -10,7 +10,7 @@
 
 using qboot::Context, qboot::Sector, qboot::BootstrapEquation;
 using qboot::mp::real, qboot::mp::rational, qboot::mp::parse;
-using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::move, std::vector, std::string;
+using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::vector, std::string;
 namespace fs = qboot::fs;
 
 template <class T>

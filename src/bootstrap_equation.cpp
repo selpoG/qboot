@@ -12,7 +12,7 @@
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real, qboot::mp::rational, qboot::mp::integer;
-using std::move, std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view, std::vector,
+using std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std::string_view, std::vector,
     std::optional, std::map, std::function, std::tuple, std::shared_ptr, std::array;
 
 namespace qboot

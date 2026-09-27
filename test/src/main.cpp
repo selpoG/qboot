@@ -27,7 +27,7 @@ using qboot::gBlock, qboot::Context, qboot::algebra::ComplexFunction, qboot::alg
     qboot::ConformalScale, qboot::PolynomialProgram, qboot::Sector;
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real, qboot::mp::rational, qboot::mp::parse;
-using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique, std::move,
+using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique,
     std::pair, std::vector, std::string;
 namespace fs = qboot::fs;
 

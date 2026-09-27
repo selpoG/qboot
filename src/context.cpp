@@ -2,7 +2,7 @@
 
 using qboot::algebra::RealFunction, qboot::algebra::ComplexFunction, qboot::algebra::RealConverter;
 using qboot::mp::real, qboot::mp::rational;
-using std::move, std::optional;
+using std::optional;
 
 namespace
 {

@@ -46,13 +46,45 @@ jobs:
           -DCMAKE_PREFIX_PATH="$HOME/local"
         cmake --build consumer-build --parallel 2
         ctest --test-dir consumer-build --output-on-failure
+    - name: sample project
+      run: |
+        cmake -S sample -B sample-build \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_PREFIX_PATH="$HOME/local" \
+          -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror"
+        cmake --build sample-build --parallel 2
+
+  sanitizers:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+    - name: requirement
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgmp-dev libmpfr-dev clang-18
+    - name: configure
+      run: >-
+        cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++-18
+        -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Debug
+        -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
+        -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+    - name: build and test
+      env:
+        ASAN_OPTIONS: detect_leaks=1
+        UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      run: |
+        cmake --build build --parallel 2 --target qboot_smoke
+        ctest --test-dir build --output-on-failure
 
   build:
-    runs-on: ubuntu-latest
-    needs: build_matrix
+    runs-on: ubuntu-24.04
+    needs: [build_matrix, sanitizers]
     if: ${{ always() }}
     steps:
     - name: Check all build configurations
       env:
         BUILD_RESULT: ${{ needs.build_matrix.result }}
-      run: test "$BUILD_RESULT" = success
+        SANITIZER_RESULT: ${{ needs.sanitizers.result }}
+      run: test "$BUILD_RESULT" = success && test "$SANITIZER_RESULT" = success

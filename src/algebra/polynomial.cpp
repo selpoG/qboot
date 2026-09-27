@@ -3,7 +3,7 @@
 #include "qboot/mp/real.hpp"  // for real, pow, sgn
 
 using qboot::mp::real;
-using std::move, std::ostream;
+using std::ostream;
 
 namespace qboot::algebra
 {

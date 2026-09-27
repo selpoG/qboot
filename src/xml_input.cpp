@@ -11,7 +11,7 @@ namespace fs = qboot::fs;
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real;
-using std::move, std::make_unique, std::optional, fs::path, std::ostream, std::ofstream, std::string_view;
+using std::make_unique, std::optional, fs::path, std::ostream, std::ofstream, std::string_view;
 
 namespace
 {

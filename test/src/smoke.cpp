@@ -2,7 +2,7 @@
 #include <cstdint>    // for uint32_t
 #include <fstream>    // for ifstream
 #include <iostream>   // for cerr
-#include <iterator>   // for istreambuf_iterator
+#include <sstream>    // for ostringstream
 #include <stdexcept>  // for runtime_error
 #include <string>     // for string
 #include <utility>    // for move
@@ -22,6 +22,8 @@ namespace
 
 	void arithmetic()
 	{
+		const qboot::algebra::Vector<real> empty;
+		require(empty.begin() == empty.end(), "empty vector iterators");
 		require(integer("12345678901234567890") * 9 == integer("111111110111111111010"), "integer product");
 		require(rational("1/3") + rational("1/6") == rational("1/2"), "rational sum");
 		require(qboot::mp::parse("1.25e-2").value() == rational("1/80"), "decimal parsing");
@@ -63,7 +65,10 @@ namespace
 	{
 		std::ifstream input(path);
 		require(input.good(), "output file missing");
-		return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+		std::ostringstream contents;
+		contents << input.rdbuf();
+		require(!input.bad(), "output file read failed");
+		return contents.str();
 	}
 
 	void output_test()

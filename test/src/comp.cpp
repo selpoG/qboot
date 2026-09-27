@@ -19,7 +19,7 @@ namespace fs = qboot::fs;
 using fs::path;
 using mp::real, mp::rational, mp::integer;
 using std::ostringstream, std::ifstream, std::endl, std::cout;
-using std::string, std::vector, std::unique_ptr, std::move, std::variant, std::array, std::optional;
+using std::string, std::vector, std::unique_ptr, std::variant, std::array, std::optional;
 template <class T>
 using my_result = variant<T, string>;
 using my_error = my_result<std::monostate>;
@@ -316,7 +316,7 @@ my_error check_dir(const path& d1, const path& d2, const real& error_bound, qboo
 		if (!is_ok(_type)) return as_err(_type);
 		auto type = as_val(_type);
 		if (type == fs::file_type::regular)
-			futs->push_back(q->push([x = x, y = y, &error_bound] { return check_file(x.path(), y, error_bound); }));
+			futs->push_back(q->push([x, y, &error_bound] { return check_file(x.path(), y, error_bound); }));
 		else if (type == fs::file_type::directory)
 			if (auto err = check_dir(x.path(), y, error_bound, q, futs); !is_ok(err)) return err;
 	}
