@@ -8,7 +8,7 @@
 #include <memory>            // for unique_ptr, make_unique
 #include <ostream>           // for ostream
 #include <type_traits>       // for true_type, false_type, is_same_v, enable_if, void_t
-#include <utility>           // for move, swap
+#include <utility>           // for declval, move, swap
 
 #include "qboot/mp/real.hpp"  // for real
 
@@ -141,8 +141,8 @@ namespace qboot::algebra
 		[[nodiscard]] auto abs() const { return mp::sqrt(norm()); }
 		[[nodiscard]] auto norm() const
 		{
-			auto s = arr_[0].norm();
-			for (uint32_t i = 1; i < sz_; ++i) s += arr_[i].norm();
+			decltype(std::declval<const Ring&>().norm()) s{};
+			for (uint32_t i = 0; i < sz_; ++i) s += arr_[i].norm();
 			return s;
 		}
 		Vector& operator+=(const Vector& v) &
@@ -433,12 +433,18 @@ namespace qboot::algebra
 		friend Vector<R> dot(const Matrix& x, const Vector<R>& y)
 		{
 			assert(x.col_ == y.size());
+			auto product = [](const Ring& a, const R& b) {
+				if constexpr (std::is_same_v<Ring, R>)
+					return mul(a, b);
+				else
+					return mul_scalar(a, b);
+			};
 			Vector<R> z(x.row_);
 			if (x.col_ > 0)
 				for (uint32_t i = 0; i < x.row_; ++i)
 				{
-					z[i] = mul_scalar(x.arr_[i * x.col_], y[0]);
-					for (uint32_t j = 1, p = i * x.col_ + 1; j < x.col_; ++j, ++p) z[i] += mul_scalar(x.arr_[p], y[j]);
+					z[i] = product(x.arr_[i * x.col_], y[0]);
+					for (uint32_t j = 1, p = i * x.col_ + 1; j < x.col_; ++j, ++p) z[i] += product(x.arr_[p], y[j]);
 				}
 			return z;
 		}
@@ -446,12 +452,18 @@ namespace qboot::algebra
 		friend Vector<R> dot(const Vector<R>& x, const Matrix& y)
 		{
 			assert(x.size() == y.row_);
+			auto product = [](const R& a, const Ring& b) {
+				if constexpr (std::is_same_v<R, Ring>)
+					return mul(a, b);
+				else
+					return mul_scalar(b, a);
+			};
 			Vector<R> z(y.col_);
 			if (y.row_ > 0)
 				for (uint32_t i = 0; i < y.col_; ++i)
 				{
-					z[i] = mul(x[0], y.at(0, i));
-					for (uint32_t j = 1; j < y.row_; ++j) z[i] += mul(x[j], y.at(j, i));
+					z[i] = product(x[0], y.at(0, i));
+					for (uint32_t j = 1; j < y.row_; ++j) z[i] += product(x[j], y.at(j, i));
 				}
 			return z;
 		}

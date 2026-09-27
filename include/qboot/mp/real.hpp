@@ -205,10 +205,9 @@ namespace qboot::mp
 		static std::optional<real> _parse(std::string_view str)
 		{
 			std::string s(str);
-			mpfr_t x;
-			mpfr_init2(x, global_prec);
-			if (mpfr_set_str(x, s.data(), 0, global_rnd) == -1) return {};
-			return real(x);
+			real x;
+			if (mpfr_set_str(x._x, s.data(), 0, global_rnd) == -1) return {};
+			return {std::move(x)};
 		}
 
 		template <class Char, class Traits>

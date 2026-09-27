@@ -75,6 +75,7 @@ namespace qboot::algebra
 	}
 	void Polynomial::_mul_linear(const real& a) &
 	{
+		if (iszero()) return;
 		Vector<real> v(coeff_.size() + 1);
 		v[0] = coeff_[0] * a;
 		for (uint32_t i = 1; i < coeff_.size(); ++i) mp::fma(v[i], coeff_[i], a, coeff_[i - 1]);

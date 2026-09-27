@@ -3,7 +3,9 @@
 #include <exception>  // for exception
 #include <iostream>   // for cerr
 #include <locale>     // for locale, numpunct
+#include <memory>     // for make_unique
 #include <stdexcept>  // for runtime_error
+#include <string>     // for to_string
 #include <utility>    // for move
 
 #include "mpfr.h"  // for mpfr_free_cache
@@ -64,13 +66,78 @@ namespace
 
 	qboot::PolynomialProgram bounded_program()
 	{
-		// Maximize 1/8 + y, with z = 2y + 1, y >= 0, z <= 5. Optimum: 17/8.
+		// Maximize 1/8 + y, with z = 2y + 1, 3y >= 3, z <= 5. Optimum: 17/8.
 		qboot::PolynomialProgram program(2);
 		program.objective_constant() = real("0.125");
 		program.objectives(Vector<real>{real(1), real(0)});
 		program.add_equation(Vector<real>{real(-2), real(1)}, real(1));
-		program.add_inequality(qboot::PolynomialInequality(2, Vector<real>{real(1), real(0)}, real(0)));
+		program.add_inequality(qboot::PolynomialInequality(2, Vector<real>{real(3), real(0)}, real(3)));
 		program.add_inequality(qboot::PolynomialInequality(2, Vector<real>{real(0), real(-1)}, real(-5)));
+		return program;
+	}
+
+	class TestScale : public qboot::ScaleFactor
+	{
+		uint32_t degree_;
+
+	public:
+		explicit TestScale(uint32_t degree) : degree_(degree) {}
+		uint32_t max_degree() const override { return degree_; }
+		real eval(const real& x) const override { return x + 1; }
+		real sample_point(uint32_t k) const override { return real(k + 1); }
+		Vector<real> sample_points() const override
+		{
+			Vector<real> points(degree_ + 1);
+			for (uint32_t k = 0; k <= degree_; ++k) points[k] = sample_point(k);
+			return points;
+		}
+		Vector<real> sample_scalings() const override
+		{
+			auto points = sample_points();
+			for (auto& x : points) x = eval(x);
+			return points;
+		}
+		Vector<Polynomial> bilinear_bases() const override
+		{
+			Vector<Polynomial> basis(degree_ / 2 + 1);
+			for (uint32_t i = 0; i < basis.size(); ++i) basis[i] = Polynomial(i);
+			return basis;
+		}
+	};
+
+	qboot::PolynomialProgram consistency_program(uint32_t degree)
+	{
+		// Equations imply (y0, y1, y2) = (1/2 + t, 2 - t, t).
+		qboot::PolynomialProgram program(3);
+		program.objective_constant() = real("0.125");
+		program.objectives(Vector<real>{real(3), real(5), real(7)});
+		program.add_equation(Vector<real>{real(2), real(1), real(-1)}, real(3));
+		program.add_equation(Vector<real>{real(0), real(1), real(1)}, real(2));
+		const auto recovered = program.recover(Vector<real>{real(3)});
+		if (recovered != Vector<real>{real("3.5"), real(-1), real(3)})
+			throw std::runtime_error("variable recovery after two equations");
+		auto scale = std::make_unique<TestScale>(degree);
+		Vector<Vector<Matrix<real>>> mat(3);
+		Vector<Matrix<real>> target(degree + 1);
+		for (uint32_t n = 0; n < 4; ++n)
+		{
+			Vector<Matrix<real>> samples(degree + 1);
+			for (uint32_t k = 0; k <= degree; ++k)
+			{
+				auto x = scale->sample_point(k);
+				real value;
+				for (uint32_t j = 0; j <= degree; ++j) value += (n + j + 1) * qboot::mp::pow(x, j);
+				value *= scale->eval(x);
+				samples[k] = Matrix<real>(2, 2);
+				for (uint32_t r = 0; r < 2; ++r)
+					for (uint32_t c = 0; c < 2; ++c) samples[k].at(r, c) = value * (r == c ? r + 2 : 1);
+			}
+			if (n < 3)
+				mat[n] = std::move(samples);
+			else
+				target = std::move(samples);
+		}
+		program.add_inequality(qboot::PolynomialInequality(3, 2, std::move(scale), std::move(mat), std::move(target)));
 		return program;
 	}
 
@@ -89,6 +156,13 @@ namespace
 		bounded_program().create_json(1).write(output / "bounded.json");
 		bounded_program().create_json(2).write(output / "bounded-parallel.json");
 		bounded_program().create_xml().write(output / "bounded.xml");
+		for (uint32_t degree = 0; degree <= 2; ++degree)
+		{
+			auto name = "consistency-" + std::to_string(degree);
+			consistency_program(degree).create_json(2).write(output / (name + ".json"));
+			consistency_program(degree).create_xml().write(output / (name + ".xml"));
+			consistency_program(degree).create_input(2).write(output / (name + "-sdp"), 2);
+		}
 	}
 }  // namespace
 
