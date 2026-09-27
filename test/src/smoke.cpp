@@ -103,7 +103,9 @@ int main()
 	catch (const std::exception& error)
 	{
 		std::cerr << error.what() << '\n';
+		mpfr_free_cache();
 		return 1;
 	}
+	mpfr_free_cache();
 	return 0;
 }

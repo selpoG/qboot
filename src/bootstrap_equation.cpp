@@ -473,16 +473,16 @@ namespace qboot
 			if (sector(id).type_ != SectorType::Continuous) continue;
 			auto sz = sector(id).size();
 			for (const auto& op : sector(id).ops_)
-				spectrums.emplace_back([this, id = id, sec = sec, op = op, sz, &recovered_func, &inv, &event]() {
+				spectrums.emplace_back([this, index = id, name = sec, primary = op, sz, &recovered_func, &inv, &event]() {
 					vector<PrimaryOperator> spectrum;
-					auto tag = op.str();
+					auto tag = primary.str();
 					tag += " in ";
-					tag += sec;
+					tag += name;
 					cout << tag << endl;
 					_scoped_event scope(tag, event);
-					auto ag = common_scale(id, op);
+					auto ag = common_scale(index, primary);
 					auto ps = ag->sample_points();
-					auto mat = make_cont_mat(id, op, ag);
+					auto mat = make_cont_mat(index, primary, ag);
 					auto num_pts = ps.size();
 					assert(N_ == mat.size());
 					Vector<Matrix<real>> mats(num_pts);
@@ -502,7 +502,7 @@ namespace qboot
 					{
 						if (t[0] == t[1])
 						{
-							spectrum.push_back(op.fix_delta(ag->get_delta(real(t[0]))));
+							spectrum.push_back(primary.fix_delta(ag->get_delta(real(t[0]))));
 							continue;
 						}
 						rational lb(t[0]), ub(t[1]);
@@ -518,7 +518,7 @@ namespace qboot
 								ub = x;
 							else if (pol2.eval(x) > 0)
 							{
-								spectrum.push_back(op.fix_delta(ag->get_delta(real(x))));
+								spectrum.push_back(primary.fix_delta(ag->get_delta(real(x))));
 								flag = false;
 								break;
 							}
@@ -529,11 +529,11 @@ namespace qboot
 						real x((lb + ub) / 2);
 						for (uint32_t i = 0; i < 15; ++i) x = x - d.eval(x) / d2.eval(x);
 						assert(t[0] <= x && x <= t[1]);
-						spectrum.push_back(op.fix_delta(ag->get_delta(x)));
+						spectrum.push_back(primary.fix_delta(ag->get_delta(x)));
 						cout << x << ": " << det.eval(x) / d2.eval(x) << endl;
 					}
 					cout << "at zero: " << det.eval(0) / d.eval(0) << endl;
-					return tuple{sec, spectrum};
+					return tuple{name, spectrum};
 				});
 		}
 		for (auto&& [sec, ops] : _parallel_evaluate(spectrums, parallel))
@@ -565,24 +565,24 @@ namespace qboot
 			auto sz = sector(id).size();
 			if (sector(id).type() == SectorType::Discrete)
 				if (sector(id).is_matrix())
-					ineqs.emplace_back([this, id = id, sz, sec = sec, &event] {
-						_scoped_event scope(sec, event);
-						return optional{PolynomialInequality(N_, sz, make_disc_mat(id), Matrix<real>(sz, sz))};
+					ineqs.emplace_back([this, index = id, sz, name = sec, &event] {
+						_scoped_event scope(name, event);
+						return optional{PolynomialInequality(N_, sz, make_disc_mat(index), Matrix<real>(sz, sz))};
 					});
 				else
-					ineqs.emplace_back([this, id = id, sec = sec, &event] {
-						_scoped_event scope(sec, event);
-						return optional{PolynomialInequality(N_, make_disc_mat_v(id), real(0))};
+					ineqs.emplace_back([this, index = id, name = sec, &event] {
+						_scoped_event scope(name, event);
+						return optional{PolynomialInequality(N_, make_disc_mat_v(index), real(0))};
 					});
 			else
 				for (const auto& op : sector(id).ops_)
-					ineqs.emplace_back([this, id = id, sz, op = op, sec = sec, &event] {
-						auto tag = op.str();
+					ineqs.emplace_back([this, index = id, sz, primary = op, name = sec, &event] {
+						auto tag = primary.str();
 						tag += " in ";
-						tag += sec;
+						tag += name;
 						_scoped_event scope(tag, event);
-						auto ag = common_scale(id, op);
-						auto mat = make_cont_mat(id, op, ag);
+						auto ag = common_scale(index, primary);
+						auto mat = make_cont_mat(index, primary, ag);
 						auto deg = ag->max_degree();
 						return optional{
 						    PolynomialInequality(N_, sz, std::move(ag), std::move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};

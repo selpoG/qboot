@@ -17,6 +17,9 @@
 
 namespace qboot
 {
+	// MPFR retains per-thread caches unless they are freed before the worker exits.
+	void _free_mpfr_cache();
+
 	template <class T>
 	std::vector<T> _seq_eval(const std::vector<std::function<T()>>& fs)
 	{
@@ -54,6 +57,7 @@ namespace qboot
 					if (now_local >= N) break;
 					ans[now_local] = fs[now_local]();
 				}
+				_free_mpfr_cache();
 			});
 		for (uint32_t i = 0; i < p; ++i) worker[i].join();
 		return ans;
@@ -137,7 +141,11 @@ namespace qboot
 	public:
 		_task_queue(uint32_t p = std::thread::hardware_concurrency())
 		{
-			for (uint32_t i = 0; i < p; ++i) ts_.emplace_back([this] { work(); });
+			for (uint32_t i = 0; i < p; ++i)
+				ts_.emplace_back([this] {
+					work();
+					_free_mpfr_cache();
+				});
 		}
 		~_task_queue()
 		{
