@@ -1,12 +1,17 @@
-#include <array>      // for array
-#include <cstdint>    // for uint32_t
-#include <fstream>    // for ifstream
-#include <iostream>   // for cerr
-#include <sstream>    // for ostringstream
-#include <stdexcept>  // for runtime_error
-#include <string>     // for string
-#include <utility>    // for move
-#include <vector>     // for vector
+#include <array>       // for array
+#include <atomic>      // for atomic
+#include <cstdint>     // for uint32_t
+#include <exception>   // for exception
+#include <fstream>     // for ifstream
+#include <functional>  // for function
+#include <iostream>    // for cerr
+#include <sstream>     // for ostringstream
+#include <stdexcept>   // for runtime_error
+#include <string>      // for string
+#include <utility>     // for move
+#include <vector>      // for vector
+
+#include "mpfr.h"  // for mpfr_free_cache
 
 #include "qboot/qboot.hpp"  // for numerical types, bootstrap equations, SDPB output
 
@@ -33,6 +38,33 @@ namespace
 		require(p.eval(real(3)) == 4, "polynomial evaluation");
 		require(p.derivative().eval(real(3)) == 4, "polynomial derivative");
 		require(qboot::algebra::mul(p, p).eval(real(3)) == 16, "polynomial product");
+	}
+
+	void concurrency()
+	{
+		std::atomic<uint32_t> evaluations{0};
+		qboot::_memoized<uint32_t(uint32_t)> square(
+		    [&evaluations](uint32_t x)
+		    {
+			    ++evaluations;
+			    return x * x;
+		    },
+		    4);
+		std::vector<std::function<uint32_t()>> tasks;
+		std::vector<std::function<bool()>> boolean_tasks;
+		for (uint32_t i = 0; i < 128; ++i)
+		{
+			tasks.emplace_back([i, &square] { return square(i % 8); });
+			boolean_tasks.emplace_back([i] { return i % 2 == 0; });
+		}
+		const auto values = qboot::_parallel_evaluate(tasks, 4);
+		const auto booleans = qboot::_parallel_evaluate(boolean_tasks, 4);
+		for (uint32_t i = 0; i < 128; ++i)
+		{
+			require(values[i] == (i % 8) * (i % 8), "concurrent memoized result");
+			require(booleans[i] == (i % 2 == 0), "parallel boolean result");
+		}
+		require(evaluations == 8, "memoized function evaluated more than once per key");
 	}
 
 	void bootstrap(const fs::path& output, uint32_t parallel)
@@ -103,6 +135,7 @@ int main()
 	try
 	{
 		arithmetic();
+		concurrency();
 		output_test();
 	}
 	catch (const std::exception& error)

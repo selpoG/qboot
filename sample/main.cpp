@@ -19,7 +19,6 @@ using Op = qboot::PrimaryOperator;
 using Eq = qboot::Equation;
 constexpr auto ContinuousType = qboot::SectorType::Continuous;
 constexpr auto Odd = qboot::algebra::FunctionSymmetry::Odd;
-constexpr auto Even = qboot::algebra::FunctionSymmetry::Even;
 
 static string name(const dict<rational>& deltas);
 static BootstrapEquation create(const Context& c, const dict<rational>& deltas, uint32_t numax, uint32_t maxspin);

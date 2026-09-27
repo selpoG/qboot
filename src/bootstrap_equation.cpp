@@ -17,6 +17,48 @@ using std::unique_ptr, std::make_unique, std::cout, std::endl, std::string, std:
 
 namespace qboot
 {
+	void BootstrapEquation::_reset() &&
+	{
+		std::vector<Sector>{}.swap(sectors_);
+		std::map<std::string, uint32_t, std::less<>>{}.swap(sector_id_);
+		std::vector<Equation>{}.swap(eqs_);
+		N_ = 0;
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
+	    : BootstrapEquation(cont, sectors, _pole_selector(numax))
+	{
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors, uint32_t numax)
+	    : BootstrapEquation(cont, std::move(sectors), _pole_selector(numax))
+	{
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors,
+	                                     const std::function<uint32_t(uint32_t)>& num_poles)
+	    : BootstrapEquation(cont, std::vector(sectors), num_poles)
+	{
+	}
+	BootstrapEquation::BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors,
+	                                     const std::function<uint32_t(uint32_t)>& num_poles)
+	    : cont_(cont), sectors_(std::move(sectors)), eqs_{}
+	{
+		for (uint32_t id = 0; id < sectors_.size(); ++id)
+		{
+			sector_id_[sectors_[id].name()] = id;
+			if (sectors_[id].type() == SectorType::Continuous)
+				sectors_[id].set_operators(cont.epsilon(), num_poles);
+		}
+	}
+	void BootstrapEquation::add_equation(const Equation& eq) &
+	{
+		assert(N_ == 0);
+		eqs_.push_back(eq);
+	}
+	void BootstrapEquation::add_equation(Equation&& eq) &
+	{
+		assert(N_ == 0);
+		eqs_.push_back(std::move(eq));
+	}
+
 	class ExactPolynomial
 	{
 		// coeff_[N_] must be positive

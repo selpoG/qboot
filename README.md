@@ -150,7 +150,9 @@ CI checks C++17, C++20, and C++23 with GCC and Clang in Debug and Release,
 treating compiler warnings as errors. Tests check multiprecision arithmetic,
 polynomial operations, and a small conformal-bootstrap problem with finite
 and infinite spectral ranges. Serial and parallel SDPB/XML output must agree.
-The same tests also run against the installed CMake package.
+The same tests also run against the installed CMake package. CI also builds the
+sample project and runs AddressSanitizer, LeakSanitizer, and UndefinedBehaviorSanitizer.
+Concurrency tests cover memoized calculations and parallel boolean results.
 
 The existing larger calculation and comparison tools are built as `bootstrap_example`
 (executable `test` or `test-debug`) and `comp`; they are not automatic CTest tests.

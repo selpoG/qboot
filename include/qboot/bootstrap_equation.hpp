@@ -256,7 +256,7 @@ namespace qboot
 		std::vector<Sector> sectors_{};
 		// maps from sector name to its unique id
 		std::map<std::string, uint32_t, std::less<>> sector_id_{};
-		std::vector<Equation> eqs_{};
+		std::vector<Equation> eqs_;
 		// total dimension (index of equations, index of derivatives)
 		uint32_t N_ = 0;
 
@@ -292,48 +292,16 @@ namespace qboot
 		    uint32_t id, const GeneralPrimaryOperator& op, const std::unique_ptr<ConformalScale>& ag) const;
 
 	public:
-		void _reset() &&
-		{
-			std::vector<Sector>{}.swap(sectors_);
-			std::map<std::string, uint32_t, std::less<>>{}.swap(sector_id_);
-			std::vector<Equation>{}.swap(eqs_);
-			N_ = 0;
-		}
-		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax)
-		    : BootstrapEquation(cont, sectors, _pole_selector(numax))
-		{
-		}
-		BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors, uint32_t numax)
-		    : BootstrapEquation(cont, std::move(sectors), _pole_selector(numax))
-		{
-		}
+		void _reset() &&;
+		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors, uint32_t numax);
+		BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors, uint32_t numax);
 		BootstrapEquation(const Context& cont, const std::vector<Sector>& sectors,
-		                  const std::function<uint32_t(uint32_t)>& num_poles)
-		    : BootstrapEquation(cont, std::vector(sectors), num_poles)
-		{
-		}
+		                  const std::function<uint32_t(uint32_t)>& num_poles);
 		// num_poles: spin -> num of poles
 		BootstrapEquation(const Context& cont, std::vector<Sector>&& sectors,
-		                  const std::function<uint32_t(uint32_t)>& num_poles)
-		    : cont_(cont), sectors_(std::move(sectors))
-		{
-			for (uint32_t id = 0; id < sectors_.size(); ++id)
-			{
-				sector_id_[sectors_[id].name()] = id;
-				if (sectors_[id].type() == SectorType::Continuous)
-					sectors_[id].set_operators(cont.epsilon(), num_poles);
-			}
-		}
-		void add_equation(const Equation& eq) &
-		{
-			assert(N_ == 0);
-			eqs_.push_back(eq);
-		}
-		void add_equation(Equation&& eq) &
-		{
-			assert(N_ == 0);
-			eqs_.push_back(std::move(eq));
-		}
+		                  const std::function<uint32_t(uint32_t)>& num_poles);
+		void add_equation(const Equation& eq) &;
+		void add_equation(Equation&& eq) &;
 		// call this to finish add_equation
 		void finish() &;
 		[[nodiscard]] uint32_t lambda() const { return cont_.lambda(); }
