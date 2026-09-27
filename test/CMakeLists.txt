@@ -14,3 +14,13 @@ target_link_libraries(qboot_smoke PRIVATE qboot)
 set_default_property(qboot_smoke ..)
 add_test(NAME qboot_smoke COMMAND qboot_smoke)
 set_tests_properties(qboot_smoke PROPERTIES TIMEOUT 120)
+
+add_executable(qboot_json src/json.cpp)
+target_link_libraries(qboot_json PRIVATE qboot)
+set_default_property(qboot_json ..)
+add_test(NAME qboot_json COMMAND qboot_json)
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+	add_test(NAME qboot_json_format COMMAND ${Python3_EXECUTABLE}
+		${CMAKE_CURRENT_SOURCE_DIR}/check_json.py $<TARGET_FILE:qboot_json>)
+endif()

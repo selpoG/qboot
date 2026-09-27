@@ -1,6 +1,7 @@
 #include <array>       // for array
 #include <atomic>      // for atomic
 #include <cstdint>     // for uint32_t
+#include <cstdlib>    // for getenv
 #include <exception>   // for exception
 #include <fstream>     // for ifstream
 #include <functional>  // for function
@@ -91,6 +92,10 @@ namespace
 		auto xml = std::move(xml_program).create_xml(parallel);
 		require(xml.num_constraints() == 2, "XML spectral constraints");
 		xml.write(output / "input.xml");
+		auto json_program = equations.convert(qboot::FindContradiction("unit"), parallel);
+		auto json = std::move(json_program).create_json(parallel);
+		require(json.num_constraints() == 2, "JSON spectral constraints");
+		json.write(output / "input.json");
 	}
 
 	std::string read(const fs::path& path)
@@ -122,7 +127,7 @@ namespace
 			require(contents.find("inf") == std::string::npos, "infinity in SDPB output");
 			++count;
 		}
-		require(count == 8, "unexpected SDPB output file count");
+		require(count == 9, "unexpected SDPB output file count");
 		fs::remove_all(serial);
 		fs::remove_all(parallel);
 	}
@@ -137,6 +142,7 @@ int main()
 		arithmetic();
 		concurrency();
 		output_test();
+		if (const auto* output = std::getenv("QBOOT_TEST_OUTPUT")) bootstrap(output, 2);
 	}
 	catch (const std::exception& error)
 	{

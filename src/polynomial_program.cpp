@@ -230,7 +230,8 @@ namespace qboot
 		leading_indices_.clear();
 		return sdpb;
 	}
-	XMLInput PolynomialProgram::create_xml(uint32_t parallel, const std::unique_ptr<_event_base>& event) &&
+	template <class Input>
+	Input PolynomialProgram::create_pmp(uint32_t parallel, const std::unique_ptr<_event_base>& event) &&
 	{
 		uint32_t eq_sz = uint32_t(equation_.size()), M = N_ - eq_sz;
 		Vector<real> obj_new(M);
@@ -242,7 +243,7 @@ namespace qboot
 			obj_const_ += equation_targets_[e] * std::move(t);
 		}
 		std::move(obj_)._reset();
-		XMLInput sdpb(std::move(obj_const_), std::move(obj_new), uint32_t(inequality_.size()));
+		Input sdpb(std::move(obj_const_), std::move(obj_new), uint32_t(inequality_.size()));
 		std::vector<std::function<void()>> tasks;
 		for (uint32_t j = 0; j < inequality_.size(); ++j)
 			tasks.emplace_back([this, &sdpb, j, M, eq_sz, &event] {
@@ -278,5 +279,13 @@ namespace qboot
 		inequality_.clear();
 		leading_indices_.clear();
 		return sdpb;
+	}
+	JSONInput PolynomialProgram::create_json(uint32_t parallel, const std::unique_ptr<_event_base>& event) &&
+	{
+		return std::move(*this).create_pmp<JSONInput>(parallel, event);
+	}
+	XMLInput PolynomialProgram::create_xml(uint32_t parallel, const std::unique_ptr<_event_base>& event) &&
+	{
+		return std::move(*this).create_pmp<XMLInput>(parallel, event);
 	}
 }  // namespace qboot

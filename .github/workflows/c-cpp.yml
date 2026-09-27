@@ -75,16 +75,43 @@ jobs:
         ASAN_OPTIONS: detect_leaks=1
         UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
       run: |
-        cmake --build build --parallel 2 --target qboot_smoke
+        cmake --build build --parallel 2 --target qboot_smoke qboot_json
         ctest --test-dir build --output-on-failure
+
+  sdpb:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+    - name: Build PMP fixtures
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgmp-dev libmpfr-dev
+        cmake -S . -B build -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
+        cmake --build build --parallel 2 --target qboot_json qboot_smoke
+        QBOOT_TEST_OUTPUT="$PWD/pmp" build/bin/qboot_json
+        QBOOT_TEST_OUTPUT="$PWD/pmp/bootstrap" build/bin/qboot_smoke
+    - name: Convert and solve with SDPB 3.1.0
+      run: |
+        docker run --rm -v "$PWD/pmp:/data" bootstrapcollaboration/sdpb:3.1.0 \
+          pmp2sdp --precision=256 --input=/data/matrices.json --output=/data/matrices-sdp
+        docker run --rm -v "$PWD/pmp:/data" bootstrapcollaboration/sdpb:3.1.0 \
+          pmp2sdp --precision=256 --input=/data/bootstrap/input.json --output=/data/bootstrap-sdp
+        docker run --rm -v "$PWD/pmp:/data" bootstrapcollaboration/sdpb:3.1.0 \
+          pmp2sdp --precision=256 --input=/data/bounded.json --output=/data/sdp
+        docker run --rm -v "$PWD/pmp:/data" bootstrapcollaboration/sdpb:3.1.0 \
+          sdpb --precision=256 --sdpDir=/data/sdp --outDir=/data/out \
+          --maxIterations=300 --dualityGapThreshold=1e-30 \
+          --primalErrorThreshold=1e-30 --dualErrorThreshold=1e-30
+        python3 test/check_sdpb.py pmp/out/out.txt
 
   build:
     runs-on: ubuntu-24.04
-    needs: [build_matrix, sanitizers]
+    needs: [build_matrix, sanitizers, sdpb]
     if: ${{ always() }}
     steps:
     - name: Check all build configurations
       env:
         BUILD_RESULT: ${{ needs.build_matrix.result }}
         SANITIZER_RESULT: ${{ needs.sanitizers.result }}
-      run: test "$BUILD_RESULT" = success && test "$SANITIZER_RESULT" = success
+        SDPB_RESULT: ${{ needs.sdpb.result }}
+      run: test "$BUILD_RESULT" = success && test "$SANITIZER_RESULT" = success && test "$SDPB_RESULT" = success
