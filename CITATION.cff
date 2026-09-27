@@ -4,10 +4,10 @@ message: >-
   listed in references.
 type: software
 title: "qboot: Converter from Conformal Bootstrap Equations to Semidefinite Programming"
-version: "0.8.2"
-date-released: "2026-09-26"
-# This DOI identifies v0.8.2; replace it when citing a different release.
-doi: "10.5281/zenodo.22981122"
+version: "0.8.3"
+date-released: "2026-09-28"
+# This DOI represents all versions of the software.
+doi: "10.5281/zenodo.22981121"
 authors:
   - family-names: Go
     given-names: Mocho

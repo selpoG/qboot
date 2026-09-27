@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.4)
 project(qboot_consumer LANGUAGES CXX)
 
-find_package(QBoot 0.8.2 REQUIRED)
+find_package(QBoot 0.8.3 REQUIRED)
 add_executable(qboot_consumer ../src/smoke.cpp)
 target_link_libraries(qboot_consumer PRIVATE QBoot::qboot)
 set_target_properties(qboot_consumer PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
