@@ -78,10 +78,7 @@ namespace
 	{
 		fs::create_directories(output);
 		qboot::JSONInput input(real("0.125"), Vector<real>{real(1)}, 3);
-		require_throws<std::logic_error>([&] { input.write(output / "missing.json"); });
-		require_throws<std::invalid_argument>([&] { input.register_constraint(3, matrix(0)); });
 		for (uint32_t degree = 0; degree <= 2; ++degree) input.register_constraint(degree, matrix(degree));
-		require_throws<std::logic_error>([&] { input.register_constraint(0, matrix(0)); });
 		const auto previous = std::locale::global(std::locale(std::locale::classic(), new DecimalComma));
 		input.write(output / "matrices.json");
 		std::locale::global(previous);

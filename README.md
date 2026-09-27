@@ -121,15 +121,6 @@ Of course, you can build also in Windows.
 
 You can build `sample.sln` in `sample\build` folder.
 
-For SDPB 3.1+, write PMP JSON with `std::move(pmp).create_json(parallel).write("input.json")`, then run:
-
-```sh
-pmp2sdp --precision=1024 --input=input.json --output=sdp
-sdpb --precision=1024 --sdpDir=sdp
-```
-
-Use the same bit precision as `qboot::mp::global_prec` when generating the PMP.
-
 ## Docker
 
 Docker for qboot can be obtained from [selpo/qboot](https://hub.docker.com/r/selpo/qboot),
