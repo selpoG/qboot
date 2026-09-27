@@ -20,6 +20,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 	- [Use installed `qboot`](#use-installed-qboot)
 	- [Docker](#docker)
 	- [Development and testing](#development-and-testing)
+	- [Citation](#citation)
 
 ## Requirements
 
@@ -144,3 +145,12 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 \
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 ```
+
+## Citation
+
+The DOI badge above represents all versions of this software.
+The archived **v0.8.2** release is available at
+[10.5281/zenodo.22981122](https://doi.org/10.5281/zenodo.22981122).
+
+See [CITATION.cff](CITATION.cff) for software and thesis citation information,
+and identify the release or commit you used.
