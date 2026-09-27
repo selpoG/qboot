@@ -1,4 +1,5 @@
 #include <cstdint>    // for uint32_t
+#include <cstdlib>    // for getenv
 #include <exception>  // for exception
 #include <iostream>   // for cerr
 #include <locale>     // for locale, numpunct
@@ -94,13 +95,14 @@ namespace
 	}
 }  // namespace
 
-int main(int argc, char** argv)
+int main()
 {
 	qboot::mp::global_prec = 256;
 	qboot::mp::global_rnd = MPFR_RNDN;
 	try
 	{
-		test(argc > 1 ? argv[1] : "json-output");
+		const auto* output = std::getenv("QBOOT_TEST_OUTPUT");
+		test(output != nullptr ? output : "json-output");
 	}
 	catch (const std::exception& error)
 	{

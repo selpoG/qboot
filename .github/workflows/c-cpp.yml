@@ -88,8 +88,8 @@ jobs:
         sudo apt-get install -y libgmp-dev libmpfr-dev
         cmake -S . -B build -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
         cmake --build build --parallel 2 --target qboot_json qboot_smoke
-        build/bin/qboot_json "$PWD/pmp"
-        build/bin/qboot_smoke "$PWD/pmp/bootstrap"
+        QBOOT_TEST_OUTPUT="$PWD/pmp" build/bin/qboot_json
+        QBOOT_TEST_OUTPUT="$PWD/pmp/bootstrap" build/bin/qboot_smoke
     - name: Convert and solve with SDPB 3.1.0
       run: |
         docker run --rm -v "$PWD/pmp:/data" bootstrapcollaboration/sdpb:3.1.0 \
@@ -100,7 +100,7 @@ jobs:
           pmp2sdp --precision=256 --input=/data/bounded.json --output=/data/sdp
         docker run --rm -v "$PWD/pmp:/data" bootstrapcollaboration/sdpb:3.1.0 \
           sdpb --precision=256 --sdpDir=/data/sdp --outDir=/data/out \
-          --maxIterations=100 --dualityGapThreshold=1e-30 \
+          --maxIterations=300 --dualityGapThreshold=1e-30 \
           --primalErrorThreshold=1e-30 --dualErrorThreshold=1e-30
         python3 test/check_sdpb.py pmp/out/out.txt
 

@@ -1,6 +1,7 @@
 #include <array>       // for array
 #include <atomic>      // for atomic
 #include <cstdint>     // for uint32_t
+#include <cstdlib>    // for getenv
 #include <exception>   // for exception
 #include <fstream>     // for ifstream
 #include <functional>  // for function
@@ -132,7 +133,7 @@ namespace
 	}
 }  // namespace
 
-int main(int argc, char** argv)
+int main()
 {
 	qboot::mp::global_prec = 256;
 	qboot::mp::global_rnd = MPFR_RNDN;
@@ -141,7 +142,7 @@ int main(int argc, char** argv)
 		arithmetic();
 		concurrency();
 		output_test();
-		if (argc > 1) bootstrap(argv[1], 2);
+		if (const auto* output = std::getenv("QBOOT_TEST_OUTPUT")) bootstrap(output, 2);
 	}
 	catch (const std::exception& error)
 	{

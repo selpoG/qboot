@@ -1,6 +1,7 @@
 """Check PMP JSON independently of the C++ writer, using only Python's stdlib."""
 
 import json
+import os
 from decimal import Decimal
 from pathlib import Path
 import subprocess
@@ -71,5 +72,5 @@ def check(directory):
 if __name__ == "__main__":
     with tempfile.TemporaryDirectory(prefix="qboot-json-") as temporary:
         directory = Path(temporary)
-        subprocess.run([sys.argv[1], str(directory)], check=True)
+        subprocess.run([sys.argv[1]], env=dict(os.environ, QBOOT_TEST_OUTPUT=str(directory)), check=True)
         check(directory)
