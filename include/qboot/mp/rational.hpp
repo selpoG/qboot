@@ -5,6 +5,7 @@
 #include <cassert>      // for assert
 #include <cstdint>      // for uint32_t
 #include <istream>      // for basic_istream
+#include <limits>       // for numeric_limits
 #include <optional>     // for optional
 #include <ostream>      // for basic_ostream
 #include <stdexcept>    // for runtime_error
@@ -565,42 +566,51 @@ namespace qboot::mp
 	inline std::optional<rational> parse(std::string_view str)
 	{
 		constexpr auto npos = std::string::npos;
-		auto t = str.find_first_not_of("+-0123456789/");
-		if (t == npos) return rational::_parse(str);
-		auto i = str.find_first_of("eE", t);
-		if (i == std::string::npos) return _parse_mantisa(str);
-		if (str.find_first_not_of("+-0123456789", i + 1) != npos) return {};
+		auto parse_integer = [](std::string_view s) -> std::optional<integer> {
+			if (s.empty()) return {};
+			bool negative = s.front() == '-';
+			if (s.front() == '+' || negative) s.remove_prefix(1);
+			if (s.empty() || s.find_first_not_of("0123456789") != std::string::npos) return {};
+			auto x = integer::_parse(s);
+			if (x && negative) x->negate();
+			return x;
+		};
+		auto slash = str.find('/');
+		if (slash != npos)
+		{
+			auto num = parse_integer(str.substr(0, slash)), den = parse_integer(str.substr(slash + 1));
+			if (!num || !den || den->iszero()) return {};
+			return rational(num.value(), den.value());
+		}
+		auto i = str.find_first_of("eE");
+		if (i == npos) return _parse_mantisa(str);
 		auto mant = _parse_mantisa(str.substr(0, i));
 		if (!mant) return {};
-		auto exp = integer::_parse(str.substr(i + 1));
+		auto exp = parse_integer(str.substr(i + 1));
 		if (!exp) return {};
-		if (exp.value() >= 0) return mant.value() * pow(10u, _ulong(exp.value()));
-		return mant.value() / pow(10u, _ulong(-exp.value()));
+		bool negative = exp.value() < 0;
+		if (negative) exp->negate();
+		if (exp.value() > std::numeric_limits<_ulong>::max()) return {};
+		auto scale = pow(10u, _ulong(exp.value()));
+		if (negative) return mant.value() / scale;
+		return mant.value() * scale;
 	}
 	inline std::optional<rational> _parse_mantisa(std::string_view str)
 	{
 		constexpr auto npos = std::string::npos;
-		auto sg = str.find_first_of("+-");
-		if (sg != npos)
-		{
-			if (sg != 0) return {};
-			auto n = _parse_mantisa(str.substr(1));
-			if (!n) return {};
-			return (str[sg] == '+' ? 1 : -1) * n.value();
-		}
+		if (str.empty()) return {};
+		bool negative = str.front() == '-';
+		if (str.front() == '+' || negative) str.remove_prefix(1);
+		if (str.empty() || str.find_first_not_of("0123456789.") != npos) return {};
 		auto i = str.find('.');
-		if (i == npos)
-		{
-			auto x = integer::_parse(str);
-			if (!x.has_value()) return {};
-			return rational(x.value());
-		}
-		auto a = i == 0 ? integer() : integer::_parse(str.substr(0, i));
-		if (!a) return {};
-		if (i + 1 == str.size()) return rational(a.value());
-		auto b = integer::_parse(str.substr(i + 1));
-		if (!b) return {};
-		return a.value() + rational(b.value(), pow(10u, str.size() - i - 1));
+		if (i != npos && (str.size() == 1 || str.find('.', i + 1) != npos)) return {};
+		std::string digits(str);
+		if (i != npos) digits.erase(i, 1);
+		auto num = integer::_parse(digits);
+		if (!num) return {};
+		if (negative) num->negate();
+		if (i == npos) return rational(num.value());
+		return rational(num.value(), pow(10u, str.size() - i - 1));
 	}
 }  // namespace qboot::mp
 

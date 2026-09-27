@@ -28,7 +28,7 @@ endif()
 add_executable(qboot_regression src/regression.cpp)
 target_link_libraries(qboot_regression PRIVATE qboot)
 set_default_property(qboot_regression ..)
-foreach(case scalar subtraction norm linear shift parsing parallel queue)
+foreach(case scalar subtraction norm linear shift parsing parallel queue number_strings real_parsing conversion events)
 	add_test(NAME regression_${case} COMMAND qboot_regression)
 	set_tests_properties(regression_${case} PROPERTIES
 		ENVIRONMENT "QBOOT_REGRESSION=${case}" TIMEOUT 15)

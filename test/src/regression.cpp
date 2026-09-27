@@ -1,16 +1,20 @@
-#include <array>       // for array
-#include <atomic>      // for atomic
-#include <chrono>      // for seconds
-#include <cstdint>     // for uint32_t
-#include <cstdlib>     // for getenv
-#include <exception>   // for exception
-#include <functional>  // for function
-#include <future>      // for future_status
-#include <iostream>    // for cerr
-#include <map>         // for map
-#include <stdexcept>   // for runtime_error, logic_error
-#include <string>      // for string
-#include <vector>      // for vector
+#include <array>        // for array
+#include <atomic>       // for atomic
+#include <chrono>       // for seconds
+#include <cstdint>      // for uint32_t
+#include <cstdlib>      // for getenv
+#include <exception>    // for exception
+#include <functional>   // for function
+#include <future>       // for future_status
+#include <iostream>     // for cerr
+#include <limits>       // for numeric_limits
+#include <map>          // for map
+#include <memory>       // for make_unique, unique_ptr
+#include <stdexcept>    // for runtime_error, logic_error
+#include <string>       // for string
+#include <string_view>  // for string_view
+#include <utility>      // for move
+#include <vector>       // for vector
 
 #include "mpfr.h"  // for mpfr_free_cache
 
@@ -125,6 +129,97 @@ namespace
 		require(qboot::mp::parse("0/5").value() == 0, "zero rational parsing");
 	}
 
+	void number_strings()
+	{
+		const std::map<std::string, std::string> cases{{"1e+3", "1000"},    {"+3", "3"},          {"+1.2", "6/5"},
+		                                               {"-.5", "-1/2"},     {"5.", "5"},          {"-5e3", "-5000"},
+		                                               {"1.25E-2", "1/80"}, {"+2/+4", "1/2"},     {"2/-4", "-1/2"},
+		                                               {"-2/-4", "1/2"},    {"001.020", "51/50"}, {"0e+10", "0"}};
+		for (const auto& entry : cases)
+		{
+			auto value = qboot::mp::parse(entry.first);
+			require(value && value.value() == rational(entry.second), "valid number string rejected or misread");
+		}
+		for (const auto* s :
+		     {"",   "+",  "-",   ".",     "+.",    "--1.2", "+-2", "1 2.3", "1\t2",  " 1",    "1 ",  "1.2.3",
+		      "1e", "e3", "1e+", "1e--3", "1e2e3", "1/",    "/2",  "1/2/3", "1.2/3", "1/2e3", "1/0", "0/0"})
+			require(!qboot::mp::parse(s), "invalid number string accepted");
+		require(!qboot::mp::parse(std::string("1\0junk", 6)), "embedded null accepted");
+		auto too_large = (qboot::mp::integer(std::numeric_limits<qboot::mp::_ulong>::max()) + 1).str();
+		require(!qboot::mp::parse("1e" + too_large), "positive exponent overflow");
+		require(!qboot::mp::parse("1e-" + too_large), "negative exponent overflow");
+	}
+
+	void real_parsing()
+	{
+		// LeakSanitizer must see both success and failure paths release the MPFR allocation.
+		for (uint32_t i = 0; i < 64; ++i)
+		{
+			auto x = real::_parse("1.25");
+			require(x && x.value() == real("1.25"), "real parsing failed");
+			require(!real::_parse("invalid"), "invalid real accepted");
+		}
+	}
+
+	void conversion()
+	{
+		RealFunction<real> x(2);
+		x.at(1) = 2;
+		x.at(2) = 3;
+		qboot::algebra::RealConverter converter(x);
+		RealFunction<Polynomial> f(2);
+		f.at(0) = Polynomial{real(1), real(2)};
+		f.at(1) = Polynomial{real(3), real(4)};
+		f.at(2) = Polynomial{real(5), real(-1)};
+		auto g = converter.convert(f);
+		require(g.at(0) == f.at(0), "converted constant coefficient");
+		require(g.at(1) == Polynomial{real(6), real(8)}, "converted linear coefficient");
+		require(g.at(2) == Polynomial{real(29), real(8)}, "converted quadratic coefficient");
+		require(converter.inverse().convert(g) == f, "polynomial coefficient conversion round trip");
+		Vector<Polynomial> row{Polynomial{real(1), real(1)}, Polynomial(real(2))};
+		Matrix<Polynomial> mat(2, 1);
+		mat.at(0, 0) = Polynomial(1u);
+		mat.at(1, 0) = Polynomial(real(3));
+		require(dot(row, mat)[0] == Polynomial{real(6), real(1), real(1)}, "polynomial matrix product");
+	}
+
+#ifndef NDEBUG
+	class RecordingEvent : public qboot::_event_base
+	{
+	public:
+		uint32_t begins = 0, ends = 0;
+		void on_begin([[maybe_unused]] std::string_view tag) override { ++begins; }
+		void on_end([[maybe_unused]] std::string_view tag) override { ++ends; }
+	};
+#endif
+
+	void events()
+	{
+		{
+			qboot::_scoped_event scope("default");
+		}
+		{
+			qboot::_scoped_event scope("empty", {});
+		}
+#ifndef NDEBUG
+		auto recorder = std::make_unique<RecordingEvent>();
+		auto* result = recorder.get();
+		std::unique_ptr<qboot::_event_base> event = std::move(recorder);
+		{
+			qboot::_scoped_event scope("active", event);
+			require(result->begins == 1 && result->ends == 0, "event begin callback");
+		}
+		require(result->ends == 1, "event end callback");
+		require_throws<std::runtime_error>(
+		    [&]
+		    {
+			    qboot::_scoped_event scope("exception", event);
+			    throw std::runtime_error("test");
+		    });
+		require(result->begins == 2 && result->ends == 2, "event callback during unwinding");
+#endif
+	}
+
 	void parallel()
 	{
 		for (uint32_t p : {0u, 1u, 2u, 4u})
@@ -176,9 +271,18 @@ int main()
 	qboot::mp::global_rnd = MPFR_RNDN;
 	try
 	{
-		const std::map<std::string, std::function<void()>> tests{
-		    {"scalar", scalar}, {"subtraction", subtraction}, {"norm", norm},         {"linear", linear},
-		    {"shift", shift},   {"parsing", parsing},         {"parallel", parallel}, {"queue", queue}};
+		const std::map<std::string, std::function<void()>> tests{{"scalar", scalar},
+		                                                         {"subtraction", subtraction},
+		                                                         {"norm", norm},
+		                                                         {"linear", linear},
+		                                                         {"shift", shift},
+		                                                         {"parsing", parsing},
+		                                                         {"parallel", parallel},
+		                                                         {"queue", queue},
+		                                                         {"number_strings", number_strings},
+		                                                         {"real_parsing", real_parsing},
+		                                                         {"conversion", conversion},
+		                                                         {"events", events}};
 		if (const auto* name = std::getenv("QBOOT_REGRESSION"))
 			tests.at(name)();
 		else

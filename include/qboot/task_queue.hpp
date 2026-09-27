@@ -233,11 +233,11 @@ namespace qboot
 	class _scoped_event
 	{
 		std::string tag_;
-		const std::unique_ptr<_event_base>& event_;
+		_event_base* event_;
 
 	public:
 		explicit _scoped_event(std::string_view tag, const std::unique_ptr<_event_base>& event = {})
-		    : tag_(tag), event_(event)
+		    : tag_(tag), event_(event.get())
 		{
 			if (event_ != nullptr) event_->on_begin(tag_);
 		}
@@ -254,8 +254,8 @@ namespace qboot
 	class _scoped_event
 	{
 	public:
-		template <class T>
-		_scoped_event(std::string_view tag [[maybe_unused]], [[maybe_unused]] T&& event)
+		explicit _scoped_event([[maybe_unused]] std::string_view tag,
+		                       [[maybe_unused]] const std::unique_ptr<_event_base>& event = {})
 		{
 		}
 	};
