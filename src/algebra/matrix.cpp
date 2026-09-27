@@ -58,7 +58,7 @@ namespace qboot::algebra
 			_multiply_row(&mat, j, 1 / mat.at(j, j), j);
 			for (uint32_t i = j + 1; i < mat.row(); ++i) _add_row(&mat, j, i, -mat.at(i, j), j);
 		}
-		move(mat)._reset();
+		std::move(mat)._reset();
 		return det;
 	}
 	Matrix<real> inverse(Matrix<real>&& mat)
@@ -83,7 +83,7 @@ namespace qboot::algebra
 		}
 		for (uint32_t j = mat.row() - 1; j < mat.row(); --j)
 			for (uint32_t r = j - 1; r < j; --r) _add_row(&inv, j, r, -mat.at(r, j));
-		move(mat)._reset();
+		std::move(mat)._reset();
 		return inv;
 	}
 	Matrix<real> cholesky_decomposition(const Matrix<real>& mat)

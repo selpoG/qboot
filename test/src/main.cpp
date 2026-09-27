@@ -194,15 +194,15 @@ qboot::BootstrapEquation single_ising(const Context& c, const dict<rational>& de
 		even.add_op(0, real(6));
 		even.add_op(2, real(5));
 		for (uint32_t spin = 4; spin <= maxspin; spin += 2) even.add_op(spin);
-		secs.push_back(move(even));
+		secs.push_back(std::move(even));
 	}
-	qboot::BootstrapEquation boot(c, move(secs), numax);
+	qboot::BootstrapEquation boot(c, std::move(secs), numax);
 	Eq eq(boot, Odd);
 	eq.add("unit", u, ext("s", "s", "s", "s"));
 	eq.add("e", ops.at("e"), ext("s", "s", "s", "s"));
 	eq.add("T", T, ext("s", "s", "s", "s"));
 	eq.add("even", ext("s", "s", "s", "s"));
-	boot.add_equation(move(eq));
+	boot.add_equation(std::move(eq));
 	boot.finish();
 	return boot;
 }
@@ -263,9 +263,9 @@ int main(int argc, char* argv[])
 			pmp = boot.convert(sdp_mode, parallel, stopwatch);
 		}
 		auto root = fs::current_path() / name_mixed(deltas);
-		auto input = move(pmp.value()).create_input(parallel, stopwatch);
+		auto input = std::move(pmp.value()).create_input(parallel, stopwatch);
 		pmp.reset();
-		move(input).write(root, parallel, stopwatch);
+		std::move(input).write(root, parallel, stopwatch);
 	}
 	return 0;
 }

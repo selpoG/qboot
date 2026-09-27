@@ -43,7 +43,7 @@ const string& as_err(const my_result<T>& v)
 template <class T>
 string&& as_err(my_result<T>&& v)
 {
-	return std::get<1>(move(v));
+	return std::get<1>(std::move(v));
 }
 
 template <class T>
@@ -59,7 +59,7 @@ const T& as_val(const my_result<T>& v)
 template <class T>
 T&& as_val(my_result<T>&& v)
 {
-	return std::get<0>(move(v));
+	return std::get<0>(std::move(v));
 }
 
 namespace qboot::mp
@@ -111,7 +111,7 @@ public:
 		return ('0' <= c && c <= '9') || c == '+' || c == 'e' || c == '-' || c == '.';
 	}
 	NumberElement(uint32_t r, uint32_t c, const real& num) noexcept : ElementBase(r, c), num_(num) {}
-	NumberElement(uint32_t r, uint32_t c, real&& num) noexcept : ElementBase(r, c), num_(move(num)) {}
+	NumberElement(uint32_t r, uint32_t c, real&& num) noexcept : ElementBase(r, c), num_(std::move(num)) {}
 	[[nodiscard]] const real& number() const noexcept { return num_; }
 	[[nodiscard]] string str() const noexcept
 	{
@@ -230,7 +230,7 @@ class Content
 {
 	vector<Element> elems_;
 
-	explicit Content(vector<Element>&& elems) noexcept : elems_(move(elems)) {}
+	explicit Content(vector<Element>&& elems) noexcept : elems_(std::move(elems)) {}
 
 public:
 	static my_result<Content> read(const path& path) noexcept
@@ -262,7 +262,7 @@ public:
 			}
 		}
 		elems.emplace_back(EOFElement(fin.row(), 0));
-		return Content(move(elems));
+		return Content(std::move(elems));
 	}
 	static optional<array<Element, 2>> compare(const Content& x, const Content& y, const real& error_bound) noexcept
 	{
@@ -277,9 +277,9 @@ my_error check_file(const path& d1, const path& d2, const real& error_bound) noe
 	for (const auto& d : {d1, d2})
 		if (!fs::is_regular_file(d)) return d.string() + " is not a file";
 	auto c1 = Content::read(d1);
-	if (!is_ok(c1)) return as_err(move(c1));
+	if (!is_ok(c1)) return as_err(std::move(c1));
 	auto c2 = Content::read(d2);
-	if (!is_ok(c2)) return as_err(move(c2));
+	if (!is_ok(c2)) return as_err(std::move(c2));
 	auto diff = Content::compare(as_val(c1), as_val(c2), error_bound);
 	if (!diff.has_value()) return std::monostate{};
 	auto [x, y] = diff.value();

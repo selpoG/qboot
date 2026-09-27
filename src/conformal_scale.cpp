@@ -116,7 +116,7 @@ namespace
 		void update() & { next_l = !seqr.valid() || (seql.valid() && seql.get() >= seqr.get()); }
 
 	public:
-		Merged(L&& l, R&& r) : seql(move(l)), seqr(move(r)) { update(); }
+		Merged(L&& l, R&& r) : seql(std::move(l)), seqr(std::move(r)) { update(); }
 		void next() &
 		{
 			if (next_l)
@@ -180,8 +180,8 @@ namespace qboot
 			for (uint32_t i = 0; i <= deg; ++i)
 			{
 				Vector<real> v(i + 1);
-				for (uint32_t j = 0; j <= i; ++j) v[j] = move(mat.at(i, j));
-				bilinear_bases_.at(i) = Polynomial(move(v));
+				for (uint32_t j = 0; j <= i; ++j) v[j] = std::move(mat.at(i, j));
+				bilinear_bases_.at(i) = Polynomial(std::move(v));
 			}
 		}
 	}

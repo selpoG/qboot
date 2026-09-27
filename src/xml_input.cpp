@@ -64,7 +64,7 @@ namespace
 namespace qboot
 {
 	PVM::PVM(Matrix<Vector<Polynomial>>&& M, Vector<real>&& x, Vector<real>&& scale, Vector<Polynomial>&& bilinear)
-	    : M_(move(M)), sample_points_(move(x)), sample_scalings_(move(scale)), bilinear_(move(bilinear))
+	    : M_(std::move(M)), sample_points_(std::move(x)), sample_scalings_(std::move(scale)), bilinear_(std::move(bilinear))
 	{
 		dim_ = M_.row();
 		assert(sample_points_.size() > 0);
@@ -88,16 +88,16 @@ namespace qboot
 	      constraints_(make_unique<optional<PVM>[]>(num_constraints)),
 	      num_constraints_(num_constraints)
 	{
-		objectives_[0] = move(constant);
-		for (uint32_t i = 0; i < obj.size(); ++i) objectives_[i + 1] = move(obj[i]);
-		move(obj)._reset();
+		objectives_[0] = std::move(constant);
+		for (uint32_t i = 0; i < obj.size(); ++i) objectives_[i + 1] = std::move(obj[i]);
+		std::move(obj)._reset();
 	}
 	void XMLInput::register_constraint(uint32_t index, PVM&& c) &
 	{
 		assert(index < num_constraints_);
 		assert(!constraints_[index].has_value());
 		assert(objectives_.size() == c.num_of_vars() + 1);
-		constraints_[index] = move(c);
+		constraints_[index] = std::move(c);
 	}
 	void XMLInput::write(const path& path) const
 	{

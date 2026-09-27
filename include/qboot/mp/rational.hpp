@@ -388,7 +388,7 @@ namespace qboot::mp
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator*(const Tp& r1, const rational& r2) noexcept
 		{
-			return std::move(r2 * r1);
+			return r2 * r1;
 		}
 		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
 		friend rational operator*(const Tp& r1, rational&& r2)

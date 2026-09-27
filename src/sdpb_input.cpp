@@ -39,7 +39,7 @@ namespace qboot
 {
 	DualConstraint::DualConstraint(uint32_t dim, uint32_t deg, Matrix<real>&& B, Vector<real>&& c,
 	                               array<Matrix<real>, 2>&& bilinear)
-	    : dim_(dim), deg_(deg), constraint_B_(move(B)), constraint_c_(move(c)), bilinear_(move(bilinear))
+	    : dim_(dim), deg_(deg), constraint_B_(std::move(B)), constraint_c_(std::move(c)), bilinear_(std::move(bilinear))
 	{
 		[[maybe_unused]] auto schur = schur_size();
 		assert(constraint_B_.row() == schur);
@@ -51,8 +51,8 @@ namespace qboot
 	}
 
 	SDPBInput::SDPBInput(real&& constant, Vector<real>&& obj, uint32_t num_constraints)
-	    : constant_term_(move(constant)),
-	      objectives_(move(obj)),
+	    : constant_term_(std::move(constant)),
+	      objectives_(std::move(obj)),
 	      constraints_(make_unique<optional<DualConstraint>[]>(num_constraints)),
 	      num_constraints_(num_constraints)
 	{
@@ -62,7 +62,7 @@ namespace qboot
 		assert(index < num_constraints_);
 		assert(!constraints_[index].has_value());
 		assert(objectives_.size() == c.obj_B().column());
-		constraints_[index] = move(c);
+		constraints_[index] = std::move(c);
 	}
 	void SDPBInput::write_objectives(const path& root) const
 	{
@@ -185,7 +185,7 @@ namespace qboot
 			tasks.emplace_back([this, &root, &event] {
 				_scoped_event scope("write_objectives", event);
 				write_objectives(root);
-				move(objectives_)._reset();
+				std::move(objectives_)._reset();
 			});
 			for (uint32_t i = 0; i < num_constraints_; ++i)
 				tasks.emplace_back([this, &root, i, &event] {

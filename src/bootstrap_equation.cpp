@@ -54,7 +54,7 @@ namespace qboot
 			return binom_->at(n)[m];
 		}
 		ExactPolynomial(vector<integer>&& coeff, const shared_ptr<vector<vector<integer>>>& binom)
-		    : coeff_(move(coeff)), N_(0), binom_(binom)
+		    : coeff_(std::move(coeff)), N_(0), binom_(binom)
 		{
 			assert(!coeff_.empty() && coeff_.back() != 0);
 			N_ = uint32_t(coeff_.size()) - 1;
@@ -63,7 +63,7 @@ namespace qboot
 		}
 
 	public:
-		explicit ExactPolynomial(vector<integer>&& coeff) : coeff_(move(coeff)), N_(0)
+		explicit ExactPolynomial(vector<integer>&& coeff) : coeff_(std::move(coeff)), N_(0)
 		{
 			assert(!coeff_.empty() && coeff_.back() != 0);
 			N_ = uint32_t(coeff_.size()) - 1;
@@ -178,7 +178,7 @@ namespace qboot
 				q[j] *= pow_a;
 				pow_a *= a;
 			}
-			return ExactPolynomial(move(q), binom_);
+			return ExactPolynomial(std::move(q), binom_);
 		}
 		// num of roots in (a, infty)
 		[[nodiscard]] uint32_t count_roots_pos(const integer& a) const
@@ -270,7 +270,7 @@ namespace qboot
 			vector<integer> q(N_ + 1);
 			for (uint32_t j = 0; j <= N_; ++j)
 				for (uint32_t i = j; i <= N_; ++i) addmul(q[j], coeff_[i], binom(i, j));
-			return ExactPolynomial(move(q), binom_);
+			return ExactPolynomial(std::move(q), binom_);
 		}
 		void isolate_helper(vector<array<rational, 2>>* ans) &&
 		{
@@ -284,11 +284,11 @@ namespace qboot
 				left_child();
 				auto right = shift_one();
 				auto it = ans->end();
-				move(*this).isolate_helper(ans);
+				std::move(*this).isolate_helper(ans);
 				for (; it != ans->end(); ++it)
 					for (uint32_t i = 0; i < 2; ++i) it->at(i) /= 2;
 				vector<integer>().swap(coeff_);
-				move(right).isolate_helper(ans);
+				std::move(right).isolate_helper(ans);
 				for (; it != ans->end(); ++it)
 					for (uint32_t i = 0; i < 2; ++i) it->at(i) = (1 + it->at(i)) / 2;
 			}
@@ -374,7 +374,7 @@ namespace qboot
 		auto mats = make_disc_mat(id);
 		auto sz = sec.size();
 		Matrix<real> mat{sz, sz};
-		for (uint32_t n = 0; n < N_; ++n) mat += mul_scalar(func[n], move(mats[n]));
+		for (uint32_t n = 0; n < N_; ++n) mat += mul_scalar(func[n], std::move(mats[n]));
 		return mat;
 	}
 	[[nodiscard]] Vector<Matrix<real>> BootstrapEquation::make_disc_mat(uint32_t id) const
@@ -405,7 +405,7 @@ namespace qboot
 			}
 			for (uint32_t j = 0; j < n; ++j)
 				for (uint32_t r = 0; r < sz; ++r)
-					for (uint32_t c = 0; c < sz; ++c) mat[j + p].at(r, c) = move(tmp.at(r, c)[j]);
+					for (uint32_t c = 0; c < sz; ++c) mat[j + p].at(r, c) = std::move(tmp.at(r, c)[j]);
 			p += n;
 		}
 		return mat;
@@ -453,7 +453,7 @@ namespace qboot
 				}
 				for (uint32_t j = 0; j < n; ++j)
 					for (uint32_t r = 0; r < sz; ++r)
-						for (uint32_t c = 0; c < sz; ++c) mat[j + p][k].at(r, c) = move(tmp.at(r, c)[j]);
+						for (uint32_t c = 0; c < sz; ++c) mat[j + p][k].at(r, c) = std::move(tmp.at(r, c)[j]);
 			}
 			p += n;
 		}
@@ -489,7 +489,7 @@ namespace qboot
 					for (uint32_t k = 0; k < num_pts; ++k)
 					{
 						mats[k] = {sz, sz};
-						for (uint32_t n = 0; n < N_; ++n) mats[k] += mul_scalar(recovered_func[n], move(mat[n][k]));
+						for (uint32_t n = 0; n < N_; ++n) mats[k] += mul_scalar(recovered_func[n], std::move(mat[n][k]));
 						mats[k] /= ag->eval(ps[k]);
 					}
 					auto mat_pol = polynomial_interpolate(mats, inv(ag->max_degree()));
@@ -585,10 +585,10 @@ namespace qboot
 						auto mat = make_cont_mat(id, op, ag);
 						auto deg = ag->max_degree();
 						return optional{
-						    PolynomialInequality(N_, sz, move(ag), move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};
+						    PolynomialInequality(N_, sz, std::move(ag), std::move(mat), Vector<Matrix<real>>(deg + 1, {sz, sz}))};
 					});
 		}
-		for (auto&& x : _parallel_evaluate(ineqs, parallel)) prg.add_inequality(move(x));
+		for (auto&& x : _parallel_evaluate(ineqs, parallel)) prg.add_inequality(std::move(x));
 		return prg;
 	}
 }  // namespace qboot

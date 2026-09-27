@@ -11,19 +11,19 @@ namespace qboot::algebra
 	{
 		if (coeffs.size() > 0 && !coeffs[coeffs.size() - 1].iszero())
 		{
-			coeff_ = move(coeffs);
+			coeff_ = std::move(coeffs);
 			return;
 		}
 		int32_t deg = int32_t(coeffs.size()) - 1;
 		while (deg >= 0 && coeffs[uint32_t(deg)].iszero()) deg--;
 		if (deg < 0)
 		{
-			move(coeffs)._reset();
+			std::move(coeffs)._reset();
 			return;
 		}
 		coeff_ = Vector<real>{uint32_t(deg + 1)};
 		for (uint32_t i = 0; i <= uint32_t(deg); ++i) coeff_[i].swap(coeffs[i]);
-		move(coeffs)._reset();
+		std::move(coeffs)._reset();
 	}
 	void Polynomial::derivate() &
 	{
@@ -34,8 +34,8 @@ namespace qboot::algebra
 			return;
 		}
 		Vector<real> new_coeff(coeff_.size() - 1);
-		for (uint32_t i = 1; i < coeff_.size(); ++i) new_coeff[i - 1] = i * move(coeff_[i]);
-		coeff_ = move(new_coeff);
+		for (uint32_t i = 1; i < coeff_.size(); ++i) new_coeff[i - 1] = i * std::move(coeff_[i]);
+		coeff_ = std::move(new_coeff);
 	}
 	Polynomial& Polynomial::operator+=(const Polynomial& p) &
 	{
@@ -79,7 +79,7 @@ namespace qboot::algebra
 		v[0] = coeff_[0] * a;
 		for (uint32_t i = 1; i < coeff_.size(); ++i) mp::fma(v[i], coeff_[i], a, coeff_[i - 1]);
 		v[coeff_.size()] = coeff_[coeff_.size() - 1];
-		coeff_ = move(v);
+		coeff_ = std::move(v);
 	}
 	Polynomial mul(const Polynomial& p, const Polynomial& q)
 	{
@@ -215,7 +215,7 @@ namespace qboot::algebra
 		assert(mat.is_square());
 		uint32_t N = mat.row();
 		if (N == 0) return Polynomial(0u);
-		if (N == 1) return move(mat.at(0, 0));
+		if (N == 1) return std::move(mat.at(0, 0));
 		if (N == 2) return mul(mat.at(0, 0), mat.at(1, 1)) - mul(mat.at(0, 1), mat.at(1, 0));
 		std::vector<uint32_t> perm(N);
 		for (uint32_t i = 0; i < N; ++i) perm[i] = i;
