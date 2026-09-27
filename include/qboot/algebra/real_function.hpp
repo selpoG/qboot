@@ -56,8 +56,14 @@ namespace qboot::algebra
 		// multiply x ^ p
 		void shift(uint32_t p) &
 		{
-			for (uint32_t i = lambda_; i >= p; i--) at(i) = std::move(at(i - p));
-			for (uint32_t i = 0; i < p; ++i) at(i) = {};
+			if (p == 0) return;
+			for (uint32_t i = size(); i > 0; --i)
+			{
+				if (i - 1 >= p)
+					at(i - 1) = std::move(at(i - 1 - p));
+				else
+					at(i - 1) = {};
+			}
 		}
 
 		RealFunction& operator+=(const RealFunction& v) &

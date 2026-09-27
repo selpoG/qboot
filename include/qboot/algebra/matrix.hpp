@@ -8,7 +8,7 @@
 #include <memory>            // for unique_ptr, make_unique
 #include <ostream>           // for ostream
 #include <type_traits>       // for true_type, false_type, is_same_v, enable_if, void_t
-#include <utility>           // for move, swap
+#include <utility>           // for declval, move, swap
 
 #include "qboot/mp/real.hpp"  // for real
 
@@ -141,8 +141,8 @@ namespace qboot::algebra
 		[[nodiscard]] auto abs() const { return mp::sqrt(norm()); }
 		[[nodiscard]] auto norm() const
 		{
-			auto s = arr_[0].norm();
-			for (uint32_t i = 1; i < sz_; ++i) s += arr_[i].norm();
+			decltype(std::declval<const Ring&>().norm()) s{};
+			for (uint32_t i = 0; i < sz_; ++i) s += arr_[i].norm();
 			return s;
 		}
 		Vector& operator+=(const Vector& v) &

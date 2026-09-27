@@ -182,7 +182,7 @@ namespace qboot::algebra
 				for (uint32_t dy = 0; dy <= x.lambda_ / 2; ++dy)
 					for (uint32_t dx = 0; dx + 2 * dy <= x.lambda_; ++dx)
 					{
-						if (_matches(x.sym_, dx)) z.at(dx, dy) -= x.at(dx, dy);
+						if (_matches(x.sym_, dx)) z.at(dx, dy) += x.at(dx, dy);
 						if (_matches(y.sym_, dx)) z.at(dx, dy) -= y.at(dx, dy);
 					}
 			return z;

@@ -64,12 +64,12 @@ namespace
 
 	qboot::PolynomialProgram bounded_program()
 	{
-		// Maximize 1/8 + y, with z = 2y + 1, y >= 0, z <= 5. Optimum: 17/8.
+		// Maximize 1/8 + y, with z = 2y + 1, 3y >= 3, z <= 5. Optimum: 17/8.
 		qboot::PolynomialProgram program(2);
 		program.objective_constant() = real("0.125");
 		program.objectives(Vector<real>{real(1), real(0)});
 		program.add_equation(Vector<real>{real(-2), real(1)}, real(1));
-		program.add_inequality(qboot::PolynomialInequality(2, Vector<real>{real(1), real(0)}, real(0)));
+		program.add_inequality(qboot::PolynomialInequality(2, Vector<real>{real(3), real(0)}, real(3)));
 		program.add_inequality(qboot::PolynomialInequality(2, Vector<real>{real(0), real(-1)}, real(-5)));
 		return program;
 	}

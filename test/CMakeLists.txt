@@ -24,3 +24,12 @@ if(Python3_Interpreter_FOUND)
 	add_test(NAME qboot_json_format COMMAND ${Python3_EXECUTABLE}
 		${CMAKE_CURRENT_SOURCE_DIR}/check_json.py $<TARGET_FILE:qboot_json>)
 endif()
+
+add_executable(qboot_regression src/regression.cpp)
+target_link_libraries(qboot_regression PRIVATE qboot)
+set_default_property(qboot_regression ..)
+foreach(case scalar subtraction norm linear shift parsing parallel queue)
+	add_test(NAME regression_${case} COMMAND qboot_regression)
+	set_tests_properties(regression_${case} PROPERTIES
+		ENVIRONMENT "QBOOT_REGRESSION=${case}" TIMEOUT 15)
+endforeach()

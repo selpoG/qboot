@@ -4,11 +4,13 @@
 #include <atomic>              // for atomic
 #include <condition_variable>  // for condition_variable
 #include <cstdint>             // for uint32_t
+#include <exception>           // for current_exception, exception_ptr, rethrow_exception
 #include <functional>          // for function
 #include <future>              // for future, promise
 #include <memory>              // for unique_ptr, make_unique
 #include <mutex>               // for mutex, lock_guard, unique_lock
 #include <queue>               // for queue
+#include <stdexcept>           // for logic_error
 #include <string>              // for string
 #include <string_view>         // for string_view
 #include <thread>              // for thread
@@ -45,30 +47,48 @@ namespace qboot
 		std::mutex mtx{};
 		uint32_t now = 0;
 		std::vector<std::thread> worker;
-		for (uint32_t i = 0; i < p; ++i)
-			worker.emplace_back([&mtx, &now, N, &fs, &ans] {
-				while (true)
-				{
-					uint32_t now_local;
+		std::exception_ptr error{};
+		try
+		{
+			for (uint32_t i = 0; i < p; ++i)
+				worker.emplace_back([&mtx, &now, N, &fs, &ans, &error] {
+					try
+					{
+						while (true)
+						{
+							uint32_t now_local;
+							{
+								std::lock_guard<std::mutex> lock(mtx);
+								if (error || now >= N) break;
+								now_local = now++;
+							}
+							if constexpr (std::is_same_v<T, bool>)
+							{
+								// vector<bool> packs distinct elements into shared storage.
+								const bool value = fs[now_local]();
+								std::lock_guard<std::mutex> lock(mtx);
+								ans[now_local] = value;
+							}
+							else
+								ans[now_local] = fs[now_local]();
+						}
+					}
+					catch (...)
 					{
 						std::lock_guard<std::mutex> lock(mtx);
-						now_local = now;
-						++now;
+						if (!error) error = std::current_exception();
 					}
-					if (now_local >= N) break;
-					if constexpr (std::is_same_v<T, bool>)
-					{
-						// vector<bool> packs distinct elements into shared storage.
-						const bool value = fs[now_local]();
-						std::lock_guard<std::mutex> lock(mtx);
-						ans[now_local] = value;
-					}
-					else
-						ans[now_local] = fs[now_local]();
-				}
-				_free_mpfr_cache();
-			});
-		for (uint32_t i = 0; i < p; ++i) worker[i].join();
+					_free_mpfr_cache();
+				});
+		}
+		catch (...)
+		{
+			// Join already started workers if creating a later thread fails.
+			std::lock_guard<std::mutex> lock(mtx);
+			error = std::current_exception();
+		}
+		for (auto& t : worker) t.join();
+		if (error) std::rethrow_exception(error);
 		return ans;
 	}
 	// evaluate fs in parallel
@@ -113,13 +133,17 @@ namespace qboot
 		~_task() override = default;
 		void run() override
 		{
-			if constexpr (std::is_same_v<T, void>)
+			try
 			{
-				f_();
-				p_.set_value();
+				if constexpr (std::is_same_v<T, void>)
+				{
+					f_();
+					p_.set_value();
+				}
+				else
+					p_.set_value(f_());
 			}
-			else
-				p_.set_value(f_());
+			catch (...) { p_.set_exception(std::current_exception()); }
 		}
 	};
 
@@ -150,11 +174,21 @@ namespace qboot
 	public:
 		_task_queue(uint32_t p = std::thread::hardware_concurrency())
 		{
-			for (uint32_t i = 0; i < p; ++i)
-				ts_.emplace_back([this] {
-					work();
-					_free_mpfr_cache();
-				});
+			if (p == 0) p = 1;
+			try
+			{
+				for (uint32_t i = 0; i < p; ++i)
+					ts_.emplace_back([this] {
+						work();
+						_free_mpfr_cache();
+					});
+			}
+			catch (...)
+			{
+				signal_done();
+				for (auto& t : ts_) t.join();
+				throw;
+			}
 		}
 		~_task_queue()
 		{
@@ -171,6 +205,7 @@ namespace qboot
 		std::future<T> push(Func task) &
 		{
 			std::unique_lock<std::mutex> lk(mtx_);
+			if (killed_) throw std::logic_error("Task queue has stopped");
 			std::promise<T> p_;
 			auto f = p_.get_future();
 			q_.push(std::make_unique<_task<T>>(std::move(p_), task));

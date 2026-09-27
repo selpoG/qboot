@@ -63,9 +63,9 @@ def check(directory):
         assert actual == expected
 
     # After eliminating y using z = 2y + 1: objective = -3/8 + z/2,
-    # and the two constraints are (z-1)/2 >= 0 and 5-z >= 0.
+    # and the two constraints are 3(z-3)/2 >= 0 and 5-z >= 0.
     assert numbers(pmp["objective"]) == [Decimal("-0.375"), Decimal("0.5")]
-    assert numbers(json_blocks[0]["polynomials"])[0][0] == [[Decimal("-0.5")], [Decimal("0.5")]]
+    assert numbers(json_blocks[0]["polynomials"])[0][0] == [[Decimal("-4.5")], [Decimal("1.5")]]
     assert numbers(json_blocks[1]["polynomials"])[0][0] == [[5], [-1]]
 
 

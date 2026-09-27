@@ -137,7 +137,7 @@ namespace qboot::algebra
 			if (p.iszero() || algebra::iszero(c)) return Polynomial{};
 			auto d = uint32_t(p.degree());
 			Polynomial r(d);
-			r.coeff_ *= c;
+			r.coeff_ = mul_scalar(c, p.coeff_);
 			return r;
 		}
 		friend Polynomial operator+(const Polynomial& p, const Polynomial& q);

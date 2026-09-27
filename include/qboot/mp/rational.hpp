@@ -120,7 +120,7 @@ namespace qboot::mp
 		{
 			std::string s(str);
 			rational x;
-			if (mpq_set_str(x._x, s.data(), 10) == -1) return {};
+			if (mpq_set_str(x._x, s.data(), 10) == -1 || mpz_sgn(mpq_denref(x._x)) == 0) return {};
 			mpq_canonicalize(x._x);
 			return {std::move(x)};
 		}
