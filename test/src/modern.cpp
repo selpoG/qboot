@@ -105,6 +105,16 @@ namespace
 	static_assert(PolynomialArgument<rational> && !PolynomialArgument<std::string>);
 	static_assert(QueueArgument<int (*)()> && !QueueArgument<int>);
 
+	template <class T>
+	concept BlockArgument = requires { typename qboot::ConformalBlock<T>; };
+	static_assert(BlockArgument<qboot::PrimaryOperator> && BlockArgument<qboot::GeneralPrimaryOperator>);
+	static_assert(!BlockArgument<int> && !BlockArgument<real>);
+	static_assert(qboot::algebra::Ring<integer> && qboot::algebra::Ring<rational>);
+	static_assert(qboot::algebra::Ring<Polynomial> && qboot::algebra::Ring<Vector<real>>);
+	static_assert(qboot::algebra::Ring<Matrix<Polynomial>> && !qboot::algebra::Ring<int>);
+	static_assert(qboot::algebra::Algebra<integer> && qboot::algebra::Algebra<Polynomial>);
+	static_assert(!qboot::algebra::Algebra<Vector<real>>);
+
 	void require(bool condition, const char* message)
 	{
 		if (!condition) throw std::runtime_error(message);
@@ -181,6 +191,24 @@ namespace
 		require(zero_columns.row_view(1).empty(), "empty matrix row");
 	}
 
+	void exact_norms()
+	{
+		const integer n("-123456789012345678901234567890");
+		require(n.norm() == n * n, "exact integer norm");
+		auto moved_n = n.clone();
+		require(std::move(moved_n).norm() == n * n, "rvalue integer norm");
+		const rational r(integer(-7), integer(3));
+		require(r.norm() == rational(integer(49), integer(9)), "exact rational norm");
+		auto moved_r = r.clone();
+		require(std::move(moved_r).norm() == r * r, "rvalue rational norm");
+		require(integer{}.norm() == 0 && rational{}.norm() == 0, "zero norms");
+		const Vector<integer> v{integer(-3), integer(4)};
+		require(v.norm() == 25 && v.eval(real(2)) == v, "integer coefficient vector");
+		const Vector<rational> fractions{rational(integer(1), integer(3)), rational(integer(2), integer(3))};
+		require(fractions.norm() == rational(integer(5), integer(9)), "rational coefficient vector");
+		require(Vector<integer>{}.norm() == 0 && Vector<rational>{}.norm() == 0, "empty exact vectors");
+	}
+
 	void scalar_templates()
 	{
 		const Polynomial p{real(1), real(-2), real(3)};
@@ -243,6 +271,7 @@ int main()
 	qboot::mp::global_prec = 256;
 	try
 	{
+		exact_norms();
 		scalar_templates();
 		comparisons();
 		views();

@@ -32,7 +32,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [mpfr](http://mpfr.org/)
 
-- [gcc](http://gcc.gnu.org/) (`7.4.0+`) or [clang](http://clang.llvm.org/) (`8.0.0+`)
+- [gcc](http://gcc.gnu.org/) or [clang](http://clang.llvm.org/) with C++20 support
 
 ### Windows (MSVC)
 
@@ -40,7 +40,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [mpfr](https://github.com/BrianGladman/mpfr.git)
 
-- [Visual Studio](https://visualstudio.microsoft.com/) (`2017+`)
+- [Visual Studio](https://visualstudio.microsoft.com/) (`2022+`)
 
 Please build `mpir` and `mpfr` in both `Debug` and `Release` mode.
 

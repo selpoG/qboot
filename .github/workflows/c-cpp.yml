@@ -56,6 +56,41 @@ jobs:
           -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror"
         cmake --build sample-build --parallel 2
 
+  libcxx:
+    name: libc++ (C++${{ matrix.standard }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        standard: [20, 23]
+    steps:
+    - uses: actions/checkout@v5
+    - name: requirement
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgmp-dev libmpfr-dev clang-20 libc++-20-dev libc++abi-20-dev
+    - name: build and test
+      run: |
+        cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/local" \
+          -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
+        cmake --build build --parallel 2
+        ctest --test-dir build --output-on-failure
+        cmake --install build
+    - name: installed package and sample
+      run: |
+        cmake -S test/consumer -B consumer-build -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build consumer-build --parallel 2
+        ctest --test-dir consumer-build --output-on-failure
+        cmake -S sample -B sample-build -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} \
+          -DCMAKE_CXX_FLAGS="-stdlib=libc++ -Wall -Wextra -Wpedantic -Werror" \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build sample-build --parallel 2
+
   sanitizers:
     runs-on: ubuntu-24.04
     steps:
@@ -114,12 +149,13 @@ jobs:
 
   build:
     runs-on: ubuntu-24.04
-    needs: [build_matrix, sanitizers, sdpb]
+    needs: [build_matrix, libcxx, sanitizers, sdpb]
     if: ${{ always() }}
     steps:
     - name: Check all build configurations
       env:
         BUILD_RESULT: ${{ needs.build_matrix.result }}
+        LIBCXX_RESULT: ${{ needs.libcxx.result }}
         SANITIZER_RESULT: ${{ needs.sanitizers.result }}
         SDPB_RESULT: ${{ needs.sdpb.result }}
-      run: test "$BUILD_RESULT" = success && test "$SANITIZER_RESULT" = success && test "$SDPB_RESULT" = success
+      run: test "$BUILD_RESULT" = success && test "$LIBCXX_RESULT" = success && test "$SANITIZER_RESULT" = success && test "$SDPB_RESULT" = success

@@ -10,7 +10,7 @@ namespace qboot
 	template class ConformalBlock<PrimaryOperator>;
 	template class ConformalBlock<GeneralPrimaryOperator>;
 
-	template <class Operator>
+	template <_operator Operator>
 	[[nodiscard]] string ConformalBlock<Operator>::str() const
 	{
 		ostringstream os;

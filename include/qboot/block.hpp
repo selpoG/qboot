@@ -22,8 +22,11 @@ namespace qboot
 	{
 		return _delta_P(d1 - d2, d3 - d4);
 	}
+	template <class T>
+	concept _operator = std::same_as<T, PrimaryOperator> || std::same_as<T, GeneralPrimaryOperator>;
+
 	// F_{\mp, op}^{d1 d2, d3 d4}
-	template <class Operator>
+	template <_operator Operator>
 	class ConformalBlock
 	{
 		Operator op_;
@@ -129,7 +132,7 @@ namespace qboot
 		[[nodiscard]] const mp::real& P() const { return P_; }
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
-		template <class Operator>
+		template <_operator Operator>
 		[[nodiscard]] ConformalBlock<Operator> fix_op(const Operator& op) const
 		{
 			return ConformalBlock<Operator>(op, d12_, d34_, d23h_, sym_);

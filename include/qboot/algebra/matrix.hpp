@@ -35,10 +35,10 @@ namespace qboot::algebra
 	{
 		using type = Vec<_evaluated_t<R>>;
 	};
-	template <>
-	struct _evaluated<mp::real>
+	template <mp::_is_mp T>
+	struct _evaluated<T>
 	{
-		using type = mp::real;
+		using type = T;
 	};
 	template <class Ring, class S>
 	struct _substitute;
@@ -60,17 +60,37 @@ namespace qboot::algebra
 	// Coefficients are movable, explicitly cloneable, and default to zero.
 	// Individual operations impose additional requirements where needed.
 	template <class T>
-	concept _ring = std::default_initializable<T> && std::movable<T> && requires(T& x, T& y, const T& c)
+	concept _ring_base = std::default_initializable<T> && std::movable<T> && requires(T& x, T& y, const T& c)
 	{
 		{ x.swap(y) } -> std::same_as<void>;
 		{ c.clone() } -> std::same_as<T>;
 		{ c.iszero() } -> std::same_as<bool>;
 	};
 
+	// Structural requirements; algebraic laws and the zero value remain the type's responsibility.
 	template <class T>
-	concept _multipliable = requires(const T& x, const T& y, T& result)
+	concept Ring = _ring_base<T> && requires(const T& x, const T& y, T& result)
+	{
+		{ result += y } -> std::same_as<T&>;
+		{ result -= y } -> std::same_as<T&>;
+		result.negate();
+		{ x + y } -> std::same_as<T>;
+		{ +x } -> std::same_as<T>;
+		{ -x } -> std::same_as<T>;
+		{ x == y } -> std::same_as<bool>;
+		x.norm();
+	};
+	template <class T>
+	concept Algebra = requires(const T& x, const T& y)
 	{
 		{ mul(x, y) } -> std::same_as<T>;
+	};
+	template <class T>
+	concept _ring = Ring<T>;
+
+	template <class T>
+	concept _multipliable = Algebra<T> && requires(const T& x, const T& y, T& result)
+	{
 		{ result += mul(x, y) } -> std::same_as<T&>;
 	};
 	template <class T, class S>
