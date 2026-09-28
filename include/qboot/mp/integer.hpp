@@ -27,8 +27,7 @@ namespace qboot::mp
 	class real;
 
 	template <class Tp>
-	concept _is_mp =
-	    std::same_as<Tp, integer> || std::same_as<Tp, rational> || std::same_as<Tp, real>;
+	concept _is_mp = std::same_as<Tp, integer> || std::same_as<Tp, rational> || std::same_as<Tp, real>;
 
 	// check all values in integral class I1 are included in integral class I2
 	// and I1, I2 has the same signed property

@@ -4,7 +4,7 @@
 #include <concepts>  // for same_as
 #include <cstdint>   // for uint32_t
 #include <string>    // for string
-#include <variant>   // for varinat
+#include <variant>   // for variant
 
 #include "qboot/algebra/complex_function.hpp"  // for FunctionSymmetry
 #include "qboot/mp/real.hpp"                   // for real
@@ -75,11 +75,13 @@ namespace qboot
 		[[nodiscard]] bool include_odd() const { return d12_ != 0 && d34_ != 0; }
 		[[nodiscard]] algebra::FunctionSymmetry symmetry() const { return sym_; }
 		[[nodiscard]] const Operator& get_op() const { return op_; }
-		[[nodiscard]] PrimaryOperator get_op(const mp::real& delta) const requires std::same_as<Operator, GeneralPrimaryOperator>
+		[[nodiscard]] PrimaryOperator get_op(const mp::real& delta) const
+			requires std::same_as<Operator, GeneralPrimaryOperator>
 		{
 			return op_.fix_delta(delta);
 		}
-		[[nodiscard]] ConformalBlock<PrimaryOperator> fix_delta(const mp::real& delta) const requires std::same_as<Operator, GeneralPrimaryOperator>
+		[[nodiscard]] ConformalBlock<PrimaryOperator> fix_delta(const mp::real& delta) const
+			requires std::same_as<Operator, GeneralPrimaryOperator>
 		{
 			return ConformalBlock<PrimaryOperator>(op_.fix_delta(delta), d12_, d34_, d23h_, sym_);
 		}
