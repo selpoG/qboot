@@ -69,10 +69,23 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libgmp-dev libmpfr-dev clang-20 libc++-20-dev libc++abi-20-dev
+    - name: Build GMP with libc++
+      run: |
+        cd "$RUNNER_TEMP"
+        curl -fL --retry 3 https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz -o gmp-6.3.0.tar.xz
+        echo 'a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898  gmp-6.3.0.tar.xz' | sha256sum --check
+        tar -xf gmp-6.3.0.tar.xz
+        cd gmp-6.3.0
+        ./configure --prefix="$RUNNER_TEMP/qboot-gmp" --enable-cxx --disable-static \
+          CC=clang-20 CXX=clang++-20 CXXFLAGS="-O2 -stdlib=libc++"
+        make -j2
+        make install
+        echo "LD_LIBRARY_PATH=$RUNNER_TEMP/qboot-gmp/lib" >> "$GITHUB_ENV"
     - name: build and test
       run: |
         cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++-20 \
           -DCMAKE_CXX_STANDARD=${{ matrix.standard }} -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+          -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/qboot-gmp" \
           -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/local" \
           -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
         cmake --build build --parallel 2
