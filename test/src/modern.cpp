@@ -1,0 +1,197 @@
+#include <algorithm>  // for ranges::sort
+#include <array>      // for array
+#include <compare>    // for is_eq, is_gt, is_lt, partial_ordering, strong_ordering
+#include <concepts>   // for same_as, three_way_comparable
+#include <exception>  // for exception
+#include <future>     // for future, future_error, future_errc
+#include <iostream>   // for cerr
+#include <latch>      // for latch
+#include <limits>     // for numeric_limits
+#include <memory>     // for make_unique
+#include <span>       // for span
+#include <stdexcept>  // for runtime_error
+#include <string>     // for string
+#include <utility>    // for as_const, declval, move
+
+#include "mpfr.h"  // for mpfr_free_cache
+
+#include "qboot/qboot.hpp"  // for algebra types, blocks, numerical types, task queue
+
+using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
+using qboot::mp::integer, qboot::mp::rational, qboot::mp::real;
+
+namespace
+{
+	template <class T>
+	concept HasDelta = requires(const T& block)
+	{
+		block.delta();
+	};
+	template <class T>
+	concept CanFixDelta = requires(const T& block, const real& delta)
+	{
+		block.fix_delta(delta);
+	};
+	template <class T>
+	concept HasInnerProduct = requires(const Matrix<T>& m, const Vector<T>& v)
+	{
+		m.inner_product(v);
+	};
+	template <class T>
+	concept HasTemporaryView = requires(T value)
+	{
+		std::move(value).view();
+	};
+	template <class T>
+	concept HasTemporaryRow = requires(T value)
+	{
+		std::move(value).row_view(0);
+	};
+	template <class T>
+	concept IntegerComparable = requires(const integer& x, const T& y)
+	{
+		x <=> y;
+	};
+
+	static_assert(HasDelta<qboot::ConformalBlock<qboot::PrimaryOperator>>);
+	static_assert(!HasDelta<qboot::ConformalBlock<qboot::GeneralPrimaryOperator>>);
+	static_assert(!CanFixDelta<qboot::ConformalBlock<qboot::PrimaryOperator>>);
+	static_assert(CanFixDelta<qboot::ConformalBlock<qboot::GeneralPrimaryOperator>>);
+	static_assert(HasInnerProduct<real> && !HasInnerProduct<Polynomial>);
+	static_assert(!HasTemporaryView<Vector<real>> && !HasTemporaryRow<Matrix<real>>);
+	static_assert(std::same_as<decltype(std::declval<const Vector<real>&>().view()), std::span<const real>>);
+	static_assert(qboot::algebra::_ring<Polynomial> && qboot::algebra::_ring<Matrix<real>>);
+	static_assert(!qboot::algebra::_ring<int>);
+	static_assert(std::three_way_comparable<integer, std::strong_ordering>);
+	static_assert(std::three_way_comparable<rational, std::strong_ordering>);
+	static_assert(std::three_way_comparable<real, std::partial_ordering>);
+	static_assert(IntegerComparable<int> && IntegerComparable<double> && !IntegerComparable<std::string>);
+	static_assert(!std::constructible_from<real, std::array<int, 2>>);
+
+	void require(bool condition, const char* message)
+	{
+		if (!condition) throw std::runtime_error(message);
+	}
+
+	template <class T, class U>
+	void ordered(const T& low, const U& high)
+	{
+		require(std::is_lt(low <=> high) && std::is_gt(high <=> low), "three-way ordering");
+		require(low < high && low <= high && high > low && high >= low, "rewritten ordering");
+		require(low != high && high != low && !(low == high) && !(high == low), "rewritten inequality");
+	}
+
+	template <class T, class U>
+	void unordered(const T& x, const U& y)
+	{
+		require((x <=> y) == std::partial_ordering::unordered, "NaN must be unordered");
+		require((y <=> x) == std::partial_ordering::unordered, "reversed NaN comparison");
+		require(x != y && y != x && !(x == y) && !(y == x), "NaN equality");
+		require(!(x < y) && !(x <= y) && !(x > y) && !(x >= y), "NaN relational operators");
+		require(!(y < x) && !(y <= x) && !(y > x) && !(y >= x), "reversed NaN relational operators");
+	}
+
+	void comparisons()
+	{
+		ordered(integer(-1), integer(2));
+		ordered(integer(-1), 2U);
+		ordered(-1, integer(2));
+		ordered(integer(1), rational(3, 2U));
+		ordered(rational(3, 2U), real(2));
+		ordered(real(-1), integer(2));
+		ordered(rational(-1), 2U);
+		ordered(-1, rational(2));
+		ordered(real(-1), 2U);
+		ordered(-1.5, real(2));
+		ordered(integer(1), 1.5);
+		ordered(integer("9007199254740993"), real("9007199254740994"));
+		const auto nan = qboot::mp::nan();
+		unordered(nan, real(0));
+		unordered(nan, nan);
+		unordered(nan, integer(0));
+		unordered(nan, rational(0));
+		unordered(nan, 0);
+		unordered(nan, 0.0);
+		unordered(real(0), std::numeric_limits<double>::quiet_NaN());
+		unordered(integer(0), std::numeric_limits<double>::quiet_NaN());
+		const auto inf = std::numeric_limits<double>::infinity();
+		ordered(integer(0), inf);
+		ordered(-inf, integer(0));
+		ordered(real(0), real(inf));
+		require(real(inf) == inf && real(-inf) == -inf, "infinite equality");
+		require(real("-0") == real("0") && std::is_eq(real("-0") <=> 0), "signed zero equality");
+		require(integer(2) == rational(2) && rational(2) == real(2) && real(2) == 2.0, "mixed equality");
+		std::array<integer, 3> numbers{integer(4), integer(-2), integer(1)};
+		std::ranges::sort(numbers);
+		require(numbers[0] == -2 && numbers[1] == 1 && numbers[2] == 4, "ranges comparison compatibility");
+		const qboot::PrimaryOperator a(real(2), 0, rational(1)), b(real(3), 0, rational(1));
+		ordered(a, b);
+	}
+
+	void views()
+	{
+		Vector<real> empty;
+		require(empty.view().empty() && empty.iszero(), "empty span");
+		Vector<real> v{real(1), real(2), real(3)};
+		auto middle = v.view().subspan(1, 1);
+		middle[0] = 5;
+		require(v[1] == 5 && std::as_const(v).view()[1] == 5, "span must refer to original coefficients");
+		Matrix<real> m(2, 3);
+		m.row_view(1)[2] = 7;
+		require(m.at(1, 2) == 7 && std::as_const(m).row_view(1)[2] == 7, "matrix row span");
+		require(m.row_view(0).size() == 3 && m.at(0, 2) == 0, "row boundaries");
+		Matrix<real> zero_columns(2, 0);
+		require(zero_columns.row_view(1).empty(), "empty matrix row");
+	}
+
+	void tasks()
+	{
+		std::future<int> active, pending;
+		std::latch entered(1), resume(1);
+		{
+			qboot::_task_queue q(1);
+			require(q.push([p = std::make_unique<int>(42)] { return *p; }).get() == 42, "move-only task");
+			active = q.push(
+			    [&entered, &resume]
+			    {
+				    entered.count_down();
+				    resume.wait();
+				    return 17;
+			    });
+			entered.wait();
+			pending = q.push([] { return 99; });
+			q.signal_done();
+			resume.count_down();
+		}
+		require(active.get() == 17, "shutdown must join active tasks");
+		try
+		{
+			pending.get();
+			throw std::runtime_error("shutdown executed a pending task");
+		}
+		catch (const std::future_error& error)
+		{
+			require(error.code() == std::future_errc::broken_promise, "pending task cancellation");
+		}
+		for (int i = 0; i < 20; ++i) { qboot::_task_queue idle(2); }
+	}
+}  // namespace
+
+int main()
+{
+	qboot::mp::global_prec = 256;
+	try
+	{
+		comparisons();
+		views();
+		tasks();
+	}
+	catch (const std::exception& error)
+	{
+		std::cerr << error.what() << '\n';
+		mpfr_free_cache();
+		return 1;
+	}
+	mpfr_free_cache();
+	return 0;
+}

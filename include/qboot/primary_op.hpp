@@ -1,13 +1,13 @@
 #ifndef QBOOT_PRIMARY_OP_HPP_
 #define QBOOT_PRIMARY_OP_HPP_
 
-#include <cassert>      // for assert
-#include <cstdint>      // for uint32_t
-#include <optional>     // for optional
-#include <sstream>      // for ostringstream
-#include <string>       // for string
-#include <type_traits>  // for true_type
-#include <variant>      // for variant
+#include <cassert>   // for assert
+#include <compare>   // for is_neq, partial_ordering
+#include <cstdint>   // for uint32_t
+#include <optional>  // for optional
+#include <sstream>   // for ostringstream
+#include <string>    // for string
+#include <variant>   // for variant
 
 #include "qboot/mp/rational.hpp"  // for rational
 #include "qboot/mp/real.hpp"      // for real, isinteger
@@ -81,16 +81,12 @@ namespace qboot
 			assert(p.epsilon_ == q.epsilon_);
 			return p.spin_ == q.spin_ && p.delta_ == q.delta_;
 		}
-		friend bool operator!=(const PrimaryOperator& p, const PrimaryOperator& q) { return !(p == q); }
-		friend bool operator<(const PrimaryOperator& p, const PrimaryOperator& q)
+		friend std::partial_ordering operator<=>(const PrimaryOperator& p, const PrimaryOperator& q)
 		{
 			assert(p.epsilon_ == q.epsilon_);
-			if (p.spin_ != q.spin_) return p.spin_ < q.spin_;
-			return p.delta_ < q.delta_;
+			if (auto order = p.spin_ <=> q.spin_; std::is_neq(order)) return order;
+			return p.delta_ <=> q.delta_;
 		}
-		friend bool operator>(const PrimaryOperator& p, const PrimaryOperator& q) { return q < p; }
-		friend bool operator>=(const PrimaryOperator& p, const PrimaryOperator& q) { return !(p < q); }
-		friend bool operator<=(const PrimaryOperator& p, const PrimaryOperator& q) { return !(p > q); }
 	};
 	class GeneralPrimaryOperator
 	{

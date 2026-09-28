@@ -6,10 +6,10 @@ set(QBOOT_VERSION ${QBOOT_MAJOR_VERSION}.${QBOOT_MINOR_VERSION}.${QBOOT_PATCH_VE
 project(qboot LANGUAGES CXX VERSION ${QBOOT_VERSION})
 
 if(NOT DEFINED CMAKE_CXX_STANDARD)
-	set(CMAKE_CXX_STANDARD 17)
+	set(CMAKE_CXX_STANDARD 20)
 endif()
-if(CMAKE_CXX_STANDARD LESS 17)
-	message(FATAL_ERROR "qboot requires C++17 or later")
+if(CMAKE_CXX_STANDARD LESS 20)
+	message(FATAL_ERROR "qboot requires C++20 or later")
 endif()
 
 option(qboot_warnings_as_errors "Treat compiler warnings as errors" OFF)
@@ -94,7 +94,7 @@ add_library(${MY_TARGET} STATIC
 	include/qboot/xml_input.hpp
 )
 
-target_compile_features(${MY_TARGET} PUBLIC cxx_std_17)
+target_compile_features(${MY_TARGET} PUBLIC cxx_std_20)
 
 find_package(Threads)
 target_link_libraries(${MY_TARGET} INTERFACE Threads::Threads)
@@ -104,9 +104,6 @@ target_link_libraries(
 	${GMP_LIBRARY}
 	${GMPXX_LIBRARY}
 )
-if(NOT MSVC)
-	target_link_libraries(${MY_TARGET} INTERFACE stdc++fs)
-endif()
 
 target_include_directories(${MY_TARGET} PUBLIC
 	$<BUILD_INTERFACE:${MPFR_INCLUDE_DIR}>

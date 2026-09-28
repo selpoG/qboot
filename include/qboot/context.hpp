@@ -42,7 +42,7 @@ namespace qboot
 			std::shared_future<T> result;
 			{
 				std::lock_guard<std::mutex> guard(mutex_);
-				if (memo_.find(key) == memo_.end())
+				if (!memo_.contains(key))
 					memo_.emplace(key, tq_.push([this, key] { return std::apply(f_, key); }).share());
 				result = memo_.at(key);
 			}

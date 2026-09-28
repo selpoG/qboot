@@ -1,10 +1,12 @@
 #ifndef QBOOT_ALGEBRA_REAL_FUNCTION_HPP_
 #define QBOOT_ALGEBRA_REAL_FUNCTION_HPP_
 
-#include <cassert>  // for assert
-#include <cstddef>  // for uint32_t
-#include <ostream>  // for ostream
-#include <utility>  // for swap, move
+#include <algorithm>  // for min, ranges::move_backward
+#include <cassert>    // for assert
+#include <concepts>   // for same_as
+#include <cstddef>    // for uint32_t
+#include <ostream>    // for ostream
+#include <utility>    // for swap, move
 
 #include "qboot/algebra/matrix.hpp"      // for Vector, Matrix
 #include "qboot/algebra/polynomial.hpp"  // for _polynomialize_t, to_pol
@@ -17,10 +19,10 @@ namespace qboot::algebra
 	// namely, a function is represented as
 	//   \sum_{k = 0}^{lambda} this->at(k) x ^ k + O(x ^ {lambda + 1})
 	// Ring must be mp::real or Polynomial
-	template <class Ring>
+	template <_ring Ring>
 	class RealFunction
 	{
-		template <class Ring2>
+		template <_ring Ring2>
 		friend class RealFunction;
 		uint32_t lambda_;
 		Vector<Ring> coeffs_;
@@ -57,13 +59,10 @@ namespace qboot::algebra
 		void shift(uint32_t p) &
 		{
 			if (p == 0) return;
-			for (uint32_t i = size(); i > 0; --i)
-			{
-				if (i - 1 >= p)
-					at(i - 1) = std::move(at(i - 1 - p));
-				else
-					at(i - 1) = {};
-			}
+			auto n = std::min(p, size());
+			auto coeffs = coeffs_.view();
+			std::ranges::move_backward(coeffs.first(size() - n), coeffs.end());
+			for (auto& c : coeffs.first(n)) c = {};
 		}
 
 		RealFunction& operator+=(const RealFunction& v) &
@@ -156,13 +155,12 @@ namespace qboot::algebra
 		{
 			return x.lambda_ == y.lambda_ && x.coeffs_ == y.coeffs_;
 		}
-		friend bool operator!=(const RealFunction& x, const RealFunction& y) { return !(x == y); }
 		[[nodiscard]] RealFunction<_evaluated_t<Ring>> eval(const mp::real& x) const
 		{
 			return RealFunction<_evaluated_t<Ring>>(coeffs_.eval(x));
 		}
 	};
-	template <class Ring>
+	template <_ring Ring>
 	RealFunction<_polynomialize_t<Ring>> to_pol(Vector<RealFunction<Ring>>* coeffs)
 	{
 		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();
@@ -257,7 +255,7 @@ namespace qboot::algebra
 			mp::real s{};
 			for (uint32_t i = f_.lambda(); i <= f_.lambda(); --i)
 			{
-				if constexpr (std::is_same_v<R, mp::real>)
+				if constexpr (std::same_as<R, mp::real>)
 					mp::fma(s, s, x, f_.at(i));
 				else
 				{

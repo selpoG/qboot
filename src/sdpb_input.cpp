@@ -18,7 +18,7 @@ namespace
 	{
 		out << v.row() << " " << v.column() << "\n";
 		for (uint32_t r = 0; r < v.row(); ++r)
-			for (uint32_t c = 0; c < v.column(); ++c) out << v.at(r, c) << "\n";
+			for (const auto& x : v.row_view(r)) out << x << "\n";
 		return out;
 	}
 

@@ -136,7 +136,7 @@ docker run -it --rm qboot.sample
 
 ## Development and testing
 
-qboot defaults to C++17; use `CMAKE_CXX_STANDARD=20` or `23` to select a newer standard.
+qboot requires C++20 or later; use `CMAKE_CXX_STANDARD=23` to select C++23.
 C++23 requires CMake 3.20+ and a compatible compiler.
 
 ```sh
