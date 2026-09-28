@@ -12,7 +12,7 @@
 #include <stdexcept>    // for runtime_error
 #include <string>       // for to_string, string_literals
 #include <string_view>  // for string_view
-#include <utility>      // for move
+#include <utility>      // for in_range, move
 #include <vector>       // for vector
 
 #include "gmpxx.h"
@@ -624,7 +624,7 @@ namespace qboot::mp
 		if (negative) num->negate();
 		if (i == npos) return rational(num.value());
 		auto places = str.size() - i - 1;
-		if (places > std::numeric_limits<_ulong>::max()) return {};
+		if (!std::in_range<_ulong>(places)) return {};
 		return rational(num.value(), pow(10u, _integral_cast<_ulong>(places)));
 	}
 }  // namespace qboot::mp
