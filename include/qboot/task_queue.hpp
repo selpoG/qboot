@@ -101,7 +101,7 @@ namespace qboot
 
 	class _task_queue
 	{
-		std::mutex mtx_{};                // lock for q_ and killed_
+		std::mutex mtx_{};  // lock for q_ and killed_
 		std::condition_variable_any cond_{};
 		bool killed_ = false;
 		std::queue<std::packaged_task<void()>> q_{};
@@ -145,9 +145,9 @@ namespace qboot
 		{
 			std::lock_guard<std::mutex> lk(mtx_);
 			if (killed_) throw std::logic_error("Task queue has stopped");
-			std::packaged_task<std::invoke_result_t<Func&>()> work(std::move(task));
-			auto result = work.get_future();
-			q_.emplace([work = std::move(work)]() mutable { work(); });
+			std::packaged_task<std::invoke_result_t<Func&>()> packaged(std::move(task));
+			auto result = packaged.get_future();
+			q_.emplace([queued = std::move(packaged)]() mutable { queued(); });
 			cond_.notify_one();
 			return result;
 		}

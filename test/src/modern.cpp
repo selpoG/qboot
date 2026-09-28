@@ -1,7 +1,7 @@
 #include <algorithm>  // for ranges::sort
 #include <array>      // for array
-#include <compare>    // for is_eq, is_gt, is_lt, partial_ordering, strong_ordering
-#include <concepts>   // for same_as, three_way_comparable
+#include <compare>    // for is_eq, is_gt, is_lt, partial_ordering, strong_ordering, three_way_comparable
+#include <concepts>   // for constructible_from, same_as
 #include <exception>  // for exception
 #include <future>     // for future, future_error, future_errc
 #include <iostream>   // for cerr
