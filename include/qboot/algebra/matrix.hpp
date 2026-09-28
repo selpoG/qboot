@@ -3,7 +3,7 @@
 
 #include <algorithm>         // for ranges::all_of
 #include <cassert>           // for assert
-#include <concepts>          // for same_as, default_initializable, movable
+#include <concepts>          // for same_as, convertible_to, default_initializable, movable
 #include <cstdint>           // for uint32_t
 #include <initializer_list>  // for initializer_list
 #include <iterator>          // for next
@@ -17,6 +17,8 @@
 namespace qboot::algebra
 {
 	template <class R>
+		requires (requires(const R& x) { { x.iszero() } -> std::same_as<bool>; } ||
+		          requires(const R& x) { { x == 0 } -> std::convertible_to<bool>; })
 	bool iszero(const R& v)
 	{
 		if constexpr (requires { { v.iszero() } -> std::same_as<bool>; })
@@ -64,6 +66,38 @@ namespace qboot::algebra
 		{ c.clone() } -> std::same_as<T>;
 		{ c.iszero() } -> std::same_as<bool>;
 	};
+
+	template <class T>
+	concept _multipliable = requires(const T& x, const T& y, T& result)
+	{
+		{ mul(x, y) } -> std::same_as<T>;
+		{ result += mul(x, y) } -> std::same_as<T&>;
+	};
+	template <class T, class S>
+	concept _scale_assignable = requires(T& x, const S& scalar)
+	{
+		{ x *= scalar } -> std::same_as<T&>;
+	};
+	// Check member operators first so ADL cannot recursively select a container's own scalar overload.
+	template <class T, class S>
+	concept _scalable = _scale_assignable<T, S> && requires(const T& x, const S& scalar)
+	{
+		{ mul_scalar(scalar, x) } -> std::same_as<T>;
+	};
+	template <class T, class S>
+	concept _divide_assignable = requires(T& x, const S& scalar)
+	{
+		{ x /= scalar } -> std::same_as<T&>;
+	};
+	template <class T, class S>
+	concept _divisible = _divide_assignable<T, S> && requires(const T& x, const S& scalar)
+	{
+		{ x / scalar } -> std::same_as<T>;
+	};
+	template <class T, class S>
+	concept _matrix_operand = (std::same_as<T, S> && _multipliable<T>) ||
+	                          (!std::same_as<T, S> && _scalable<S, T> &&
+	                           requires(S& sum, const S& value) { { sum += value } -> std::same_as<S&>; });
 
 	template <_ring Ring>
 	class Vector
@@ -144,12 +178,14 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class T>
+			requires (_scale_assignable<Ring, T>)
 		Vector& operator*=(const T& v) &
 		{
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] *= v;
 			return *this;
 		}
 		template <class T>
+			requires (_divide_assignable<Ring, T>)
 		Vector& operator/=(const T& v) &
 		{
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] /= v;
@@ -191,6 +227,7 @@ namespace qboot::algebra
 			return std::move(x);
 		}
 		template <class R>
+			requires (_scalable<Ring, R>)
 		friend Vector mul_scalar(const R& r, const Vector& x)
 		{
 			Vector z(x.sz_);
@@ -198,11 +235,13 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
+			requires (_scale_assignable<Ring, R>)
 		friend Vector mul_scalar(const R& r, Vector&& x)
 		{
 			return std::move(x *= r);
 		}
 		template <class R>
+			requires (_divisible<Ring, R>)
 		friend Vector operator/(const Vector& x, const R& r)
 		{
 			Vector z(x.sz_);
@@ -210,6 +249,7 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
+			requires (_divide_assignable<Ring, R>)
 		friend Vector operator/(Vector&& x, const R& r)
 		{
 			return std::move(x /= r);
@@ -235,7 +275,7 @@ namespace qboot::algebra
 			return std::move(*this);
 		}
 		friend Ring dot(const Vector& x, const Vector& y)
-			requires requires(const Ring& a, const Ring& b) { { mul(a, b) } -> std::same_as<Ring>; }
+			requires _multipliable<Ring>
 		{
 			assert(x.sz_ == y.sz_);
 			if (x.sz_ == 0) return {};
@@ -313,12 +353,14 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class T>
+			requires (_scale_assignable<Ring, T>)
 		Matrix& operator*=(const T& v) &
 		{
 			arr_ *= v;
 			return *this;
 		}
 		template <class T>
+			requires (_divide_assignable<Ring, T>)
 		Matrix& operator/=(const T& v) &
 		{
 			arr_ /= v;
@@ -386,21 +428,25 @@ namespace qboot::algebra
 			return std::move(x);
 		}
 		template <class R>
+			requires (_scalable<Ring, R>)
 		friend Matrix mul_scalar(const R& r, const Matrix& x)
 		{
 			return Matrix(mul_scalar(r, x.arr_), x.row_, x.col_);
 		}
 		template <class R>
+			requires (_scale_assignable<Ring, R>)
 		friend Matrix mul_scalar(const R& r, Matrix&& x)
 		{
 			return std::move(x *= r);
 		}
 		template <class R>
+			requires (_divisible<Ring, R>)
 		friend Matrix operator/(const Matrix& x, const R& r)
 		{
 			return Matrix(x.arr_ / r, x.row_, x.col_);
 		}
 		template <class R>
+			requires (_divide_assignable<Ring, R>)
 		friend Matrix operator/(Matrix&& x, const R& r)
 		{
 			return std::move(x /= r);
@@ -409,7 +455,7 @@ namespace qboot::algebra
 		{
 			return x.row_ == y.row_ && x.col_ == y.col_ && x.arr_ == y.arr_;
 		}
-		friend Matrix dot(const Matrix& x, const Matrix& y)
+		friend Matrix dot(const Matrix& x, const Matrix& y) requires _multipliable<Ring>
 		{
 			assert(x.col_ == y.row_);
 			Matrix z(x.row_, y.col_);
@@ -422,9 +468,9 @@ namespace qboot::algebra
 					}
 			return z;
 		}
-		friend Matrix mul(const Matrix& x, const Matrix& y) { return dot(x, y); }
+		friend Matrix mul(const Matrix& x, const Matrix& y) requires _multipliable<Ring> { return dot(x, y); }
 		template <class R>
-		friend Vector<R> dot(const Matrix& x, const Vector<R>& y)
+		friend Vector<R> dot(const Matrix& x, const Vector<R>& y) requires _matrix_operand<Ring, R>
 		{
 			assert(x.col_ == y.size());
 			auto product = [](const Ring& a, const R& b) {
@@ -443,7 +489,7 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
-		friend Vector<R> dot(const Vector<R>& x, const Matrix& y)
+		friend Vector<R> dot(const Vector<R>& x, const Matrix& y) requires _matrix_operand<Ring, R>
 		{
 			assert(x.size() == y.row_);
 			auto product = [](const R& a, const Ring& b) {

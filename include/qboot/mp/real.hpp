@@ -379,6 +379,11 @@ namespace qboot::mp
 		friend real mul_scalar(const real& r1, real&& r2) { return r1 * std::move(r2); }
 		friend real mul_scalar(real&& r1, real&& r2) { return std::move(r1) * std::move(r2); }
 
+		template <_mpfr_is_other_operands T>
+		friend real mul_scalar(const T& r1, const real& r2) { return r1 * r2; }
+		template <_mpfr_is_other_operands T>
+		friend real mul_scalar(const T& r1, real&& r2) { return std::move(r2 *= r1); }
+
 		friend real operator+(const real& r1, const real& r2)
 		{
 			real temp;

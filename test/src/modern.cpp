@@ -11,7 +11,7 @@
 #include <span>       // for span
 #include <stdexcept>  // for runtime_error
 #include <string>     // for string
-#include <utility>    // for as_const, declval, move
+#include <utility>    // for as_const, declval, forward, move
 
 #include "mpfr.h"  // for mpfr_free_cache
 
@@ -67,6 +67,43 @@ namespace
 	static_assert(std::three_way_comparable<real, std::partial_ordering>);
 	static_assert(IntegerComparable<int> && IntegerComparable<double> && !IntegerComparable<std::string>);
 	static_assert(!std::constructible_from<real, std::array<int, 2>>);
+
+	template <class T, class S>
+	concept ScalarOperations = requires(T& x, const T& c, const S& scalar)
+	{
+		{ x *= scalar } -> std::same_as<T&>;
+		{ x /= scalar } -> std::same_as<T&>;
+		{ mul_scalar(scalar, c) } -> std::same_as<T>;
+		{ mul_scalar(scalar, std::move(x)) } -> std::same_as<T>;
+		{ c / scalar } -> std::same_as<T>;
+		{ std::move(x) / scalar } -> std::same_as<T>;
+	};
+	template <class T, class S>
+	concept HasDot = requires(const T& x, const S& y) { dot(x, y); };
+	template <class T>
+	concept PolynomialArgument = requires(const Polynomial& p, const T& x) { p.eval(x); };
+	template <class F>
+	concept QueueArgument = requires(qboot::_task_queue& q, F&& f) { q.push(std::forward<F>(f)); };
+
+	using Nested = Vector<Matrix<qboot::algebra::RealFunction<Polynomial>>>;
+	static_assert(ScalarOperations<Polynomial, int> && ScalarOperations<Polynomial, rational>);
+	static_assert(ScalarOperations<Vector<real>, int> && ScalarOperations<Matrix<Polynomial>, double>);
+	static_assert(ScalarOperations<Nested, real> && ScalarOperations<Nested, rational>);
+	static_assert(!ScalarOperations<Nested, std::string>);
+	static_assert(!qboot::algebra::_scale_assignable<Nested, std::string>);
+	static_assert(!qboot::algebra::_scalable<Nested, std::string>);
+	static_assert(!qboot::algebra::_divisible<Nested, std::string>);
+	static_assert(!qboot::algebra::_divide_assignable<Nested, std::string>);
+	static_assert(!qboot::algebra::_scale_assignable<Polynomial, Polynomial>);
+	static_assert(!qboot::algebra::_scalable<Vector<real>, Vector<real>>);
+	static_assert(!qboot::algebra::_divisible<Vector<real>, Vector<real>>);
+	static_assert(!qboot::algebra::_scalable<Matrix<Polynomial>, Matrix<Polynomial>>);
+	static_assert(HasDot<Matrix<real>, Vector<Polynomial>> && HasDot<Vector<Polynomial>, Matrix<real>>);
+	static_assert(HasDot<Matrix<Polynomial>, Matrix<Polynomial>>);
+	static_assert(!HasDot<Matrix<Polynomial>, Vector<real>>);
+	static_assert(!HasDot<Matrix<Vector<real>>, Matrix<Vector<real>>>);
+	static_assert(PolynomialArgument<rational> && !PolynomialArgument<std::string>);
+	static_assert(QueueArgument<int (*)()> && !QueueArgument<int>);
 
 	void require(bool condition, const char* message)
 	{
@@ -144,12 +181,36 @@ namespace
 		require(zero_columns.row_view(1).empty(), "empty matrix row");
 	}
 
+	void scalar_templates()
+	{
+		const Polynomial p{real(1), real(-2), real(3)};
+		const Vector<real> v{real(2), real(-3)};
+		require(mul_scalar(2, v) == mul_scalar(real(2), v), "integral scalar on const vector");
+		for (const auto& c : {rational(-2), rational(3, 2U)})
+		{
+			auto scaled = mul_scalar(c, p);
+			auto inplace = p.clone();
+			inplace *= c;
+			require(scaled == inplace, "const and in-place polynomial scaling");
+			require(scaled / c == p, "polynomial scalar division");
+			require(scaled.eval(c) == real(c) * p.eval(c), "rational polynomial evaluation");
+			Matrix<Polynomial> m(1, 1);
+			m.at(0, 0) = p.clone();
+			require(mul_scalar(c, m).at(0, 0) == scaled, "nested scalar multiplication");
+		}
+	}
+
 	void tasks()
 	{
 		std::future<int> active, pending;
 		std::latch entered(1), resume(1);
 		{
 			qboot::_task_queue q(1);
+			auto move_only = [p = std::make_unique<int>(23)] { return *p; };
+			static_assert(QueueArgument<decltype(move_only)> && !QueueArgument<decltype(move_only)&>);
+			require(q.push(std::move(move_only)).get() == 23, "forwarded move-only callable");
+			auto copyable = [] { return 29; };
+			require(q.push(copyable).get() == 29 && copyable() == 29, "lvalue callable remains usable");
 			require(q.push([p = std::make_unique<int>(42)] { return *p; }).get() == 42, "move-only task");
 			active = q.push(
 			    [&entered, &resume]
@@ -182,6 +243,7 @@ int main()
 	qboot::mp::global_prec = 256;
 	try
 	{
+		scalar_templates();
 		comparisons();
 		views();
 		tasks();

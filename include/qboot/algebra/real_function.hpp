@@ -76,12 +76,14 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class T>
+			requires (_scale_assignable<Ring, T>)
 		RealFunction& operator*=(const T& r) &
 		{
 			coeffs_ *= r;
 			return *this;
 		}
 		template <class T>
+			requires (_divide_assignable<Ring, T>)
 		RealFunction& operator/=(const T& r) &
 		{
 			coeffs_ /= r;
@@ -132,21 +134,25 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
+			requires (_scalable<Ring, R>)
 		friend RealFunction mul_scalar(const R& r, const RealFunction& x)
 		{
 			return RealFunction(mul_scalar(r, x.coeffs_));
 		}
 		template <class R>
+			requires (_scale_assignable<Ring, R>)
 		friend RealFunction mul_scalar(const R& r, RealFunction&& x)
 		{
 			return std::move(x *= r);
 		}
 		template <class R>
+			requires (_divisible<Ring, R>)
 		friend RealFunction operator/(const RealFunction& x, const R& r)
 		{
 			return RealFunction(x.coeffs_ / r);
 		}
 		template <class R>
+			requires (_divide_assignable<Ring, R>)
 		friend RealFunction operator/(RealFunction&& x, const R& r)
 		{
 			return std::move(x /= r);
@@ -210,6 +216,7 @@ namespace qboot::algebra
 		[[nodiscard]] RealConverter inverse() const;
 		// convert a function f of x to a function of y where x = func(y)
 		template <class R>
+			requires _matrix_operand<mp::real, R>
 		[[nodiscard]] RealFunction<R> convert(const RealFunction<R>& f) const
 		{
 			assert(lambda_ == f.lambda());
@@ -250,6 +257,8 @@ namespace qboot::algebra
 		[[nodiscard]] RealFunctionWithPower clone() const { return RealFunctionWithPower(f_, pow_); }
 		// evaluate at x = x
 		template <class R>
+			requires (_scale_assignable<mp::real, R> &&
+			          requires(const R& x, const mp::real& p) { mp::pow(x, p); })
 		[[nodiscard]] mp::real approximate(const R& x) const
 		{
 			mp::real s{};

@@ -1,7 +1,7 @@
 #ifndef QBOOT_TASK_QUEUE_HPP_
 #define QBOOT_TASK_QUEUE_HPP_
 
-#include <concepts>            // for default_initializable, invocable, same_as
+#include <concepts>            // for constructible_from, default_initializable, invocable, same_as
 #include <condition_variable>  // for condition_variable_any
 #include <cstddef>             // for size_t
 #include <cstdint>             // for uint32_t
@@ -16,8 +16,8 @@
 #include <string>              // for string
 #include <string_view>         // for string_view
 #include <thread>              // for jthread, thread
-#include <type_traits>         // for invoke_result_t
-#include <utility>             // for move
+#include <type_traits>         // for decay_t, invoke_result_t
+#include <utility>             // for forward, move
 #include <vector>              // for vector
 
 namespace qboot
@@ -140,12 +140,12 @@ namespace qboot
 			cond_.notify_all();
 		}
 		template <class Func>
-			requires std::invocable<Func&>
-		std::future<std::invoke_result_t<Func&>> push(Func task) &
+			requires (std::invocable<std::decay_t<Func>&> && std::constructible_from<std::decay_t<Func>, Func>)
+		std::future<std::invoke_result_t<std::decay_t<Func>&>> push(Func&& task) &
 		{
 			std::lock_guard<std::mutex> lk(mtx_);
 			if (killed_) throw std::logic_error("Task queue has stopped");
-			std::packaged_task<std::invoke_result_t<Func&>()> packaged(std::move(task));
+			std::packaged_task<std::invoke_result_t<std::decay_t<Func>&>()> packaged(std::forward<Func>(task));
 			auto result = packaged.get_future();
 			q_.emplace([queued = std::move(packaged)]() mutable { queued(); });
 			cond_.notify_one();

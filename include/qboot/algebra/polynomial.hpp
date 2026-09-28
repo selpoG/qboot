@@ -66,6 +66,7 @@ namespace qboot::algebra
 		[[nodiscard]] bool iszero() const noexcept { return coeff_.size() == 0; }
 		[[nodiscard]] int32_t degree() const noexcept { return int32_t(coeff_.size()) - 1; }
 		template <class R>
+			requires _scale_assignable<mp::real, R>
 		[[nodiscard]] mp::real eval(const R& x) const
 		{
 			if (iszero()) return mp::real{};
@@ -101,6 +102,7 @@ namespace qboot::algebra
 		Polynomial& operator+=(const Polynomial& p) &;
 		Polynomial& operator-=(const Polynomial& p) &;
 		template <class R>
+			requires (_scale_assignable<mp::real, R> && requires(const R& c) { algebra::iszero(c); })
 		Polynomial& operator*=(const R& c) &
 		{
 			if (iszero()) return *this;
@@ -109,6 +111,7 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class R>
+			requires (_divide_assignable<mp::real, R>)
 		Polynomial& operator/=(const R& c) &
 		{
 			coeff_ /= c;
@@ -134,6 +137,7 @@ namespace qboot::algebra
 		void _mul_linear(const mp::real& a) &;
 		friend Polynomial mul(const Polynomial& p, const Polynomial& q);
 		template <class R>
+			requires (_scalable<mp::real, R> && requires(const R& c) { algebra::iszero(c); })
 		friend Polynomial mul_scalar(const R& c, const Polynomial& p)
 		{
 			if (p.iszero() || algebra::iszero(c)) return Polynomial{};
@@ -145,6 +149,7 @@ namespace qboot::algebra
 		friend Polynomial operator+(const Polynomial& p, const Polynomial& q);
 		friend Polynomial operator-(const Polynomial& p, const Polynomial& q);
 		template <class R>
+			requires (_divisible<mp::real, R>)
 		friend Polynomial operator/(const Polynomial& p, const R& c)
 		{
 			if (p.iszero()) return Polynomial{};

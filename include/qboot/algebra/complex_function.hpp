@@ -145,12 +145,14 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class T>
+			requires (_scale_assignable<Ring, T>)
 		ComplexFunction& operator*=(const T& r) &
 		{
 			coeffs_ *= r;
 			return *this;
 		}
 		template <class T>
+			requires (_divide_assignable<Ring, T>)
 		ComplexFunction& operator/=(const T& r) &
 		{
 			coeffs_ /= r;
@@ -205,21 +207,25 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
+			requires (_scalable<Ring, R>)
 		friend ComplexFunction mul_scalar(const R& r, const ComplexFunction& x)
 		{
 			return ComplexFunction(mul_scalar(r, x.coeffs_), x.lambda_, x.sym_);
 		}
 		template <class R>
+			requires (_scale_assignable<Ring, R>)
 		friend ComplexFunction mul_scalar(const R& r, ComplexFunction&& x)
 		{
 			return std::move(x *= r);
 		}
 		template <class R>
+			requires (_divisible<Ring, R>)
 		friend ComplexFunction operator/(const ComplexFunction& x, const R& r)
 		{
 			return ComplexFunction(x.coeffs_ / r, x.lambda_, x.sym_);
 		}
 		template <class R>
+			requires (_divide_assignable<Ring, R>)
 		friend ComplexFunction operator/(ComplexFunction&& x, const R& r)
 		{
 			return std::move(x /= r);
