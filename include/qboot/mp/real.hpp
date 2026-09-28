@@ -36,7 +36,6 @@
 #include <concepts>     // for integral, same_as, signed_integral
 #include <cstddef>      // for size_t
 #include <cstdint>      // for intmax_t
-#include <cstring>      // for strlen
 #include <iomanip>      // for setprecision
 #include <ios>          // for ios_base, streamsize
 #include <iostream>     // for basic_ostram, basic_istream
@@ -899,8 +898,6 @@ namespace qboot::mp
 		if (st != _exp_style::SCIENTIFIC) return prec == 0 ? 1u : static_cast<size_t>(prec);
 		return static_cast<size_t>(prec) + 1;
 	}
-	inline size_t _strlen(const char* s) { return std::strlen(s); }
-	inline size_t _strlen(const std::string& s) { return s.length(); }
 
 	template <class Char, class Traits>
 	inline std::basic_ostream<Char, Traits>& _helper_ostream_const(std::basic_ostream<Char, Traits>& s,

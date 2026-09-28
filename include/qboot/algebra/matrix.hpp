@@ -156,8 +156,8 @@ namespace qboot::algebra
 		[[nodiscard]] const Ring* end() const& noexcept { return sz_ == 0 ? arr_.get() : std::next(arr_.get(), sz_); }
 		[[nodiscard]] Ring* begin() & noexcept { return arr_.get(); }
 		[[nodiscard]] Ring* end() & noexcept { return sz_ == 0 ? arr_.get() : std::next(arr_.get(), sz_); }
-		[[nodiscard]] std::span<Ring> view() & noexcept { return {arr_.get(), sz_}; }
-		[[nodiscard]] std::span<const Ring> view() const& noexcept { return {arr_.get(), sz_}; }
+		[[nodiscard]] std::span<Ring> view() & noexcept { return std::span<Ring>(*this); }
+		[[nodiscard]] std::span<const Ring> view() const& noexcept { return std::span<const Ring>(*this); }
 		std::span<const Ring> view() const&& = delete;
 		[[nodiscard]] Vector clone() const
 		{
