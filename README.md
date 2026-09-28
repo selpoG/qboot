@@ -42,7 +42,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [Visual Studio](https://visualstudio.microsoft.com/) (`2022+`)
 
-Please build `mpir` and `mpfr` in both `Debug` and `Release` mode.
+Please build `mpir` and `mpfr` in both `Debug` and `Release` mode, with `MPFR_USE_THREAD_SAFE` enabled for `mpfr`.
 
 If you cloned `mpir` and `mpfr` in `C:\somewhere\mpir` and `C:\somewhere\mpfr`,
 you will have

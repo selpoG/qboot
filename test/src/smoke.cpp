@@ -1,7 +1,7 @@
 #include <array>       // for array
 #include <atomic>      // for atomic
 #include <cstdint>     // for uint32_t
-#include <cstdlib>    // for getenv
+#include <cstdlib>     // for getenv
 #include <exception>   // for exception
 #include <fstream>     // for ifstream
 #include <functional>  // for function
@@ -12,7 +12,7 @@
 #include <utility>     // for move
 #include <vector>      // for vector
 
-#include "mpfr.h"  // for mpfr_free_cache
+#include "mpfr.h"  // for mpfr_buildopt_tls_p, mpfr_free_cache
 
 #include "qboot/qboot.hpp"  // for numerical types, bootstrap equations, SDPB output
 
@@ -41,7 +41,7 @@ namespace
 		require(qboot::algebra::mul(p, p).eval(real(3)) == 16, "polynomial product");
 	}
 
-	void concurrency()
+	void check_concurrency()
 	{
 		std::atomic<uint32_t> evaluations{0};
 		qboot::_memoized<uint32_t(uint32_t)> square(
@@ -139,8 +139,9 @@ int main()
 	qboot::mp::global_rnd = MPFR_RNDN;
 	try
 	{
+		require(mpfr_buildopt_tls_p() != 0, "parallel tests require a thread-safe MPFR build");
 		arithmetic();
-		concurrency();
+		check_concurrency();
 		output_test();
 		if (const auto* output = std::getenv("QBOOT_TEST_OUTPUT")) bootstrap(output, 2);
 	}

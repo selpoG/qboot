@@ -22,6 +22,13 @@ namespace qboot::mp
 	using _long = long int;            // NOLINT
 	using _ulong = unsigned long int;  // NOLINT
 
+	// GMP and MPIR can use different native integer widths on Windows.
+	template <std::integral To, std::integral From>
+	constexpr To _integral_cast(From x)
+	{
+		return static_cast<To>(x);
+	}
+
 	class integer;
 	class rational;
 	class real;
@@ -178,7 +185,7 @@ namespace qboot::mp
 		inline static void set(mpz_ptr rop, _ulong op) { mpz_set_ui(rop, op); }
 		inline static void set(mpq_ptr rop, _ulong op) { mpq_set_ui(rop, op, 1); }
 		inline static void set(mpfr_ptr rop, _ulong op, mpfr_rnd_t rnd) { mpfr_set_ui(rop, op, rnd); }
-		inline static _ulong get(mpz_srcptr op) { return mpz_get_ui(op); }
+		inline static _ulong get(mpz_srcptr op) { return _integral_cast<_ulong>(mpz_get_ui(op)); }
 		inline static _ulong get(mpq_srcptr op);
 		inline static _ulong get(mpfr_srcptr op, mpfr_rnd_t rnd) { return mpfr_get_ui(op, rnd); }
 		inline static void add(mpz_ptr rop, mpz_srcptr op1, _ulong op2) { mpz_add_ui(rop, op1, op2); }
@@ -254,7 +261,7 @@ namespace qboot::mp
 		inline static void set(mpz_ptr rop, _long op) { mpz_set_si(rop, op); }
 		inline static void set(mpq_ptr rop, _long op) { mpq_set_si(rop, op, 1); }
 		inline static void set(mpfr_ptr rop, _long op, mpfr_rnd_t rnd) { mpfr_set_si(rop, op, rnd); }
-		inline static _long get(mpz_srcptr op) { return mpz_get_si(op); }
+		inline static _long get(mpz_srcptr op) { return _integral_cast<_long>(mpz_get_si(op)); }
 		inline static _long get(mpq_srcptr op);
 		inline static _long get(mpfr_srcptr op, mpfr_rnd_t rnd) { return mpfr_get_si(op, rnd); }
 		inline static void add(mpz_ptr rop, mpz_srcptr op1, _long op2)
@@ -814,7 +821,7 @@ namespace qboot::mp
 			return integer(r1 / _ulong(r2));
 		}
 
-		friend _ulong operator%(const integer& r1, _ulong r2) { return mpz_fdiv_ui(r1._x, r2); }
+		friend _ulong operator%(const integer& r1, _ulong r2) { return _integral_cast<_ulong>(mpz_fdiv_ui(r1._x, r2)); }
 		friend _ulong operator%(_ulong r1, const integer& r2)
 		{
 			if (mpz_cmpabs_ui(r2._x, r1) > 0) return r1;

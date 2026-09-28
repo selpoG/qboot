@@ -623,7 +623,9 @@ namespace qboot::mp
 		if (!num) return {};
 		if (negative) num->negate();
 		if (i == npos) return rational(num.value());
-		return rational(num.value(), pow(10u, str.size() - i - 1));
+		auto places = str.size() - i - 1;
+		if (places > std::numeric_limits<_ulong>::max()) return {};
+		return rational(num.value(), pow(10u, _integral_cast<_ulong>(places)));
 	}
 }  // namespace qboot::mp
 

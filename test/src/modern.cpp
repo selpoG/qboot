@@ -209,6 +209,17 @@ namespace
 		require(Vector<integer>{}.norm() == 0 && Vector<rational>{}.norm() == 0, "empty exact vectors");
 	}
 
+	void native_integer_widths()
+	{
+		using qboot::mp::_long, qboot::mp::_ulong;
+		const auto low = std::numeric_limits<_long>::min(), high = std::numeric_limits<_long>::max();
+		const auto max = std::numeric_limits<_ulong>::max();
+		require(_long(integer(low)) == low && _long(integer(high)) == high, "signed native integer limits");
+		require(_ulong(integer(max)) == max, "unsigned native integer limit");
+		require(integer(-1) % max == max - 1, "native-width remainder");
+		require(qboot::mp::parse("0.000125").value() == rational(1, 8000U), "decimal place count");
+	}
+
 	void scalar_templates()
 	{
 		const Polynomial p{real(1), real(-2), real(3)};
@@ -272,6 +283,7 @@ int main()
 	try
 	{
 		exact_norms();
+		native_integer_widths();
 		scalar_templates();
 		comparisons();
 		views();

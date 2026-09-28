@@ -12,9 +12,11 @@ namespace qboot::algebra
 	template class Vector<real>;
 	template class Matrix<real>;
 	template class Vector<Vector<real>>;
-	template class Vector<Matrix<real>>;
 	template class Vector<Polynomial>;
 	template class Matrix<Polynomial>;
+#ifndef _MSC_VER
+	// MSVC 19.44 crashes on these explicit instantiations; instantiate on use instead.
+	template class Vector<Matrix<real>>;
 	template class Vector<RealFunction<real>>;
 	template class Matrix<RealFunction<real>>;
 	template class Vector<ComplexFunction<real>>;
@@ -23,6 +25,7 @@ namespace qboot::algebra
 	template class Vector<ComplexFunction<Polynomial>>;
 	template class Matrix<RealFunction<Polynomial>>;
 	template class Matrix<ComplexFunction<Polynomial>>;
+#endif
 
 	static void _add_row(Matrix<real>* mat, uint32_t f, uint32_t t, const real& x, uint32_t c0 = 0)
 	{
