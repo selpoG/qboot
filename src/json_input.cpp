@@ -1,18 +1,19 @@
 #include "qboot/json_input.hpp"
 
-#include <cassert>    // for assert
-#include <cstdint>    // for int32_t, uint32_t
-#include <fstream>    // for ofstream
-#include <iomanip>    // for setprecision
-#include <ios>        // for defaultfloat, ios
-#include <locale>     // for locale
-#include <memory>     // for make_unique
-#include <optional>   // for optional
-#include <ostream>    // for ostream
-#include <stdexcept>  // for invalid_argument
-#include <utility>    // for move
+#include <cassert>     // for assert
+#include <cstdint>     // for int32_t, uint32_t
+#include <filesystem>  // for path
+#include <fstream>     // for ofstream
+#include <iomanip>     // for setprecision
+#include <ios>         // for defaultfloat, ios
+#include <locale>      // for locale
+#include <memory>      // for make_unique
+#include <optional>    // for optional
+#include <ostream>     // for ostream
+#include <stdexcept>   // for invalid_argument
+#include <utility>     // for move
 
-namespace fs = qboot::fs;
+namespace fs = std::filesystem;
 
 using qboot::algebra::Vector, qboot::algebra::Polynomial;
 using qboot::mp::real;

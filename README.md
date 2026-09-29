@@ -32,7 +32,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [mpfr](http://mpfr.org/)
 
-- [gcc](http://gcc.gnu.org/) or [clang](http://clang.llvm.org/) with C++20 support
+- [gcc](https://gcc.gnu.org/) (`10.5+`) or [clang](https://clang.llvm.org/) (`16.0.6+` with libstdc++ `10.5+`, or `20+` with libc++ `20+`)
 
 ### Windows (MSVC)
 

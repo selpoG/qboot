@@ -15,7 +15,8 @@ namespace qboot::algebra
 	template class Vector<Polynomial>;
 	template class Matrix<Polynomial>;
 #ifndef _MSC_VER
-	// MSVC 19.44 crashes on these explicit instantiations; instantiate on use instead.
+	// MSVC 19.44 crashes when explicitly instantiating constrained hidden friends for nested types.
+	// Implicit instantiation, including the operations exercised by our tests, works.
 	template class Vector<Matrix<real>>;
 	template class Vector<RealFunction<real>>;
 	template class Matrix<RealFunction<real>>;

@@ -56,6 +56,50 @@ jobs:
           -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror"
         cmake --build sample-build --parallel 2
 
+  minimum:
+    name: minimum (${{ matrix.compiler }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - compiler: g++-10
+          flags: ""
+        - compiler: clang++-16
+          flags: --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/10
+    steps:
+    - uses: actions/checkout@v5
+    - name: requirement
+      run: |
+        if [ "${{ matrix.compiler }}" = clang++-16 ]; then
+          curl -fsSL --retry 3 https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor > /tmp/llvm-keyring.gpg
+          sudo install -m 644 /tmp/llvm-keyring.gpg /usr/share/keyrings/llvm.gpg
+          echo 'deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main' | sudo tee /etc/apt/sources.list.d/llvm16.list
+        fi
+        sudo apt-get update
+        sudo apt-get install -y libgmp-dev libmpfr-dev g++-10
+        if [ "${{ matrix.compiler }}" = clang++-16 ]; then sudo apt-get install -y clang-16; fi
+    - name: build and test
+      run: |
+        cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }}" -DCMAKE_CXX_STANDARD=20 \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/local" \
+          -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
+        cmake --build build --parallel 2
+        ctest --test-dir build --output-on-failure
+        cmake --install build
+    - name: installed package and sample
+      run: |
+        cmake -S test/consumer -B consumer-build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }}" -DCMAKE_CXX_STANDARD=20 \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build consumer-build --parallel 2
+        ctest --test-dir consumer-build --output-on-failure
+        cmake -S sample -B sample-build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }} -Wall -Wextra -Wpedantic -Werror" \
+          -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build sample-build --parallel 2
+
   libcxx:
     name: libc++ (C++${{ matrix.standard }})
     runs-on: ubuntu-24.04
@@ -162,13 +206,14 @@ jobs:
 
   build:
     runs-on: ubuntu-24.04
-    needs: [build_matrix, libcxx, sanitizers, sdpb]
+    needs: [build_matrix, minimum, libcxx, sanitizers, sdpb]
     if: ${{ always() }}
     steps:
     - name: Check all build configurations
       env:
         BUILD_RESULT: ${{ needs.build_matrix.result }}
+        MINIMUM_RESULT: ${{ needs.minimum.result }}
         LIBCXX_RESULT: ${{ needs.libcxx.result }}
         SANITIZER_RESULT: ${{ needs.sanitizers.result }}
         SDPB_RESULT: ${{ needs.sdpb.result }}
-      run: test "$BUILD_RESULT" = success && test "$LIBCXX_RESULT" = success && test "$SANITIZER_RESULT" = success && test "$SDPB_RESULT" = success
+      run: test "$BUILD_RESULT" = success && test "$MINIMUM_RESULT" = success && test "$LIBCXX_RESULT" = success && test "$SANITIZER_RESULT" = success && test "$SDPB_RESULT" = success

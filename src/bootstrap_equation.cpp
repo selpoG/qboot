@@ -1,6 +1,7 @@
 #include "qboot/bootstrap_equation.hpp"
 
 #include <algorithm>   // for ranges::any_of
+#include <filesystem>  // for path
 #include <functional>  // for function
 #include <iostream>    // for cout, endl
 #include <memory>      // for unique_ptr
@@ -396,7 +397,7 @@ namespace qboot
 		return prg;
 	}
 
-	Vector<real> read_raw_functional(const fs::path& y_txt)
+	Vector<real> read_raw_functional(const std::filesystem::path& y_txt)
 	{
 		std::ifstream is(y_txt);
 		uint32_t sz, M;

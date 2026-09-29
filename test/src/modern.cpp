@@ -3,9 +3,8 @@
 #include <compare>    // for is_eq, is_gt, is_lt, partial_ordering, strong_ordering, three_way_comparable
 #include <concepts>   // for constructible_from, same_as
 #include <exception>  // for exception
-#include <future>     // for future, future_error, future_errc
+#include <future>     // for future, future_error, future_errc, promise
 #include <iostream>   // for cerr
-#include <latch>      // for latch
 #include <limits>     // for numeric_limits
 #include <memory>     // for make_unique
 #include <span>       // for span
@@ -242,7 +241,8 @@ namespace
 	void tasks()
 	{
 		std::future<int> active, pending;
-		std::latch entered(1), resume(1);
+		std::promise<void> entered, resume;
+		const auto resumed = resume.get_future();
 		{
 			qboot::_task_queue q(1);
 			auto move_only = [p = std::make_unique<int>(23)] { return *p; };
@@ -252,16 +252,16 @@ namespace
 			require(q.push(copyable).get() == 29 && copyable() == 29, "lvalue callable remains usable");
 			require(q.push([p = std::make_unique<int>(42)] { return *p; }).get() == 42, "move-only task");
 			active = q.push(
-			    [&entered, &resume]
+			    [&entered, &resumed]
 			    {
-				    entered.count_down();
-				    resume.wait();
+				    entered.set_value();
+				    resumed.wait();
 				    return 17;
 			    });
-			entered.wait();
+			entered.get_future().wait();
 			pending = q.push([] { return 99; });
 			q.signal_done();
-			resume.count_down();
+			resume.set_value();
 		}
 		require(active.get() == 17, "shutdown must join active tasks");
 		try

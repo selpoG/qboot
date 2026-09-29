@@ -1,4 +1,5 @@
 #include <array>
+#include <filesystem>  // for current_path
 #include <iostream>
 #include <map>
 #include <memory>
@@ -11,7 +12,7 @@
 using qboot::Context, qboot::Sector, qboot::BootstrapEquation;
 using qboot::mp::real, qboot::mp::rational, qboot::mp::parse;
 using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::vector, std::string;
-namespace fs = qboot::fs;
+namespace fs = std::filesystem;
 
 template <class T>
 using dict = map<string, T, std::less<>>;

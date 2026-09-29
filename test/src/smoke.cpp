@@ -3,6 +3,7 @@
 #include <cstdint>     // for uint32_t
 #include <cstdlib>     // for getenv
 #include <exception>   // for exception
+#include <filesystem>  // for path, exists, directory_iterator, remove_all
 #include <fstream>     // for ifstream
 #include <functional>  // for function
 #include <iostream>    // for cerr
@@ -19,7 +20,7 @@
 namespace
 {
 	using qboot::mp::integer, qboot::mp::rational, qboot::mp::real;
-	namespace fs = qboot::fs;
+	namespace fs = std::filesystem;
 
 	void require(bool condition, const char* message)
 	{

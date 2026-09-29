@@ -1,5 +1,6 @@
 #include "qboot/xml_input.hpp"
 
+#include <filesystem>   // for path
 #include <fstream>      // for ofstream
 #include <memory>       // for make_unique
 #include <optional>     // for optional
@@ -7,7 +8,7 @@
 #include <string_view>  // for string_view
 #include <utility>      // for move
 
-namespace fs = qboot::fs;
+namespace fs = std::filesystem;
 
 using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial;
 using qboot::mp::real;
