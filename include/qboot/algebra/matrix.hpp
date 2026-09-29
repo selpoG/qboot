@@ -1,35 +1,27 @@
 #ifndef QBOOT_ALGEBRA_MATRIX_HPP_
 #define QBOOT_ALGEBRA_MATRIX_HPP_
 
+#include <algorithm>         // for ranges::all_of
 #include <cassert>           // for assert
+#include <concepts>          // for same_as, convertible_to, default_initializable, movable
 #include <cstdint>           // for uint32_t
 #include <initializer_list>  // for initializer_list
 #include <iterator>          // for next
 #include <memory>            // for unique_ptr, make_unique
 #include <ostream>           // for ostream
-#include <type_traits>       // for true_type, false_type, is_same_v, enable_if, void_t
+#include <span>              // for span
 #include <utility>           // for declval, move, swap
 
 #include "qboot/mp/real.hpp"  // for real
 
 namespace qboot::algebra
 {
-	template <class, template <class> class, class = std::void_t<>>
-	struct _detect : std::false_type
-	{
-	};
-	template <class T, template <class> class Check>
-	struct _detect<T, Check, std::void_t<Check<T>>> : std::true_type
-	{
-	};
-	template <class T>
-	using _has_iszero_checker = decltype(std::declval<const T&>().iszero());
-	template <class T>
-	inline constexpr bool _has_iszero = _detect<T, _has_iszero_checker>::value;
 	template <class R>
+		requires (requires(const R& x) { { x.iszero() } -> std::same_as<bool>; } ||
+		          requires(const R& x) { { x == 0 } -> std::convertible_to<bool>; })
 	bool iszero(const R& v)
 	{
-		if constexpr (_has_iszero<R>)
+		if constexpr (requires { { v.iszero() } -> std::same_as<bool>; })
 			return v.iszero();
 		else
 			return v == 0;
@@ -43,10 +35,10 @@ namespace qboot::algebra
 	{
 		using type = Vec<_evaluated_t<R>>;
 	};
-	template <>
-	struct _evaluated<mp::real>
+	template <mp::_is_mp T>
+	struct _evaluated<T>
 	{
-		using type = mp::real;
+		using type = T;
 	};
 	template <class Ring, class S>
 	struct _substitute;
@@ -65,22 +57,69 @@ namespace qboot::algebra
 		using type = Vec<_substitute_t<R, S>>;
 	};
 	inline mp::real eval(const mp::real& v, [[maybe_unused]] const mp::real& x) { return v; }
-	// interface Swappable<T> {
-	//	void swap(T&);
-	// };
-	// interface Cloneable<T> {
-	//	T clone() const;
-	// };
-	// interface ZeroCheckable<T> {
-	//	bool iszero() const;
-	// }
-	// assert(T{}.iszero());  // where T: DefaultConstructible, ZeroCheckable
-	// Ring: Swappable, Clonable, ZeroCheckable, DefaultConstructible
-	// Polynomial: Swappable, Clonable, ZeroCheckable, DefaultConstructible
-	// Vector<Ring>: Swappable, Clonable
-	// Matrix<Ring>: Swappable, Clonable
-	// definitions
-	template <class Ring>
+	// Coefficients are movable, explicitly cloneable, and default to zero.
+	// Individual operations impose additional requirements where needed.
+	template <class T>
+	concept _ring_base = std::default_initializable<T> && std::movable<T> && requires(T& x, T& y, const T& c)
+	{
+		{ x.swap(y) } -> std::same_as<void>;
+		{ c.clone() } -> std::same_as<T>;
+		{ c.iszero() } -> std::same_as<bool>;
+	};
+
+	// Structural requirements; algebraic laws and the zero value remain the type's responsibility.
+	template <class T>
+	concept Ring = _ring_base<T> && requires(const T& x, const T& y, T& result)
+	{
+		{ result += y } -> std::same_as<T&>;
+		{ result -= y } -> std::same_as<T&>;
+		result.negate();
+		{ x + y } -> std::same_as<T>;
+		{ +x } -> std::same_as<T>;
+		{ -x } -> std::same_as<T>;
+		{ x == y } -> std::same_as<bool>;
+		x.norm();
+	};
+	template <class T>
+	concept Algebra = requires(const T& x, const T& y)
+	{
+		{ mul(x, y) } -> std::same_as<T>;
+	};
+	template <class T>
+	concept _ring = Ring<T>;
+
+	template <class T>
+	concept _multipliable = Algebra<T> && requires(const T& x, const T& y, T& result)
+	{
+		{ result += mul(x, y) } -> std::same_as<T&>;
+	};
+	template <class T, class S>
+	concept _scale_assignable = requires(T& x, const S& scalar)
+	{
+		{ x *= scalar } -> std::same_as<T&>;
+	};
+	// Check member operators first so ADL cannot recursively select a container's own scalar overload.
+	template <class T, class S>
+	concept _scalable = _scale_assignable<T, S> && requires(const T& x, const S& scalar)
+	{
+		{ mul_scalar(scalar, x) } -> std::same_as<T>;
+	};
+	template <class T, class S>
+	concept _divide_assignable = requires(T& x, const S& scalar)
+	{
+		{ x /= scalar } -> std::same_as<T&>;
+	};
+	template <class T, class S>
+	concept _divisible = _divide_assignable<T, S> && requires(const T& x, const S& scalar)
+	{
+		{ x / scalar } -> std::same_as<T>;
+	};
+	template <class T, class S>
+	concept _matrix_operand = (std::same_as<T, S> && _multipliable<T>) ||
+	                          (!std::same_as<T, S> && _scalable<S, T> &&
+	                           requires(S& sum, const S& value) { { sum += value } -> std::same_as<S&>; });
+
+	template <_ring Ring>
 	class Vector
 	{
 		std::unique_ptr<Ring[]> arr_;
@@ -117,6 +156,9 @@ namespace qboot::algebra
 		[[nodiscard]] const Ring* end() const& noexcept { return sz_ == 0 ? arr_.get() : std::next(arr_.get(), sz_); }
 		[[nodiscard]] Ring* begin() & noexcept { return arr_.get(); }
 		[[nodiscard]] Ring* end() & noexcept { return sz_ == 0 ? arr_.get() : std::next(arr_.get(), sz_); }
+		[[nodiscard]] std::span<Ring> view() & noexcept { return std::span<Ring>(*this); }
+		[[nodiscard]] std::span<const Ring> view() const& noexcept { return std::span<const Ring>(*this); }
+		std::span<const Ring> view() const&& = delete;
 		[[nodiscard]] Vector clone() const
 		{
 			Vector v(sz_);
@@ -134,9 +176,7 @@ namespace qboot::algebra
 		}
 		[[nodiscard]] bool iszero() const noexcept
 		{
-			for (uint32_t i = 0; i < sz_; ++i)
-				if (!arr_[i].iszero()) return false;
-			return true;
+			return std::ranges::all_of(view(), [](const Ring& x) { return x.iszero(); });
 		}
 		[[nodiscard]] auto abs() const { return mp::sqrt(norm()); }
 		[[nodiscard]] auto norm() const
@@ -158,12 +198,14 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class T>
+			requires (_scale_assignable<Ring, T>)
 		Vector& operator*=(const T& v) &
 		{
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] *= v;
 			return *this;
 		}
 		template <class T>
+			requires (_divide_assignable<Ring, T>)
 		Vector& operator/=(const T& v) &
 		{
 			for (uint32_t i = 0; i < sz_; ++i) arr_[i] /= v;
@@ -205,6 +247,7 @@ namespace qboot::algebra
 			return std::move(x);
 		}
 		template <class R>
+			requires (_scalable<Ring, R>)
 		friend Vector mul_scalar(const R& r, const Vector& x)
 		{
 			Vector z(x.sz_);
@@ -212,11 +255,13 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
+			requires (_scale_assignable<Ring, R>)
 		friend Vector mul_scalar(const R& r, Vector&& x)
 		{
 			return std::move(x *= r);
 		}
 		template <class R>
+			requires (_divisible<Ring, R>)
 		friend Vector operator/(const Vector& x, const R& r)
 		{
 			Vector z(x.sz_);
@@ -224,6 +269,7 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
+			requires (_divide_assignable<Ring, R>)
 		friend Vector operator/(Vector&& x, const R& r)
 		{
 			return std::move(x /= r);
@@ -235,7 +281,6 @@ namespace qboot::algebra
 				if (x.arr_[i] != y.arr_[i]) return false;
 			return true;
 		}
-		friend bool operator!=(const Vector& x, const Vector& y) { return !(x == y); }
 		Vector operator+() const& { return clone(); }
 		Vector operator+() && { return std::move(*this); }
 		Vector operator-() const&
@@ -249,8 +294,8 @@ namespace qboot::algebra
 			negate();
 			return std::move(*this);
 		}
-		template <class Ring2 = Ring, class = std::enable_if<std::is_same_v<Ring, Ring2>>>
-		friend Ring dot(const Vector& x, const Vector<Ring2>& y)
+		friend Ring dot(const Vector& x, const Vector& y)
+			requires _multipliable<Ring>
 		{
 			assert(x.sz_ == y.sz_);
 			if (x.sz_ == 0) return {};
@@ -266,10 +311,10 @@ namespace qboot::algebra
 		}
 	};
 
-	template <class Ring>
+	template <_ring Ring>
 	class Matrix
 	{
-		template <class Ring2>
+		template <_ring Ring2>
 		friend class Matrix;
 		Vector<Ring> arr_;
 		uint32_t row_, col_;
@@ -292,6 +337,17 @@ namespace qboot::algebra
 		[[nodiscard]] const Ring& at(uint32_t r, uint32_t c) const& { return arr_[r * col_ + c]; }
 		[[nodiscard]] const uint32_t& row() const noexcept { return row_; }
 		[[nodiscard]] const uint32_t& column() const noexcept { return col_; }
+		[[nodiscard]] std::span<Ring> row_view(uint32_t r) &
+		{
+			assert(r < row_);
+			return arr_.view().subspan(r * col_, col_);
+		}
+		[[nodiscard]] std::span<const Ring> row_view(uint32_t r) const&
+		{
+			assert(r < row_);
+			return arr_.view().subspan(r * col_, col_);
+		}
+		std::span<const Ring> row_view(uint32_t) const&& = delete;
 		[[nodiscard]] bool is_square() const noexcept { return row_ == col_; }
 		[[nodiscard]] auto abs() const { return mp::sqrt(norm()); }
 		[[nodiscard]] auto norm() const { return arr_.norm(); }
@@ -317,12 +373,14 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class T>
+			requires (_scale_assignable<Ring, T>)
 		Matrix& operator*=(const T& v) &
 		{
 			arr_ *= v;
 			return *this;
 		}
 		template <class T>
+			requires (_divide_assignable<Ring, T>)
 		Matrix& operator/=(const T& v) &
 		{
 			arr_ /= v;
@@ -350,8 +408,7 @@ namespace qboot::algebra
 			return std::move(*this);
 		}
 		// v^t M v
-		template <class = std::enable_if<std::is_same_v<Ring, mp::real>>>
-		[[nodiscard]] Ring inner_product(const Vector<Ring>& v) const
+		[[nodiscard]] Ring inner_product(const Vector<Ring>& v) const requires std::same_as<Ring, mp::real>
 		{
 			assert(is_square() && row_ == v.size());
 			mp::real s{};
@@ -391,21 +448,25 @@ namespace qboot::algebra
 			return std::move(x);
 		}
 		template <class R>
+			requires (_scalable<Ring, R>)
 		friend Matrix mul_scalar(const R& r, const Matrix& x)
 		{
 			return Matrix(mul_scalar(r, x.arr_), x.row_, x.col_);
 		}
 		template <class R>
+			requires (_scale_assignable<Ring, R>)
 		friend Matrix mul_scalar(const R& r, Matrix&& x)
 		{
 			return std::move(x *= r);
 		}
 		template <class R>
+			requires (_divisible<Ring, R>)
 		friend Matrix operator/(const Matrix& x, const R& r)
 		{
 			return Matrix(x.arr_ / r, x.row_, x.col_);
 		}
 		template <class R>
+			requires (_divide_assignable<Ring, R>)
 		friend Matrix operator/(Matrix&& x, const R& r)
 		{
 			return std::move(x /= r);
@@ -414,8 +475,7 @@ namespace qboot::algebra
 		{
 			return x.row_ == y.row_ && x.col_ == y.col_ && x.arr_ == y.arr_;
 		}
-		friend bool operator!=(const Matrix& x, const Matrix& y) { return !(x == y); }
-		friend Matrix dot(const Matrix& x, const Matrix& y)
+		friend Matrix dot(const Matrix& x, const Matrix& y) requires _multipliable<Ring>
 		{
 			assert(x.col_ == y.row_);
 			Matrix z(x.row_, y.col_);
@@ -428,13 +488,13 @@ namespace qboot::algebra
 					}
 			return z;
 		}
-		friend Matrix mul(const Matrix& x, const Matrix& y) { return dot(x, y); }
+		friend Matrix mul(const Matrix& x, const Matrix& y) requires _multipliable<Ring> { return dot(x, y); }
 		template <class R>
-		friend Vector<R> dot(const Matrix& x, const Vector<R>& y)
+		friend Vector<R> dot(const Matrix& x, const Vector<R>& y) requires _matrix_operand<Ring, R>
 		{
 			assert(x.col_ == y.size());
 			auto product = [](const Ring& a, const R& b) {
-				if constexpr (std::is_same_v<Ring, R>)
+				if constexpr (std::same_as<Ring, R>)
 					return mul(a, b);
 				else
 					return mul_scalar(a, b);
@@ -449,11 +509,11 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
-		friend Vector<R> dot(const Vector<R>& x, const Matrix& y)
+		friend Vector<R> dot(const Vector<R>& x, const Matrix& y) requires _matrix_operand<Ring, R>
 		{
 			assert(x.size() == y.row_);
 			auto product = [](const R& a, const Ring& b) {
-				if constexpr (std::is_same_v<R, Ring>)
+				if constexpr (std::same_as<R, Ring>)
 					return mul(a, b);
 				else
 					return mul_scalar(b, a);
@@ -483,7 +543,7 @@ namespace qboot::algebra
 	// calculate the inverse matrix of lower triangular matrix
 	[[nodiscard]] Matrix<mp::real> lower_triangular_inverse(const Matrix<mp::real>& mat);
 
-	template <class Ring>
+	template <_ring Ring>
 	std::ostream& operator<<(std::ostream& out, const Vector<Ring>& v)
 	{
 		out << "[";
@@ -497,7 +557,7 @@ namespace qboot::algebra
 		return out << "]";
 	}
 
-	template <class Ring>
+	template <_ring Ring>
 	std::ostream& operator<<(std::ostream& out, const Matrix<Ring>& v)
 	{
 		out << "[";

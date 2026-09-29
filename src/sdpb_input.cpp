@@ -1,11 +1,12 @@
 #include "qboot/sdpb_input.hpp"
 
+#include <filesystem>  // for path, create_directory
 #include <functional>  // for function
 #include <vector>      // for vector
 
 #include "qboot/task_queue.hpp"  // for _parallel_evaluate, _event_base
 
-namespace fs = qboot::fs;
+namespace fs = std::filesystem;
 
 using qboot::algebra::Vector, qboot::algebra::Matrix;
 using qboot::mp::real;
@@ -18,7 +19,7 @@ namespace
 	{
 		out << v.row() << " " << v.column() << "\n";
 		for (uint32_t r = 0; r < v.row(); ++r)
-			for (uint32_t c = 0; c < v.column(); ++c) out << v.at(r, c) << "\n";
+			for (const auto& x : v.row_view(r)) out << x << "\n";
 		return out;
 	}
 

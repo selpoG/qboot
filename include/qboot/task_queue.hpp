@@ -1,21 +1,23 @@
 #ifndef QBOOT_TASK_QUEUE_HPP_
 #define QBOOT_TASK_QUEUE_HPP_
 
-#include <atomic>              // for atomic
-#include <condition_variable>  // for condition_variable
+#include <concepts>            // for constructible_from, default_initializable, invocable, same_as
+#include <condition_variable>  // for condition_variable_any
+#include <cstddef>             // for size_t
 #include <cstdint>             // for uint32_t
 #include <exception>           // for current_exception, exception_ptr, rethrow_exception
 #include <functional>          // for function
-#include <future>              // for future, promise
-#include <memory>              // for unique_ptr, make_unique
+#include <future>              // for future, packaged_task
+#include <memory>              // for unique_ptr
 #include <mutex>               // for mutex, lock_guard, unique_lock
 #include <queue>               // for queue
 #include <stdexcept>           // for logic_error
+#include <stop_token>          // for stop_token
 #include <string>              // for string
 #include <string_view>         // for string_view
-#include <thread>              // for thread
-#include <type_traits>         // for is_default_constructible_v, is_same_v
-#include <utility>             // for declval, move
+#include <thread>              // for jthread, thread
+#include <type_traits>         // for decay_t, invoke_result_t
+#include <utility>             // for forward, move
 #include <vector>              // for vector
 
 namespace qboot
@@ -36,33 +38,31 @@ namespace qboot
 	}
 	// evaluate fs in parallel and returns its value
 	// if p <= 1, evaluate sequentially
-	template <class T>
+	template <std::default_initializable T>
 	std::vector<T> _parallel_evaluate(const std::vector<std::function<T()>>& fs,
 	                                  uint32_t p = std::thread::hardware_concurrency())
 	{
-		static_assert(std::is_default_constructible_v<T>);
 		if (p <= 1) return _seq_eval(fs);
 		auto N = fs.size();
 		std::vector<T> ans(N);
 		std::mutex mtx{};
-		uint32_t now = 0;
-		std::vector<std::thread> worker;
+		std::size_t now = 0;
 		std::exception_ptr error{};
-		try
 		{
+			std::vector<std::jthread> worker;
 			for (uint32_t i = 0; i < p; ++i)
 				worker.emplace_back([&mtx, &now, N, &fs, &ans, &error] {
 					try
 					{
 						while (true)
 						{
-							uint32_t now_local;
+							std::size_t now_local;
 							{
 								std::lock_guard<std::mutex> lock(mtx);
 								if (error || now >= N) break;
 								now_local = now++;
 							}
-							if constexpr (std::is_same_v<T, bool>)
+							if constexpr (std::same_as<T, bool>)
 							{
 								// vector<bool> packs distinct elements into shared storage.
 								const bool value = fs[now_local]();
@@ -81,13 +81,6 @@ namespace qboot
 					_free_mpfr_cache();
 				});
 		}
-		catch (...)
-		{
-			// Join already started workers if creating a later thread fails.
-			std::lock_guard<std::mutex> lock(mtx);
-			error = std::current_exception();
-		}
-		for (auto& t : worker) t.join();
 		if (error) std::rethrow_exception(error);
 		return ans;
 	}
@@ -106,68 +99,26 @@ namespace qboot
 		_parallel_evaluate(fs_dummy, p);
 	}
 
-	class _task_base
-	{
-	public:
-		_task_base() = default;
-		_task_base(const _task_base&) = default;
-		_task_base(_task_base&&) noexcept = default;
-		_task_base& operator=(const _task_base&) = default;
-		_task_base& operator=(_task_base&&) noexcept = default;
-		virtual ~_task_base();
-		virtual void run() = 0;
-	};
-
-	template <class T>
-	class _task : public _task_base
-	{
-		std::promise<T> p_;
-		std::function<T()> f_;
-
-	public:
-		_task(std::promise<T>&& p, std::function<T()> f) : _task_base(), p_(std::move(p)), f_(std::move(f)) {}
-		_task(const _task&) = default;
-		_task(_task&&) noexcept = default;
-		_task& operator=(const _task&) = default;
-		_task& operator=(_task&&) noexcept = default;
-		~_task() override = default;
-		void run() override
-		{
-			try
-			{
-				if constexpr (std::is_same_v<T, void>)
-				{
-					f_();
-					p_.set_value();
-				}
-				else
-					p_.set_value(f_());
-			}
-			catch (...) { p_.set_exception(std::current_exception()); }
-		}
-	};
-
 	class _task_queue
 	{
-		std::mutex mtx_{};                // lock for q_ and killed_
-		std::condition_variable cond_{};  // awake if task is queued or killed
-		std::vector<std::thread> ts_{};   // worker threads
-		std::atomic<bool> killed_ = false;
-		std::queue<std::unique_ptr<_task_base>> q_{};
-		void work()
+		std::mutex mtx_{};  // lock for q_ and killed_
+		std::condition_variable_any cond_{};
+		bool killed_ = false;
+		std::queue<std::packaged_task<void()>> q_{};
+		// Destroy workers before the state they access, including during construction failure.
+		std::vector<std::jthread> ts_{};
+		void work(std::stop_token stop)
 		{
-			std::unique_ptr<_task_base> task;
 			while (true)
 			{
+				std::packaged_task<void()> task;
 				{
 					std::unique_lock<std::mutex> lk(mtx_);
-					cond_.wait(lk, [this] { return killed_ || !q_.empty(); });
-					if (killed_) return;
+					if (!cond_.wait(lk, stop, [this] { return killed_ || !q_.empty(); }) || killed_) return;
 					task = std::move(q_.front());
 					q_.pop();
 				}
-				task->run();
-				task.reset();
+				task();
 			}
 		}
 
@@ -175,42 +126,30 @@ namespace qboot
 		_task_queue(uint32_t p = std::thread::hardware_concurrency())
 		{
 			if (p == 0) p = 1;
-			try
-			{
-				for (uint32_t i = 0; i < p; ++i)
-					ts_.emplace_back([this] {
-						work();
-						_free_mpfr_cache();
-					});
-			}
-			catch (...)
-			{
-				signal_done();
-				for (auto& t : ts_) t.join();
-				throw;
-			}
+			for (uint32_t i = 0; i < p; ++i)
+				ts_.emplace_back([this](std::stop_token stop) {
+					work(stop);
+					_free_mpfr_cache();
+				});
 		}
-		~_task_queue()
-		{
-			signal_done();
-			for (auto& t : ts_) t.join();
-		}
+		~_task_queue() { signal_done(); }
 		void signal_done() &
 		{
-			std::unique_lock<std::mutex> lk(mtx_);
-			if (killed_.exchange(true)) return;
+			std::lock_guard<std::mutex> lk(mtx_);
+			killed_ = true;
 			cond_.notify_all();
 		}
-		template <class Func, class T = decltype(std::declval<Func>()())>
-		std::future<T> push(Func task) &
+		template <class Func>
+			requires (std::invocable<std::decay_t<Func>&> && std::constructible_from<std::decay_t<Func>, Func>)
+		std::future<std::invoke_result_t<std::decay_t<Func>&>> push(Func&& task) &
 		{
-			std::unique_lock<std::mutex> lk(mtx_);
+			std::lock_guard<std::mutex> lk(mtx_);
 			if (killed_) throw std::logic_error("Task queue has stopped");
-			std::promise<T> p_;
-			auto f = p_.get_future();
-			q_.push(std::make_unique<_task<T>>(std::move(p_), task));
+			std::packaged_task<std::invoke_result_t<std::decay_t<Func>&>()> packaged(std::forward<Func>(task));
+			auto result = packaged.get_future();
+			q_.emplace([queued = std::move(packaged)]() mutable { queued(); });
 			cond_.notify_one();
-			return f;
+			return result;
 		}
 	};
 

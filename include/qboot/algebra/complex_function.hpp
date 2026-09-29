@@ -58,10 +58,10 @@ namespace qboot::algebra
 	// we take (x0, y0) = (1 / 2, 0)
 	// if a nontrivial symmetry even (resp. odd) is given, m runs over even (resp. odd) number only.
 	// Ring must be mp::real or Polynomial
-	template <class Ring>
+	template <_ring Ring>
 	class ComplexFunction
 	{
-		template <class Ring2>
+		template <_ring Ring2>
 		friend class ComplexFunction;
 		FunctionSymmetry sym_ = FunctionSymmetry::Mixed;
 		uint32_t lambda_;
@@ -145,12 +145,14 @@ namespace qboot::algebra
 			return *this;
 		}
 		template <class T>
+			requires (_scale_assignable<Ring, T>)
 		ComplexFunction& operator*=(const T& r) &
 		{
 			coeffs_ *= r;
 			return *this;
 		}
 		template <class T>
+			requires (_divide_assignable<Ring, T>)
 		ComplexFunction& operator/=(const T& r) &
 		{
 			coeffs_ /= r;
@@ -205,21 +207,25 @@ namespace qboot::algebra
 			return z;
 		}
 		template <class R>
+			requires (_scalable<Ring, R>)
 		friend ComplexFunction mul_scalar(const R& r, const ComplexFunction& x)
 		{
 			return ComplexFunction(mul_scalar(r, x.coeffs_), x.lambda_, x.sym_);
 		}
 		template <class R>
+			requires (_scale_assignable<Ring, R>)
 		friend ComplexFunction mul_scalar(const R& r, ComplexFunction&& x)
 		{
 			return std::move(x *= r);
 		}
 		template <class R>
+			requires (_divisible<Ring, R>)
 		friend ComplexFunction operator/(const ComplexFunction& x, const R& r)
 		{
 			return ComplexFunction(x.coeffs_ / r, x.lambda_, x.sym_);
 		}
 		template <class R>
+			requires (_divide_assignable<Ring, R>)
 		friend ComplexFunction operator/(ComplexFunction&& x, const R& r)
 		{
 			return std::move(x /= r);
@@ -228,7 +234,6 @@ namespace qboot::algebra
 		{
 			return x.lambda_ == y.lambda_ && x.sym_ == y.sym_ && x.coeffs_ == y.coeffs_;
 		}
-		friend bool operator!=(const ComplexFunction& x, const ComplexFunction& y) { return !(x == y); }
 		[[nodiscard]] ComplexFunction<_evaluated_t<Ring>> eval(const mp::real& x) const
 		{
 			return ComplexFunction<_evaluated_t<Ring>>(coeffs_.eval(x), lambda_, sym_);
@@ -238,7 +243,7 @@ namespace qboot::algebra
 	ComplexFunction<mp::real> ComplexFunction<mp::real>::proj(FunctionSymmetry sym) &&;
 	template <>
 	ComplexFunction<Polynomial> ComplexFunction<Polynomial>::proj(FunctionSymmetry sym) &&;
-	template <class Ring>
+	template <_ring Ring>
 	ComplexFunction<_polynomialize_t<Ring>> to_pol(Vector<ComplexFunction<Ring>>* coeffs)
 	{
 		uint32_t lambda = coeffs->at(0).lambda(), len = coeffs->size();

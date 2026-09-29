@@ -1,12 +1,13 @@
-#include <cstdint>    // for uint32_t
-#include <cstdlib>    // for getenv
-#include <exception>  // for exception
-#include <iostream>   // for cerr
-#include <locale>     // for locale, numpunct
-#include <memory>     // for make_unique
-#include <stdexcept>  // for runtime_error
-#include <string>     // for to_string
-#include <utility>    // for move
+#include <cstdint>     // for uint32_t
+#include <cstdlib>     // for getenv
+#include <exception>   // for exception
+#include <filesystem>  // for path, create_directories
+#include <iostream>    // for cerr
+#include <locale>      // for locale, numpunct
+#include <memory>      // for make_unique
+#include <stdexcept>   // for runtime_error
+#include <string>      // for to_string
+#include <utility>     // for move
 
 #include "mpfr.h"  // for mpfr_free_cache
 
@@ -16,7 +17,7 @@ namespace
 {
 	using qboot::algebra::Matrix, qboot::algebra::Polynomial, qboot::algebra::Vector;
 	using qboot::mp::real;
-	namespace fs = qboot::fs;
+	namespace fs = std::filesystem;
 
 	template <class Exception, class Function>
 	void require_throws(Function action)

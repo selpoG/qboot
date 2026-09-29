@@ -8,7 +8,7 @@ using std::move;
 
 namespace
 {
-	template <class Ring>
+	template <qboot::algebra::_ring Ring>
 	ComplexFunction<Ring> _proj(ComplexFunction<Ring>&& f, FunctionSymmetry sym)
 	{
 		if (f.symmetry() == sym) return std::move(f);

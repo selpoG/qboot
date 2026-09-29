@@ -3,6 +3,7 @@
 
 #include <array>        // for array
 #include <cassert>      // for assert
+#include <concepts>     // for integral, same_as, signed_integral, unsigned_integral
 #include <cstdint>      // for uint32_t
 #include <istream>      // for basic_istream
 #include <limits>       // for numeric_limits
@@ -11,8 +12,7 @@
 #include <stdexcept>    // for runtime_error
 #include <string>       // for to_string, string_literals
 #include <string_view>  // for string_view
-#include <type_traits>  // for enable_if_t, is_same_v, is_integral_v, is_signed_v, is_unsigned_v
-#include <utility>      // for move
+#include <utility>      // for in_range, move
 #include <vector>       // for vector
 
 #include "gmpxx.h"
@@ -23,7 +23,7 @@
 namespace qboot::mp
 {
 	template <class Tp>
-	inline constexpr bool _mpq_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer>;
+	concept _mpq_is_other_operands = _mpz_is_other_operands<Tp> || std::same_as<Tp, integer>;
 
 	inline integer ceil(const rational& q);
 	inline integer floor(const rational& q);
@@ -85,6 +85,13 @@ namespace qboot::mp
 		}
 		[[nodiscard]] bool isinteger() const { return _cmp_ui(mpq_denref(_x), 1) == 0; }
 
+		[[nodiscard]] rational norm() const& { return *this * *this; }
+		[[nodiscard]] rational norm() &&
+		{
+			*this *= *this;
+			return std::move(*this);
+		}
+
 		template <class T>
 		[[nodiscard]] rational eval([[maybe_unused]] const T& x) const
 		{
@@ -95,7 +102,7 @@ namespace qboot::mp
 		{
 			std::string s(mpz_sizeinbase(mpq_numref(_x), 10) + mpz_sizeinbase(mpq_denref(_x), 10) + 3, 0);
 			mpq_get_str(s.data(), 10, _x);
-			s.resize(std::strlen(s.data()));
+			s.resize(s.find('\0'));
 			return s;
 		}
 		// replace '/' by slash, '-' by minus
@@ -126,16 +133,16 @@ namespace qboot::mp
 			return {std::move(x)};
 		}
 
-		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T> || std::is_same_v<T, double>>>
+		template <class T>
+			requires (_mpq_is_other_operands<T> || std::same_as<T, double>)
 		explicit rational(T o) : rational()
 		{
 			_mp_ops<T>::set(_x, o);
 		}
-		template <class T1, class T2,
-		          class = std::enable_if_t<std::is_integral_v<T1> && std::is_integral_v<T2> && std::is_unsigned_v<T2>>>
+		template <std::integral T1, std::unsigned_integral T2>
 		rational(T1 num, T2 den) : rational()
 		{
-			if constexpr (std::is_signed_v<T1>)
+			if constexpr (std::signed_integral<T1>)
 				mpq_set_si(_x, num, den);
 			else
 				mpq_set_ui(_x, num, den);
@@ -160,7 +167,8 @@ namespace qboot::mp
 			mpq_canonicalize(_x);
 		}
 
-		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T> || std::is_same_v<T, double>>>
+		template <class T>
+			requires (_mpq_is_other_operands<T> || std::same_as<T, double>)
 		rational& operator=(T o) &
 		{
 			_mp_ops<T>::set(_x, o);
@@ -179,7 +187,8 @@ namespace qboot::mp
 			return *this;
 		}
 
-		template <class T, class = std::enable_if_t<_mpz_is_other_operands<T> || std::is_same_v<T, double>>>
+		template <class T>
+			requires (_mpz_is_other_operands<T> || std::same_as<T, double>)
 		explicit operator T() const
 		{
 			return _mp_ops<T>::get(_x);
@@ -190,21 +199,22 @@ namespace qboot::mp
 		// _cmp(a, b) returns the sign of a - b
 
 		friend int _cmp(const rational& r1, const rational& r2) { return mpq_cmp(r1._x, r2._x); }
-		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T>>>
+		template <_mpq_is_other_operands T>
 		friend int _cmp(const rational& r1, T r2)
 		{
 			return _mp_ops<T>::cmp(r1._x, r2);
 		}
-		template <class T, class = std::enable_if_t<_mpq_is_other_operands<T>>>
+		template <_mpq_is_other_operands T>
 		friend int _cmp(T r1, const rational& r2)
 		{
 			return -_cmp(r2, r1);
 		}
 
 		template <class Tp>
+			requires (_mpq_is_other_operands<Tp> || std::same_as<Tp, rational>)
 		rational& operator+=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, rational>)
+			if constexpr (std::same_as<Tp, rational>)
 				mpq_add(_x, _x, o._x);
 			else
 				_mp_ops<Tp>::add(_x, _x, o);
@@ -212,9 +222,10 @@ namespace qboot::mp
 		}
 
 		template <class Tp>
+			requires (_mpq_is_other_operands<Tp> || std::same_as<Tp, rational>)
 		rational& operator-=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, rational>)
+			if constexpr (std::same_as<Tp, rational>)
 				mpq_sub(_x, _x, o._x);
 			else
 				_mp_ops<Tp>::sub_a(_x, _x, o);
@@ -222,9 +233,10 @@ namespace qboot::mp
 		}
 
 		template <class Tp>
+			requires (_mpq_is_other_operands<Tp> || std::same_as<Tp, rational>)
 		rational& operator*=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, rational>)
+			if constexpr (std::same_as<Tp, rational>)
 				mpq_mul(_x, _x, o._x);
 			else
 			{
@@ -235,9 +247,10 @@ namespace qboot::mp
 		}
 
 		template <class Tp>
+			requires (_mpq_is_other_operands<Tp> || std::same_as<Tp, rational>)
 		rational& operator/=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, rational>)
+			if constexpr (std::same_as<Tp, rational>)
 				mpq_div(_x, _x, o._x);
 			else
 			{
@@ -324,56 +337,56 @@ namespace qboot::mp
 			return std::move(a);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator+(const rational& r1, const Tp& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::add(temp._x, r1._x, r2);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator+(rational&& r1, const Tp& r2)
 		{
 			return std::move(r1 += r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator+(const Tp& r1, const rational& r2)
 		{
 			return r2 + r1;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator+(const Tp& r1, rational&& r2)
 		{
 			return std::move(r2 += r1);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator-(const rational& r1, const Tp& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::sub_a(temp._x, r1._x, r2);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator-(rational&& r1, const Tp& r2)
 		{
 			return std::move(r1 -= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator-(const Tp& r1, const rational& r2)
 		{
 			rational temp;
 			_mp_ops<Tp>::sub_b(temp._x, r1, r2._x);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator-(const Tp& r1, rational&& r2)
 		{
 			_mp_ops<Tp>::sub_b(r2._x, r1, r2._x);
 			return std::move(r2);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator*(const rational& r1, const Tp& r2)
 		{
 			rational temp;
@@ -381,23 +394,23 @@ namespace qboot::mp
 			mpq_canonicalize(temp._x);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator*(rational&& r1, const Tp& r2)
 		{
 			return std::move(r1 *= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator*(const Tp& r1, const rational& r2) noexcept
 		{
 			return r2 * r1;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator*(const Tp& r1, rational&& r2)
 		{
 			return std::move(r2 *= r1);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator/(const rational& r1, const Tp& r2)
 		{
 			rational temp;
@@ -405,12 +418,12 @@ namespace qboot::mp
 			mpq_canonicalize(temp._x);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator/(rational&& r1, const Tp& r2)
 		{
 			return std::move(r1 /= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator/(const Tp& r1, const rational& r2)
 		{
 			rational temp;
@@ -418,7 +431,7 @@ namespace qboot::mp
 			mpq_canonicalize(temp._x);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpq_is_other_operands<Tp>>>
+		template <_mpq_is_other_operands Tp>
 		friend rational operator/(const Tp& r1, rational&& r2)
 		{
 			_mp_ops<Tp>::div_b(r2._x, r1, r2._x);
@@ -610,7 +623,9 @@ namespace qboot::mp
 		if (!num) return {};
 		if (negative) num->negate();
 		if (i == npos) return rational(num.value());
-		return rational(num.value(), pow(10u, str.size() - i - 1));
+		auto places = str.size() - i - 1;
+		if (!std::in_range<_ulong>(places)) return {};
+		return rational(num.value(), pow(10u, _integral_cast<_ulong>(places)));
 	}
 }  // namespace qboot::mp
 

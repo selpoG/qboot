@@ -1,4 +1,5 @@
 #include <cassert>
+#include <filesystem>  // for current_path
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -17,7 +18,6 @@
 #include "qboot/hor_formula.hpp"
 #include "qboot/hor_recursion.hpp"
 #include "qboot/mp/real.hpp"
-#include "qboot/my_filesystem.hpp"
 #include "qboot/polynomial_program.hpp"
 #include "qboot/primary_op.hpp"
 #include "qboot/sdpb_input.hpp"
@@ -29,7 +29,7 @@ using qboot::algebra::Vector, qboot::algebra::Matrix, qboot::algebra::Polynomial
 using qboot::mp::real, qboot::mp::rational, qboot::mp::parse;
 using std::array, std::unique_ptr, std::cout, std::endl, std::map, std::optional, std::make_unique,
     std::pair, std::vector, std::string;
-namespace fs = qboot::fs;
+namespace fs = std::filesystem;
 
 template <class T>
 using dict = map<string, T, std::less<>>;

@@ -32,7 +32,7 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [mpfr](http://mpfr.org/)
 
-- [gcc](http://gcc.gnu.org/) (`7.4.0+`) or [clang](http://clang.llvm.org/) (`8.0.0+`)
+- [gcc](https://gcc.gnu.org/) (`10.5+`) or [clang](https://clang.llvm.org/) (`16.0.6+` with libstdc++ `10.5+`, or `20+` with libc++ `20+`)
 
 ### Windows (MSVC)
 
@@ -40,9 +40,9 @@ Some codes are taken from [cboot](https://github.com/tohtsky/cboot.git).
 
 - [mpfr](https://github.com/BrianGladman/mpfr.git)
 
-- [Visual Studio](https://visualstudio.microsoft.com/) (`2017+`)
+- [Visual Studio](https://visualstudio.microsoft.com/) (`2022+`)
 
-Please build `mpir` and `mpfr` in both `Debug` and `Release` mode.
+Please build `mpir` and `mpfr` in both `Debug` and `Release` mode, with `MPFR_USE_THREAD_SAFE` enabled for `mpfr`.
 
 If you cloned `mpir` and `mpfr` in `C:\somewhere\mpir` and `C:\somewhere\mpfr`,
 you will have
@@ -136,7 +136,7 @@ docker run -it --rm qboot.sample
 
 ## Development and testing
 
-qboot defaults to C++17; use `CMAKE_CXX_STANDARD=20` or `23` to select a newer standard.
+qboot requires C++20 or later; use `CMAKE_CXX_STANDARD=23` to select C++23.
 C++23 requires CMake 3.20+ and a compatible compiler.
 
 ```sh

@@ -33,3 +33,16 @@ foreach(case scalar subtraction norm linear shift parsing parallel queue number_
 	set_tests_properties(regression_${case} PROPERTIES
 		ENVIRONMENT "QBOOT_REGRESSION=${case}" TIMEOUT 15)
 endforeach()
+
+add_executable(qboot_modern src/modern.cpp)
+target_link_libraries(qboot_modern PRIVATE qboot)
+set_default_property(qboot_modern ..)
+add_test(NAME qboot_modern COMMAND qboot_modern)
+set_tests_properties(qboot_modern PROPERTIES TIMEOUT 15)
+
+if(MSVC)
+	# Tests only read the environment; concurrent environment changes are not supported.
+	foreach(target qboot_smoke qboot_json qboot_regression)
+		target_compile_definitions(${target} PRIVATE _CRT_SECURE_NO_WARNINGS)
+	endforeach()
+endif()

@@ -33,9 +33,9 @@
 #ifndef QBOOT_MP_REAL_HPP_
 #define QBOOT_MP_REAL_HPP_
 
+#include <concepts>     // for integral, same_as, signed_integral
 #include <cstddef>      // for size_t
 #include <cstdint>      // for intmax_t
-#include <cstring>      // for strlen
 #include <iomanip>      // for setprecision
 #include <ios>          // for ios_base, streamsize
 #include <iostream>     // for basic_ostram, basic_istream
@@ -46,7 +46,6 @@
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string, to_string, basic_string, string_literals
 #include <string_view>  // for string_view
-#include <type_traits>  // for enable_if_t, is_same_v, is_integral_v, is_signed_v
 #include <utility>      // for move
 
 #include "gmpxx.h"
@@ -75,8 +74,8 @@ namespace qboot::mp
 	inline int _signbit(mpfr_srcptr x) { return mpfr_signbit(x); }             // NOLINT
 
 	template <class Tp>
-	inline constexpr bool _mpfr_is_other_operands = _mpz_is_other_operands<Tp> || std::is_same_v<Tp, integer> ||
-	                                                std::is_same_v<Tp, rational> || std::is_same_v<Tp, double>;
+	concept _mpfr_is_other_operands = _mpz_is_other_operands<Tp> || std::same_as<Tp, integer> ||
+	                                                std::same_as<Tp, rational> || std::same_as<Tp, double>;
 
 	inline void _reset(mpfr_ptr x)
 	{
@@ -252,32 +251,34 @@ namespace qboot::mp
 			}
 		}
 
-		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
+		template <class T>
+			requires (std::integral<T> || _mpfr_is_other_operands<T>)
 		explicit real(const T& o)
 		{
 			mpfr_init2(_x, global_prec);
 			if constexpr (_mpfr_is_other_operands<T>)
 				_mp_ops<T>::set(_x, o, global_rnd);
-			else if constexpr (std::is_signed_v<T>)
+			else if constexpr (std::signed_integral<T>)
 				mpfr_set_sj(_x, o, global_rnd);
 			else
 				mpfr_set_uj(_x, o, global_rnd);
 		}
 
-		template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
+		template <class T>
+			requires (std::integral<T>)
 		real(T op, mpfr_exp_t e)
 		{
 			mpfr_init2(_x, global_prec);
-			if constexpr (std::is_signed_v<T>)
+			if constexpr (std::signed_integral<T>)
 			{
-				if constexpr (_is_included_v<T, _long>)
+				if constexpr (_is_included<T, _long>)
 					mpfr_set_si_2exp(_x, op, e, global_rnd);
 				else
 					mpfr_set_sj_2exp(_x, op, e, global_rnd);
 			}
 			else
 			{
-				if constexpr (_is_included_v<T, _ulong>)
+				if constexpr (_is_included<T, _ulong>)
 					mpfr_set_ui_2exp(_x, op, e, global_rnd);
 				else
 					mpfr_set_uj_2exp(_x, op, e, global_rnd);
@@ -286,12 +287,13 @@ namespace qboot::mp
 
 		// converting assignment operators
 
-		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
+		template <class T>
+			requires (std::integral<T> || _mpfr_is_other_operands<T>)
 		real& operator=(const T& o) &
 		{
 			if constexpr (_mpfr_is_other_operands<T>)
 				_mp_ops<T>::set(_x, o, global_rnd);
-			else if constexpr (std::is_signed_v<T>)
+			else if constexpr (std::signed_integral<T>)
 				mpfr_set_sj(_x, o, global_rnd);
 			else
 				mpfr_set_uj(_x, o, global_rnd);
@@ -308,21 +310,22 @@ namespace qboot::mp
 		// _cmp(a, b) returns the sign of a - b
 
 		friend int _cmp(const real& r1, const real& r2) { return mpfr_cmp(r1._x, r2._x); }
-		template <class T, class = std::enable_if_t<_mpfr_is_other_operands<T>>>
+		template <_mpfr_is_other_operands T>
 		friend int _cmp(const real& r1, T r2)
 		{
 			return _mp_ops<T>::cmp(r1._x, r2);
 		}
-		template <class T, class = std::enable_if_t<_mpfr_is_other_operands<T>>>
+		template <_mpfr_is_other_operands T>
 		friend int _cmp(T r1, const real& r2)
 		{
 			return -_cmp(r2, r1);
 		}
 
 		template <class Tp>
+			requires (_mpfr_is_other_operands<Tp> || std::same_as<Tp, real>)
 		real& operator+=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, real>)
+			if constexpr (std::same_as<Tp, real>)
 				mpfr_add(_x, _x, o._x, global_rnd);
 			else
 				_mp_ops<Tp>::add(_x, _x, o, global_rnd);
@@ -330,9 +333,10 @@ namespace qboot::mp
 		}
 
 		template <class Tp>
+			requires (_mpfr_is_other_operands<Tp> || std::same_as<Tp, real>)
 		real& operator-=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, real>)
+			if constexpr (std::same_as<Tp, real>)
 				mpfr_sub(_x, _x, o._x, global_rnd);
 			else
 				_mp_ops<Tp>::sub_a(_x, _x, o, global_rnd);
@@ -340,9 +344,10 @@ namespace qboot::mp
 		}
 
 		template <class Tp>
+			requires (_mpfr_is_other_operands<Tp> || std::same_as<Tp, real>)
 		real& operator*=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, real>)
+			if constexpr (std::same_as<Tp, real>)
 				mpfr_mul(_x, _x, o._x, global_rnd);
 			else
 				_mp_ops<Tp>::mul(_x, _x, o, global_rnd);
@@ -350,9 +355,10 @@ namespace qboot::mp
 		}
 
 		template <class Tp>
+			requires (_mpfr_is_other_operands<Tp> || std::same_as<Tp, real>)
 		real& operator/=(const Tp& o) &
 		{
-			if constexpr (std::is_same_v<Tp, real>)
+			if constexpr (std::same_as<Tp, real>)
 				mpfr_div(_x, _x, o._x, global_rnd);
 			else
 				_mp_ops<Tp>::div_a(_x, _x, o, global_rnd);
@@ -371,6 +377,11 @@ namespace qboot::mp
 		friend real mul_scalar(real&& r1, const real& r2) { return std::move(r1) * r2; }
 		friend real mul_scalar(const real& r1, real&& r2) { return r1 * std::move(r2); }
 		friend real mul_scalar(real&& r1, real&& r2) { return std::move(r1) * std::move(r2); }
+
+		template <_mpfr_is_other_operands T>
+		friend real mul_scalar(const T& r1, const real& r2) { return r1 * r2; }
+		template <_mpfr_is_other_operands T>
+		friend real mul_scalar(const T& r1, real&& r2) { return std::move(r2 *= r1); }
 
 		friend real operator+(const real& r1, const real& r2)
 		{
@@ -420,98 +431,98 @@ namespace qboot::mp
 		}
 		friend real operator/(real&& r1, real&& r2) { return std::move(r1 /= r2); }
 
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator+(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::add(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator+(real&& r1, const Tp& r2)
 		{
 			return std::move(r1 += r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator+(const Tp& r1, const real& r2)
 		{
 			return r2 + r1;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator+(const Tp& r1, real&& r2)
 		{
 			return std::move(r2 += r1);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator-(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::sub_a(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator-(real&& r1, const Tp& r2)
 		{
 			return std::move(r1 -= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator-(const Tp& r1, const real& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::sub_b(temp._x, r1, r2._x, global_rnd);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator-(const Tp& r1, real&& r2)
 		{
 			_mp_ops<Tp>::sub_b(r2._x, r1, r2._x, global_rnd);
 			return std::move(r2);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator*(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::mul(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator*(real&& r1, const Tp& r2)
 		{
 			return std::move(r1 *= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator*(const Tp& r1, const real& r2) noexcept
 		{
 			return r2 * r1;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator*(const Tp& r1, real&& r2)
 		{
 			return std::move(r2 *= r1);
 		}
 
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator/(const real& r1, const Tp& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::div_a(temp._x, r1._x, r2, global_rnd);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator/(real&& r1, const Tp& r2)
 		{
 			return std::move(r1 /= r2);
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator/(const Tp& r1, const real& r2)
 		{
 			real temp;
 			_mp_ops<Tp>::div_b(temp._x, r1, r2._x, global_rnd);
 			return temp;
 		}
-		template <class Tp, class = std::enable_if_t<_mpfr_is_other_operands<Tp>>>
+		template <_mpfr_is_other_operands Tp>
 		friend real operator/(const Tp& r1, real&& r2)
 		{
 			_mp_ops<Tp>::div_b(r2._x, r1, r2._x, global_rnd);
@@ -522,12 +533,13 @@ namespace qboot::mp
 		// conversion operators
 		/////////////////////////////////////////////////////////////////
 
-		template <class T, class = std::enable_if_t<std::is_integral_v<T> || _mpfr_is_other_operands<T>>>
+		template <class T>
+			requires (std::integral<T> || _mpfr_is_other_operands<T>)
 		explicit operator T() const
 		{
 			if constexpr (_mpfr_is_other_operands<T>)
 				return _mp_ops<T>::get(_x, global_rnd);
-			else if constexpr (std::is_signed_v<T>)
+			else if constexpr (std::signed_integral<T>)
 				return mpfr_get_sj(_x, global_rnd);
 			else
 				return mpfr_get_uj(_x, global_rnd);
@@ -886,8 +898,6 @@ namespace qboot::mp
 		if (st != _exp_style::SCIENTIFIC) return prec == 0 ? 1u : static_cast<size_t>(prec);
 		return static_cast<size_t>(prec) + 1;
 	}
-	inline size_t _strlen(const char* s) { return std::strlen(s); }
-	inline size_t _strlen(const std::string& s) { return s.length(); }
 
 	template <class Char, class Traits>
 	inline std::basic_ostream<Char, Traits>& _helper_ostream_const(std::basic_ostream<Char, Traits>& s,

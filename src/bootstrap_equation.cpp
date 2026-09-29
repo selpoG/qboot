@@ -1,6 +1,7 @@
 #include "qboot/bootstrap_equation.hpp"
 
-#include <algorithm>   // for any_of
+#include <algorithm>   // for ranges::any_of
+#include <filesystem>  // for path
 #include <functional>  // for function
 #include <iostream>    // for cout, endl
 #include <memory>      // for unique_ptr
@@ -396,7 +397,7 @@ namespace qboot
 		return prg;
 	}
 
-	Vector<real> read_raw_functional(const fs::path& y_txt)
+	Vector<real> read_raw_functional(const std::filesystem::path& y_txt)
 	{
 		std::ifstream is(y_txt);
 		uint32_t sz, M;
@@ -457,7 +458,7 @@ namespace qboot
 	{
 		auto include_odd = false;
 		for (uint32_t i = 0; !include_odd && i < eqs_.size(); ++i)
-			include_odd |= std::any_of(eqs_[i][id].begin(), eqs_[i][id].end(), [](const auto& term) {
+			include_odd |= std::ranges::any_of(eqs_[i][id], [](const auto& term) {
 				return std::get<GeneralBlock>(term.block()).include_odd();
 			});
 		return make_unique<ConformalScale>(op, cont_, include_odd);

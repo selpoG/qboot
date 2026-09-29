@@ -15,7 +15,7 @@ jobs:
       matrix:
         build_type: [Debug, Release]
         compiler: [g++-14, clang++-18]
-        standard: [17, 20, 23]
+        standard: [20, 23]
 
     steps:
     - uses: actions/checkout@v5
@@ -56,6 +56,98 @@ jobs:
           -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror"
         cmake --build sample-build --parallel 2
 
+  minimum:
+    name: minimum (${{ matrix.compiler }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - compiler: g++-10
+          flags: ""
+        - compiler: clang++-16
+          flags: --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/10
+    steps:
+    - uses: actions/checkout@v5
+    - name: requirement
+      run: |
+        if [ "${{ matrix.compiler }}" = clang++-16 ]; then
+          curl -fsSL --retry 3 https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor > /tmp/llvm-keyring.gpg
+          sudo install -m 644 /tmp/llvm-keyring.gpg /usr/share/keyrings/llvm.gpg
+          echo 'deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main' | sudo tee /etc/apt/sources.list.d/llvm16.list
+        fi
+        sudo apt-get update
+        sudo apt-get install -y libgmp-dev libmpfr-dev g++-10
+        if [ "${{ matrix.compiler }}" = clang++-16 ]; then sudo apt-get install -y clang-16; fi
+    - name: build and test
+      run: |
+        cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }}" -DCMAKE_CXX_STANDARD=20 \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/local" \
+          -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
+        cmake --build build --parallel 2
+        ctest --test-dir build --output-on-failure
+        cmake --install build
+    - name: installed package and sample
+      run: |
+        cmake -S test/consumer -B consumer-build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }}" -DCMAKE_CXX_STANDARD=20 \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build consumer-build --parallel 2
+        ctest --test-dir consumer-build --output-on-failure
+        cmake -S sample -B sample-build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_FLAGS="${{ matrix.flags }} -Wall -Wextra -Wpedantic -Werror" \
+          -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build sample-build --parallel 2
+
+  libcxx:
+    name: libc++ (C++${{ matrix.standard }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        standard: [20, 23]
+    steps:
+    - uses: actions/checkout@v5
+    - name: requirement
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgmp-dev libmpfr-dev clang-20 libc++-20-dev libc++abi-20-dev
+    - name: Build GMP with libc++
+      run: |
+        cd "$RUNNER_TEMP"
+        curl -fL --retry 3 https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz -o gmp-6.3.0.tar.xz
+        echo 'a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898  gmp-6.3.0.tar.xz' | sha256sum --check
+        tar -xf gmp-6.3.0.tar.xz
+        cd gmp-6.3.0
+        ./configure --prefix="$RUNNER_TEMP/qboot-gmp" --enable-cxx --disable-static \
+          CC=clang-20 CXX=clang++-20 CXXFLAGS="-O2 -stdlib=libc++"
+        make -j2
+        make install
+        echo "LD_LIBRARY_PATH=$RUNNER_TEMP/qboot-gmp/lib" >> "$GITHUB_ENV"
+    - name: build and test
+      run: |
+        cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+          -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/qboot-gmp" \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/local" \
+          -Dqboot_build_tests=ON -Dqboot_warnings_as_errors=ON
+        cmake --build build --parallel 2
+        ctest --test-dir build --output-on-failure
+        cmake --install build
+    - name: installed package and sample
+      run: |
+        cmake -S test/consumer -B consumer-build -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build consumer-build --parallel 2
+        ctest --test-dir consumer-build --output-on-failure
+        cmake -S sample -B sample-build -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_CXX_STANDARD=${{ matrix.standard }} \
+          -DCMAKE_CXX_FLAGS="-stdlib=libc++ -Wall -Wextra -Wpedantic -Werror" \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/local"
+        cmake --build sample-build --parallel 2
+
   sanitizers:
     runs-on: ubuntu-24.04
     steps:
@@ -75,7 +167,7 @@ jobs:
         ASAN_OPTIONS: detect_leaks=1
         UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
       run: |
-        cmake --build build --parallel 2 --target qboot_smoke qboot_json qboot_regression
+        cmake --build build --parallel 2 --target qboot_smoke qboot_json qboot_regression qboot_modern
         ctest --test-dir build --output-on-failure
 
   sdpb:
@@ -114,12 +206,14 @@ jobs:
 
   build:
     runs-on: ubuntu-24.04
-    needs: [build_matrix, sanitizers, sdpb]
+    needs: [build_matrix, minimum, libcxx, sanitizers, sdpb]
     if: ${{ always() }}
     steps:
     - name: Check all build configurations
       env:
         BUILD_RESULT: ${{ needs.build_matrix.result }}
+        MINIMUM_RESULT: ${{ needs.minimum.result }}
+        LIBCXX_RESULT: ${{ needs.libcxx.result }}
         SANITIZER_RESULT: ${{ needs.sanitizers.result }}
         SDPB_RESULT: ${{ needs.sdpb.result }}
-      run: test "$BUILD_RESULT" = success && test "$SANITIZER_RESULT" = success && test "$SDPB_RESULT" = success
+      run: test "$BUILD_RESULT" = success && test "$MINIMUM_RESULT" = success && test "$LIBCXX_RESULT" = success && test "$SANITIZER_RESULT" = success && test "$SDPB_RESULT" = success
