@@ -208,6 +208,14 @@ namespace
 		require(Vector<integer>{}.norm() == 0 && Vector<rational>{}.norm() == 0, "empty exact vectors");
 	}
 
+	void nested_products()
+	{
+		Matrix<real> m(1, 1);
+		m.at(0, 0) = 3;
+		const Vector<Matrix<real>> v{m.clone()};
+		require(dot(v, v).at(0, 0) == 9, "nested constrained friend instantiation");
+	}
+
 	void native_integer_widths()
 	{
 		using qboot::mp::_long, qboot::mp::_ulong;
@@ -283,6 +291,7 @@ int main()
 	try
 	{
 		exact_norms();
+		nested_products();
 		native_integer_widths();
 		scalar_templates();
 		comparisons();
